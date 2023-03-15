@@ -1,0 +1,45 @@
+{
+    "nested": {
+        "pintswap": {
+            "nested": {
+                "Offer": {
+                    "fields": {
+                        "givesToken": {
+                            "type": "bytes",
+                            "id": 1
+                        },
+                        "getsToken": {
+                            "type": "bytes",
+                            "id": 2
+                        },
+                        "givesAmount": {
+                            "type": "bytes",
+                            "id": 3
+                        },
+                        "getsAmount": {
+                            "type": "bytes",
+                            "id": 4
+                        }
+                    }
+                },
+                "OfferList": {
+                    "fields": {
+                        "offers": {
+                            "rule": "repeated",
+                            "type": "Offer",
+                            "id": 1
+                        }
+                    }
+                },
+                "Transmission": {
+                    "fields": {
+                        "data": {
+                            "type": "bytes",
+                            "id": 1
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

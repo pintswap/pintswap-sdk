@@ -1,0 +1,17 @@
+syntax = "proto3";
+package pintswap;
+
+message Offer {
+  bytes gives_token = 1;
+  bytes gets_token = 2;
+  bytes gives_amount = 3;
+  bytes gets_amount = 4;
+}
+
+message OfferList {
+  repeated Offer offers = 1;
+}
+
+message Transmission {
+  bytes data = 1;
+}

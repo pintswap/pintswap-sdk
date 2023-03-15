@@ -1,0 +1,26 @@
+{
+  "name": "pintswap-sdk",
+  "version": "0.1.0",
+  "description": "pintswap SDK",
+  "main": "lib/index.js",
+  "repository": "https://github.com/pintswap/pintswap-sdk",
+  "scripts": {
+    "build:proto": "pbjs proto/pintswap.proto -o src.ts/pintswap-protocol.json",
+    "build:ts": "tsc",
+    "build": "npm-run-all build:proto build:ts"
+  },
+  "author": "flex",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "@safeheron/two-party-ecdsa-js": "^1.0.1",
+    "@zerodao/p2p": "^0.3.40"
+  },
+  "devDependencies": {
+    "@types/node": "^18.15.3",
+    "cross-env": "^7.0.3",
+    "npm-run-all": "^4.1.5",
+    "protobufjs-cli": "^1.1.1",
+    "typescript": "^4.9.5"
+  }
+}

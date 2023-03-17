@@ -4,6 +4,7 @@ import { Signer } from "@ethersproject/abstract-signer";
 import { pipe } from "it-pipe";
 import type { BytesLike } from "@ethersproject/bytes";
 import type { BigNumberish } from "@ethersproject/bignumber";
+import { handle_keygen } from "./utils";
 
 interface IOffer {
   givesToken: BytesLike;
@@ -12,29 +13,35 @@ interface IOffer {
   getsAmount: BigNumberish;
 }
 
-class Pintswap extends ZeroP2P {
+export class Pintswap extends ZeroP2P {
   public signer: Signer;
   public offers: IOffer[];
-  constructor({
-    signer
-  }) {
-    super({});
-    this.signer = signer;
-  }
+
   static async initialize({
     signer
   }) {
-    const self = new this({ signer });
+    console.log("\n ... initilizing new Pintswap node ...");
+    let peerId = await this.peerIdFromSeed(await signer.getAddress());
+    const self = new this({ signer, peerId });
+
     await self.handle('/pintswap/0.1.0/orders', async (duplex) => {
       await new Promise((resolve) => pipe(protocol.OfferList.encode({
         offers: self.offers
       }), duplex.stream.source, resolve)); 
     });
-    await self.handle('/pintswap/0.1.0/create-trade', async () => {
-      // should do keygen and sign a tx between both parties
-    });
+
+    await self.handle('/pintswap/0.1.0/create-trade', handle_keygen);
+
     await self.start();
     return self;
   }
+
+  constructor({
+    signer,
+    peerId
+  }) {
+    super({ signer, peerId });
+  }
+
 }
 

@@ -7,14 +7,23 @@
   "scripts": {
     "build:proto": "pbjs proto/pintswap.proto -o src.ts/pintswap-protocol.json",
     "build:ts": "tsc",
-    "build": "npm-run-all build:proto build:ts"
+    "build": "npm-run-all build:proto build:ts",
+    "run-script": "node"
   },
   "author": "flex",
   "license": "MIT",
   "private": false,
   "dependencies": {
+    "@ethersproject/abstract-signer": "^5.7.0",
+    "@ethersproject/bignumber": "^5.7.0",
+    "@ethersproject/bytes": "^5.7.0",
+    "@ethersproject/solidity": "^5.7.0",
+    "@ethersproject/wallet": "^5.7.0",
     "@safeheron/two-party-ecdsa-js": "^1.0.1",
-    "@zerodao/p2p": "^0.3.40"
+    "@zerodao/p2p": "^0.3.40",
+    "emitterator": "^1.0.0",
+    "it-keepalive": "^1.2.0",
+    "it-length-prefixed": "^8.0.4"
   },
   "devDependencies": {
     "@types/node": "^18.15.3",

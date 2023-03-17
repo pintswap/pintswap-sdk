@@ -1,8 +1,7 @@
-import type { BytesLike } from "@ethersproject/bytes";
 import type { BigNumberish } from "@ethersproject/bignumber";
 interface IOffer {
-    givesToken: BytesLike;
-    getsToken: BytesLike;
+    givesToken: string;
+    getsToken: string;
     givesAmount: BigNumberish;
     getsAmount: BigNumberish;
 }

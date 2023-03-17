@@ -15,8 +15,8 @@ import { Contract } from "@ethersproject/contract";
 import { hexlify } from "@ethersproject/bytes";
 
 interface IOffer {
-  givesToken: BytesLike;
-  getsToken: BytesLike;
+  givesToken: string;
+  getsToken: string;
   givesAmount: BigNumberish;
   getsAmount: BigNumberish;
 }
@@ -82,7 +82,7 @@ export const hashOffer = (o) => {
 };
 
 class Pintswap extends ZeroP2P {
-  public signer: VoidSigner;
+  public signer: any;
   public offers: IOffer[];
   async getTradeAddress(sharedAddress: string) {
     return getContractAddress({
@@ -118,7 +118,7 @@ class Pintswap extends ZeroP2P {
       from: sharedAddress,
       gasPrice,
     });
-    return new Transaction({
+    return Object.assign(new Transaction(), {
       data: createContract(offer, maker, await this.signer.getAddress()),
       gasPrice,
       gasLimit,

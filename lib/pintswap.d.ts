@@ -1,5 +1,3 @@
-import { ZeroP2P } from "@zerodao/p2p";
-import { Signer } from "@ethersproject/abstract-signer";
 import type { BytesLike } from "@ethersproject/bytes";
 import type { BigNumberish } from "@ethersproject/bignumber";
 interface IOffer {
@@ -8,15 +6,6 @@ interface IOffer {
     givesAmount: BigNumberish;
     getsAmount: BigNumberish;
 }
-export declare class Pintswap extends ZeroP2P {
-    signer: Signer;
-    offers: IOffer[];
-    static initialize({ signer }: {
-        signer: any;
-    }): Promise<Pintswap>;
-    constructor({ signer, peerId }: {
-        signer: any;
-        peerId: any;
-    });
-}
+export declare const createContract: (offer: IOffer, maker: string, taker: string) => any;
+export declare const hashOffer: (o: any) => string;
 export {};

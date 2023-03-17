@@ -23,7 +23,13 @@
     "@zerodao/p2p": "^0.3.40",
     "emitterator": "^1.0.0",
     "it-keepalive": "^1.2.0",
-    "it-length-prefixed": "^8.0.4"
+    "it-length-prefixed": "^8.0.4",
+    "@ethersproject/address": "^5.7.0",
+    "@ethersproject/contract": "^6.0.0-beta.1",
+    "@ethersproject/transaction": "^6.0.0-beta.2",
+    "@safeheron/two-party-ecdsa-js": "^1.0.1",
+    "@zerodao/p2p": "^0.3.40",
+    "emasm": "https://github.com/kungfuflex/emasm"
   },
   "devDependencies": {
     "@types/node": "^18.15.3",

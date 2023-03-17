@@ -6,6 +6,6 @@ interface IOffer {
     givesAmount: BigNumberish;
     getsAmount: BigNumberish;
 }
-export declare const createContractAsTaker: (offer: IOffer, maker: string, taker: string) => any;
-export declare const hashOffer: (o: any) => any;
+export declare const createContract: (offer: IOffer, maker: string, taker: string) => any;
+export declare const hashOffer: (o: any) => string;
 export {};

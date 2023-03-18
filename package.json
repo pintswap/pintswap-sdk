@@ -44,7 +44,6 @@
     "uuid": "^8.3.2",
     "wrtc": "^0.4.7",
     "@safeheron/two-party-ecdsa-js": "^1.0.1",
-    "@zerodao/p2p": "^0.3.40",
     "emasm": "https://github.com/kungfuflex/emasm",
     "emitterator": "^1.0.0",
     "ethers": "^6.1.0"

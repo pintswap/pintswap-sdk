@@ -1,9 +1,9 @@
 import { protocol } from "./protocol";
-import { ZeroP2P } from "@zerodao/p2p";
+import { PintP2P } from "./p2p";
 import { ethers } from "ethers";
 import { pipe } from "it-pipe";
 import * as lp from "it-length-prefixed";
-import { handle_keygen, init_keygen } from "./utils";
+import { handleKeygen, initKeygen } from "./utils";
 import { TPCEcdsaKeyGen } from "@safeheron/two-party-ecdsa-js";
 import { emasm } from "emasm";
 
@@ -84,7 +84,7 @@ export const hashOffer = (o) => {
   );
 };
 
-export class Pintswap extends ZeroP2P {
+export class Pintswap extends PintP2P {
   public signer: any;
   public offers: IOffer[];
   async getTradeAddress(sharedAddress: string) {
@@ -142,7 +142,7 @@ export class Pintswap extends ZeroP2P {
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
     ]);
-    let keyShare = await init_keygen(stream);
+    let keyShare = await initKeygen(stream);
     return keyShare;
 
     // derive transaction address from ecdsa pubkey
@@ -161,7 +161,7 @@ export class Pintswap extends ZeroP2P {
     await self.handle(
       "/pintswap/0.1.0/create-trade",
       async ({ stream, connection, protocol }) => {
-        let keyshare = await handle_keygen({ stream });
+        let keyshare = await handleKeygen({ stream });
         /*
       const message1 = await pipe(duplex.source, lp.decode());
       const message2 = context.step1(message1);

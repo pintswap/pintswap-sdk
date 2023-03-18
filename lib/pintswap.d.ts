@@ -1,4 +1,4 @@
-import { ZeroP2P } from "@zerodao/p2p";
+import { PintP2P } from "./p2p";
 import { ethers } from "ethers";
 interface IOffer {
     givesToken: string;
@@ -8,7 +8,7 @@ interface IOffer {
 }
 export declare const createContract: (offer: IOffer, maker: string, taker: string) => any;
 export declare const hashOffer: (o: any) => string;
-export declare class Pintswap extends ZeroP2P {
+export declare class Pintswap extends PintP2P {
     signer: any;
     offers: IOffer[];
     getTradeAddress(sharedAddress: string): Promise<string>;

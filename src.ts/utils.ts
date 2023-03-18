@@ -25,8 +25,8 @@ export async function handle_keygen({ stream }) {
         else {
           p2cx.step2(v)
           let ks = p2cx.exportKeyShare()
-          resolve(ks);
           let js_str = JSON.stringify(ks.toJsonObject(), null, 4)
+          resolve(js_str);
         }
         step += 1
       });
@@ -59,8 +59,8 @@ export async function init_keygen(stream) {
       source.push(p1cx.step2(v))	
 
       let ks = p1cx.exportKeyShare()
-      resolve(ks)
       let js_str = JSON.stringify(ks.toJsonObject(), null, 4)
+      resolve(js_str)
       console.log("Keyshare Initiatior", js_str);
     });
 

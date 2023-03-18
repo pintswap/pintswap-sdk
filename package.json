@@ -3,37 +3,38 @@
   "version": "0.1.0",
   "description": "pintswap SDK",
   "main": "lib/index.js",
-  "repository": "https://github.com/pintswap/pintswap-sdk",
+  "type": "commonjs",
   "scripts": {
     "build:proto": "pbjs proto/pintswap.proto -o src.ts/pintswap-protocol.json",
     "build:ts": "tsc",
     "build": "npm-run-all build:proto build:ts",
-    "run-script": "node"
+    "run-script": "node",
+    "test": "jest"
   },
+  "repository": "https://github.com/pintswap/pintswap-sdk",
   "author": "flex",
   "license": "MIT",
   "private": false,
   "dependencies": {
     "@ethersproject/abstract-signer": "^5.7.0",
+    "@ethersproject/address": "^5.7.0",
     "@ethersproject/bignumber": "^5.7.0",
     "@ethersproject/bytes": "^5.7.0",
+    "@ethersproject/contract": "^6.0.0-beta.1",
     "@ethersproject/solidity": "^5.7.0",
+    "@ethersproject/transaction": "^6.0.0-beta.2",
     "@ethersproject/wallet": "^5.7.0",
     "@safeheron/two-party-ecdsa-js": "^1.0.1",
     "@zerodao/p2p": "^0.3.40",
+    "emasm": "https://github.com/kungfuflex/emasm",
     "emitterator": "^1.0.0",
-    "it-keepalive": "^1.2.0",
-    "it-length-prefixed": "^8.0.4",
-    "@ethersproject/address": "^5.7.0",
-    "@ethersproject/contract": "^6.0.0-beta.1",
-    "@ethersproject/transaction": "^6.0.0-beta.2",
-    "@safeheron/two-party-ecdsa-js": "^1.0.1",
-    "@zerodao/p2p": "^0.3.40",
-    "emasm": "https://github.com/kungfuflex/emasm"
+    "ethers": "^6.1.0"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.0",
     "@types/node": "^18.15.3",
     "cross-env": "^7.0.3",
+    "jest": "^29.5.0",
     "npm-run-all": "^4.1.5",
     "protobufjs-cli": "^1.1.1",
     "typescript": "^4.9.5"

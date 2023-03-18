@@ -3,16 +3,16 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "module": "commonjs",
+    "skipLibCheck": true,
     "moduleResolution": "node",
-    "target": "es2020",
+    "target": "es6",
     "noImplicitAny": false,
     "esModuleInterop": true,
     "sourceMap": true,
     "outDir": "./lib",
     "declaration": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node", "jest"]
   },
   "include": ["./src.ts/*"],
   "exclude" : ["./scripts/*"]

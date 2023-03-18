@@ -43,7 +43,9 @@ const returnOp = (v) => v;
 
 globalObject.Buffer = globalObject.Buffer || Buffer;
 
-const mapToBuffers = (o) => mapValues(o, (v) => (base64url as any)(v.toByteArray && Buffer.from(v.toByteArray()) || Buffer.from(hexlify(v).substr(2), 'hex')));
+const ln = (v) => ((console.log(v)), v);
+
+const mapToBuffers = (o) => mapValues(o, (v) => (base64url as any)(v.toByteArray && Buffer.from(v.toByteArray()) || hexlify(Buffer.from([v]))));
 
 const cryptoFromSeed = async function (seed) {
   const key = mapToBuffers(await cryptico.generateRSAKey(seed, 2048));

@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for pintswap.ts</title>
+    <title>Code coverage report for p2p.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="prettify.css" />
     <link rel="stylesheet" href="base.css" />
@@ -19,7 +19,7 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="index.html">All files</a> pintswap.ts</h1>
+        <h1><a href="index.html">All files</a> p2p.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
@@ -251,8 +251,7 @@
 <a name='L186'></a><a href='#L186'>186</a>
 <a name='L187'></a><a href='#L187'>187</a>
 <a name='L188'></a><a href='#L188'>188</a>
-<a name='L189'></a><a href='#L189'>189</a>
-<a name='L190'></a><a href='#L190'>190</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L189'></a><a href='#L189'>189</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -440,196 +439,194 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { protocol } from "./protocol";
-import { PintP2P } from "./p2p";
-import { ethers } from "ethers";
-import { pipe } from "it-pipe";
-import * as lp from "it-length-prefixed";
-import { handleKeygen, initKeygen } from "./utils";
-import { TPCEcdsaKeyGen } from "@safeheron/two-party-ecdsa-js";
-import { emasm } from "emasm";
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">"use strict";
+import Mplex = require("libp2p-mplex");
+import { NOISE } from 'libp2p-noise';
+import KadDHT = require("libp2p-kad-dht");
+import Bootstrap = require("libp2p-bootstrap");
+import PeerId = require("peer-id");
+import GossipSub = require("libp2p-gossipsub");
+import RelayConstants = require('libp2p/src/circuit/constants')
+import WStar = require("libp2p-webrtc-star");
+import isBrowser = require("is-browser");
+import { VoidSigner, hexlify, solidityPackedKeccak256 } from "ethers";
+import Libp2p = require("libp2p");
+import crypto from "libp2p-crypto";
+import wrtc = require("wrtc");
+import cryptico = require('cryptico-js');
+import globalObject = require('the-global-object');
+import { Buffer } from 'buffer';
+import { mapValues } from 'lodash';
+import base64url = require('base64url');
 &nbsp;
-const {
-  solidityPackedKeccak256,
-  hexlify,
-  getAddress,
-  getCreateAddress,
-  VoidSigner,
-  Contract,
-  Transaction,
-} = ethers;
 &nbsp;
-interface IOffer {
-  givesToken: string;
-  getsToken: string;
-  givesAmount: any;
-  getsAmount: any;
+export function bufferToString(buf: Uint8Array): string {
+    return new TextDecoder().decode(buf)
 }
 &nbsp;
-export const createContract = (offer: IOffer, maker: string, taker: string) =&gt; {
-  return emasm([
-    "pc",
-    "returndatasize",
-    "0x64",
-    "returndatasize",
-    "returndatasize",
-    getAddress(offer.givesToken),
-    "0x23b872dd00000000000000000000000000000000000000000000000000000000",
-    "returndatasize",
-    "mstore",
-    getAddress(maker),
-    "0x4",
-    "mstore",
-    getAddress(taker),
-    "0x24",
-    "mstore",
-    hexlify(offer.givesAmount),
-    "0x44",
-    "mstore",
-    "gas",
-    "call",
-    "0x0",
-    "0x0",
-    "0x64",
-    "0x0",
-    "0x0",
-    getAddress(offer.getsToken),
-    getAddress(taker),
-    "0x4",
-    "mstore",
-    getAddress(maker),
-    "0x24",
-    "mstore",
-    hexlify(offer.getsAmount),
-    "0x44",
-    "mstore",
-    "gas",
-    "call",
-    "and",
-    "failure",
-    "jumpi",
-    getAddress(maker),
-    "selfdestruct",
-    ["failure", ["0x0", "0x0", "revert"]],
-  ]);
+export function stringToBuffer(text: string): Uint8Array {
+    return new TextEncoder().encode(text);
+}
+&nbsp;
+export function fromBufferToJSON(buf: Uint8Array): any {
+    const stringified = bufferToString(buf);
+    return JSON.parse(stringified)
+}
+&nbsp;
+export function fromJSONtoBuffer(obj: any): Uint8Array {
+    const stringified = JSON.stringify(obj);
+    return stringToBuffer(stringified);
+}
+&nbsp;
+&nbsp;
+const returnOp = (v) =&gt; v;
+&nbsp;
+&nbsp;
+globalObject.Buffer = globalObject.Buffer || Buffer;
+&nbsp;
+const ln = (v) =&gt; ((console.log(v)), v);
+&nbsp;
+const mapToBuffers = (o) =&gt; mapValues(o, (v) =&gt; (base64url as any)(v.toByteArray &amp;&amp; Buffer.from(v.toByteArray()) || hexlify(Buffer.from([v]))));
+&nbsp;
+const cryptoFromSeed = async function (seed) {
+  const key = mapToBuffers(await cryptico.generateRSAKey(seed, 2048));
+  key.dp = key.dmp1;
+  key.dq = key.dmq1;
+  key.qi = key.coeff;
+  return crypto.keys.supportedKeys.rsa.unmarshalRsaPrivateKey((new (crypto.keys.supportedKeys.rsa.RsaPrivateKey as any)(key, key) as any).marshal());
 };
 &nbsp;
-export const hashOffer = (o) =&gt; {
-  return solidityPackedKeccak256(
-    ["address", "address", "uint256", "uint256"],
-    [
-      getAddress(o.givesToken),
-      getAddress(o.getsToken),
-      o.givesAmount,
-      o.getsAmount,
-    ]
-  );
+const coerceBuffersToHex = (v) =&gt; {
+  if (v instanceof Uint8Array || Buffer.isBuffer(v))
+    return hexlify(v);
+  if (Array.isArray(v)) return v.map(coerceBuffersToHex);
+  if (typeof v === "object") {
+    return Object.keys(v).reduce((r, key) =&gt; {
+      r[key] = coerceBuffersToHex(v[key]);
+      return r;
+    }, {});
+  }
+  return v;
 };
 &nbsp;
-export class Pintswap extends PintP2P {
-  public signer: any;
-  public offers: IOffer[];
-  async getTradeAddress(sharedAddress: string) {
-    return getCreateAddress({
-      nonce: await this.signer.provider.getTransactionCount(sharedAddress),
-      from: sharedAddress,
-    });
+const coerceHexToBuffers = (v) =&gt; {
+  if (typeof v === "string" &amp;&amp; v.substr(0, 2) === "0x")
+    return Buffer.from(v.substr(2), "hex");
+  if (Array.isArray(v)) return v.map(coerceHexToBuffers);
+  if (typeof v === "object") {
+    return Object.keys(v).reduce((r, key) =&gt; {
+      r[key] = coerceHexToBuffers(v[key]);
+      return r;
+    }, {});
   }
-  async approveTradeAsMaker(offer: IOffer, sharedAddress: string) {
-    const tradeAddress = await this.getTradeAddress(sharedAddress);
-    return await new Contract(
-      offer.givesToken,
-      ["function approve(address, uint256) returns (bool)"],
-      this.signer
-    ).approve(tradeAddress, offer.givesAmount);
+  return v;
+};
+&nbsp;
+export class PintP2P extends Libp2p {
+  public signer: VoidSigner;
+  public addressPromise: Promise&lt;string&gt;;
+  static PRESETS = {
+    MAINNET: '/dns4/p2p.zerodao.com/tcp/443/wss/p2p-webrtc-star/',
+    'DEV-MAINNET': '/dns4/devp2p.zerodao.com/tcp/443/wss/p2p-webrtc-star/'
+  };
+  static fromPresetOrMultiAddr(multiaddr) {
+    return this.PRESETS[(multiaddr || '').toUpperCase() || 'MAINNET'] || multiaddr;
   }
-  async approveTradeAsTaker(offer: IOffer, sharedAddress: string) {
-    const tradeAddress = await this.getTradeAddress(sharedAddress);
-    return await new Contract(
-      getAddress(offer.getsToken),
-      ["function approve(address, uint256) returns (bool)"],
-      this.signer
-    ).approve(tradeAddress, offer.getsAmount);
-  }
-  async createTransaction(offer: IOffer, maker: string, sharedAddress: string) {
-    const contract = createContract(
-      offer,
-      maker,
-      await this.signer.getAddress()
+  static toMessage(password) {
+    return (
+      "/pintp2p/1.0.0/" +
+      solidityPackedKeccak256(["string"], ["/pintp2p/1.0.0/" + password])
     );
-    const gasPrice = await this.signer.provider.getGasPrice();
-    const gasLimit = await this.signer.provider.estimateGas({
-      data: contract,
-      from: sharedAddress,
-      gasPrice,
-    });
-    return Object.assign(new Transaction(), {
-      data: createContract(offer, maker, await this.signer.getAddress()),
-      gasPrice,
-      gasLimit,
-      nonce: await this.signer.provider.getTransactionCount(sharedAddress),
-      value: (await this.signer.provider.getBalance(sharedAddress)).sub(
-        gasPrice.mul(gasLimit)
-      ),
+  }
+  static async peerIdFromSeed(seed) {
+    return await PeerId.createFromPrivKey((await cryptoFromSeed(seed)).bytes);
+  }
+  static async fromSeed({ signer, seed, multiaddr }) {
+    return new this({
+      peerId: await this.peerIdFromSeed(seed),
+      multiaddr,
+      signer,
     });
   }
-&nbsp;
-  constructor({ signer, peerId }) {
-    super({ signer, peerId });
+  static async fromPassword({ signer, multiaddr, password }) {
+    return await this.fromSeed({
+      signer,
+      multiaddr,
+      seed: await signer.signMessage(this.toMessage(password)),
+    });
+  }
+  async start() {
+    await super.start();
+    await this.pubsub.start();
+  }
+  setSigner(signer) {
     this.signer = signer;
+    this.addressPromise = this.signer.getAddress();
   }
-&nbsp;
-  async create_trade(peer) {
-    // generate 2p-ecdsa keyshare with indicated peer
-    let { stream } = await this.dialProtocol(peer, [
-      "/pintswap/0.1.0/create-trade",
-    ]);
-    let keyShare = await initKeygen(stream);
-    return keyShare;
-&nbsp;
-    // derive transaction address from ecdsa pubkey
-  }
-&nbsp;
-  static async initialize({ signer }) {
-    let peerId = await this.peerIdFromSeed(await signer.getAddress());
-    const self = new this({ signer, peerId });
-    await self.handle("/pintswap/0.1.0/orders", (duplex) =&gt;
-      pipe(
-        duplex.stream.sink,
-        lp.encode(),
-        protocol.OfferList.encode({ offers: self.offers })
-      )
+  constructor(options) {
+    const multiaddr = PintP2P.fromPresetOrMultiAddr(
+      options.multiaddr || "mainnet"
     );
-    await self.handle(
-      "/pintswap/0.1.0/create-trade",
-      async ({ stream, connection, protocol }) =&gt; {
-        let keyshare = await handleKeygen({ stream });
-        /*
-      const message1 = await pipe(duplex.source, lp.decode());
-      const message2 = context.step1(message1);
-      await pipe(duplex.sink, lp.encode(), message2);
-      const message3 = await pipe(duplex.source, lp.decode());
-      context.step2(message3);
-      const key = JSON.stringify(context.exportKeyShare());
-     */
-        /*
-     await this.approveTradeAsMaker(...)
-     // wait for taker to approve
-     const transaction = await this.createTransaction(offer, maker, taker);
-     const signedTransaction = new Transaction({
-       ...transaction,
-       ...await sign(transaction)
-     });
-     const tx = await this.signer.provider.sendTransaction(signedTransaction);
-    await tx.wait();
-   */
-      }
-    );
-    await self.start();
-    return self;
+    super({
+      peerId: options.peerId,
+      connectionManager: {
+        minConnections: 25
+      },
+      relay: {
+        enabled: true,
+        advertise: {
+          bootDelay: RelayConstants.ADVERTISE_BOOT_DELAY,
+          enabled: false,
+          ttl: RelayConstants.ADVERTISE_TTL
+        },
+        hop: {
+          enabled: false,
+          active: false
+        },
+        autoRelay: {
+          enabled: false,
+          maxListeners: 2
+        }
+      },
+      addresses: {
+        listen: [multiaddr]
+      },
+      modules: {
+        transport: [WStar],
+        streamMuxer: [Mplex],
+        connEncryption: [NOISE],
+        pubsub: GossipSub,
+        peerDiscovery: [Bootstrap],
+        dht: KadDHT,
+      },
+      config: {
+        peerDiscovery: {
+          autoDial: true,
+          [Bootstrap.tag]: {
+            enabled: true,
+            list: [
+              multiaddr + 'QmXRimgxFGd8FEFRX8FvyzTG4jJTJ5pwoa3N5YDCrytASu'
+            ],
+          },
+        },
+        transport: {
+          [WStar.prototype[Symbol.toStringTag]]: {
+            wrtc: !isBrowser &amp;&amp; wrtc,
+          },
+        },
+        dht: {
+          enabled: true,
+          kBucketSize: 20,
+        },
+        pubsub: {
+          enabled: true,
+          emitSelf: false,
+        },
+      },
+    } as any);
+    this.setSigner(options.signer);
   }
-}
+};
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->

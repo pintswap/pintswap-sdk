@@ -5,7 +5,6 @@ const { Pintswap, init_keygen } = require("../lib");
 
 (async () => {
 	console.log("... env-tests.js ... \n");
-	console.log(PS);
 	
 
 	let wallet = Wallet.createRandom();

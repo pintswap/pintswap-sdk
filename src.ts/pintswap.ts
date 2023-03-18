@@ -1,24 +1,27 @@
 import { protocol } from "./protocol";
 import { ZeroP2P } from "@zerodao/p2p";
-import { VoidSigner } from "@ethersproject/abstract-signer";
+import { ethers } from "ethers";
 import { pipe } from "it-pipe";
 import * as lp from "it-length-prefixed";
-import type { BytesLike } from "@ethersproject/bytes";
-import type { BigNumberish } from "@ethersproject/bignumber";
 import { handle_keygen, init_keygen } from "./utils";
 import { TPCEcdsaKeyGen } from "@safeheron/two-party-ecdsa-js";
 import { emasm } from "emasm";
-import { getAddress, getContractAddress } from "@ethersproject/address";
-import { keccak256 } from "@ethersproject/solidity";
-import { Transaction } from "@ethersproject/transaction";
-import { Contract } from "@ethersproject/contract";
-import { hexlify } from "@ethersproject/bytes";
+
+const {
+  solidityPackedKeccak256,
+  hexlify,
+  getAddress,
+  getCreateAddress,
+  VoidSigner,
+  Contract,
+  Transaction,
+} = ethers;
 
 interface IOffer {
   givesToken: string;
   getsToken: string;
-  givesAmount: BigNumberish;
-  getsAmount: BigNumberish;
+  givesAmount: any;
+  getsAmount: any;
 }
 
 export const createContract = (offer: IOffer, maker: string, taker: string) => {
@@ -70,7 +73,7 @@ export const createContract = (offer: IOffer, maker: string, taker: string) => {
 };
 
 export const hashOffer = (o) => {
-  return keccak256(
+  return solidityPackedKeccak256(
     ["address", "address", "uint256", "uint256"],
     [
       getAddress(o.givesToken),
@@ -85,7 +88,7 @@ export class Pintswap extends ZeroP2P {
   public signer: any;
   public offers: IOffer[];
   async getTradeAddress(sharedAddress: string) {
-    return getContractAddress({
+    return getCreateAddress({
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),
       from: sharedAddress,
     });
@@ -130,18 +133,19 @@ export class Pintswap extends ZeroP2P {
   }
 
   constructor({ signer, peerId }) {
-    super({signer, peerId});
+    super({ signer, peerId });
     this.signer = signer;
   }
 
   async create_trade(peer) {
     // generate 2p-ecdsa keyshare with indicated peer
-    let { stream } = await this.dialProtocol(peer, ['/pintswap/0.1.0/create-trade']);
+    let { stream } = await this.dialProtocol(peer, [
+      "/pintswap/0.1.0/create-trade",
+    ]);
     let keyShare = await init_keygen(stream);
     return keyShare;
 
     // derive transaction address from ecdsa pubkey
-
   }
 
   static async initialize({ signer }) {
@@ -154,9 +158,11 @@ export class Pintswap extends ZeroP2P {
         protocol.OfferList.encode({ offers: self.offers })
       )
     );
-    await self.handle("/pintswap/0.1.0/create-trade", async ({ stream, connection, protocol }) => {
-      let keyshare = await handle_keygen({ stream });
-      /*
+    await self.handle(
+      "/pintswap/0.1.0/create-trade",
+      async ({ stream, connection, protocol }) => {
+        let keyshare = await handle_keygen({ stream });
+        /*
       const message1 = await pipe(duplex.source, lp.decode());
       const message2 = context.step1(message1);
       await pipe(duplex.sink, lp.encode(), message2);
@@ -164,7 +170,7 @@ export class Pintswap extends ZeroP2P {
       context.step2(message3);
       const key = JSON.stringify(context.exportKeyShare());
      */
-      /*
+        /*
      await this.approveTradeAsMaker(...)
      // wait for taker to approve
      const transaction = await this.createTransaction(offer, maker, taker);
@@ -175,10 +181,9 @@ export class Pintswap extends ZeroP2P {
      const tx = await this.signer.provider.sendTransaction(signedTransaction);
     await tx.wait();
    */
-    });
+      }
+    );
     await self.start();
     return self;
   }
-
-
 }

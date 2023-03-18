@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1679172624502" clover="3.2.0">
-  <project timestamp="1679172624502" name="All files">
-    <metrics statements="0" coveredstatements="0" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0" elements="0" coveredelements="0" complexity="0" loc="0" ncloc="0" packages="0" files="0" classes="0"/>
+<coverage generated="1679174198497" clover="3.2.0">
+  <project timestamp="1679174198497" name="All files">
+    <metrics statements="4" coveredstatements="4" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0" elements="4" coveredelements="4" complexity="0" loc="4" ncloc="4" packages="1" files="4" classes="4"/>
+    <file name="index.ts" path="/home/shell/pintswap-sdk/src.ts/index.ts">
+      <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+      <line num="1" count="1" type="stmt"/>
+    </file>
+    <file name="pintswap.ts" path="/home/shell/pintswap-sdk/src.ts/pintswap.ts">
+      <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+      <line num="1" count="1" type="stmt"/>
+    </file>
+    <file name="protocol.ts" path="/home/shell/pintswap-sdk/src.ts/protocol.ts">
+      <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+      <line num="1" count="1" type="stmt"/>
+    </file>
+    <file name="utils.ts" path="/home/shell/pintswap-sdk/src.ts/utils.ts">
+      <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+      <line num="1" count="1" type="stmt"/>
+    </file>
   </project>
 </coverage>

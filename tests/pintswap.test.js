@@ -1,5 +1,5 @@
 const { Pintswap } = require("../lib");
-const { Wallet } = require("@ethersproject/wallet");
+const { Wallet } = require("ethers");
 
 test('test init pintswap function', async () => {
   let wallet = Wallet.createRandom();

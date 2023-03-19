@@ -137,7 +137,7 @@ export class Pintswap extends PintP2P {
     this.signer = signer;
   }
 
-  async create_trade(peer) {
+  async createTrade(peer) {
     // generate 2p-ecdsa keyshare with indicated peer
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",

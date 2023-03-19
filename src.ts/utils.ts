@@ -41,6 +41,7 @@ export async function handleKeygen({ stream }) {
   let f = new BN(Q.y, 16).mod(new BN(2)).isZero() ? '0x02' : '0x03';
   let add = f + new BN(Q.x, 16).toString(16);
   return ethers.computeAddress(add);
+  // ethers.computeAddress((context1.Q.y.mod(new BN(2)).isZero() ? '0x02' : '0x03') + context1.Q.x.toString(16))
 }
 
 export async function initKeygen(stream) {

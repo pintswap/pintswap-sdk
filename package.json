@@ -20,6 +20,7 @@
     "@safeheron/two-party-ecdsa-js": "^1.0.1",
     "assert": "^2.0.0",
     "base64url": "^3.0.1",
+    "bn.js": "^5.2.1",
     "browserify-zlib": "^0.2.0",
     "buffer": "^6.0.3",
     "cryptico-js": "^1.1.0",

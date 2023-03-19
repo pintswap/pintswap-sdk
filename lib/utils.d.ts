@@ -1,4 +1,4 @@
 export declare function handleKeygen({ stream }: {
     stream: any;
-}): Promise<void>;
-export declare function initKeygen(stream: any): Promise<unknown>;
+}): Promise<string>;
+export declare function initKeygen(stream: any): Promise<string>;

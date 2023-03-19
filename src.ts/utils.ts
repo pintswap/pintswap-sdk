@@ -2,6 +2,8 @@ import Emitterator from "emitterator";
 import { default as pushable } from "it-pushable";
 import { pipe } from "it-pipe";
 import { TPCEcdsaKeyGen as TPC } from "@safeheron/two-party-ecdsa-js";
+import BN from "bn.js";
+import { ethers } from "ethers";
 
 /*
  * Keygen handler for second party in 2p-ECDSA key generation
@@ -26,19 +28,19 @@ export async function handleKeygen({ stream }) {
           p2cx.step2(v)
           let ks = p2cx.exportKeyShare()
           let js_str = JSON.stringify(ks.toJsonObject(), null, 4)
-          resolve(js_str);
+          resolve(ks.toJsonObject());
         }
         step += 1
       });
-
       pipe(
         source,
         stream.sink
       );
   })
-
-
-  console.log(ks);
+  let { Q } = ks as any;
+  let f = new BN(Q.y, 16).mod(new BN(2)).isZero() ? '0x02' : '0x03';
+  let add = f + new BN(Q.x, 16).toString(16);
+  return ethers.computeAddress(add);
 }
 
 export async function initKeygen(stream) {
@@ -60,8 +62,7 @@ export async function initKeygen(stream) {
 
       let ks = p1cx.exportKeyShare()
       let js_str = JSON.stringify(ks.toJsonObject(), null, 4)
-      resolve(js_str)
-      console.log("Keyshare Initiatior", js_str);
+      resolve(ks.toJsonObject())
     });
 
 
@@ -70,5 +71,9 @@ export async function initKeygen(stream) {
       stream.sink
     );
   })
-  return ks; 
+
+  let { Q } = ks as any;
+  let f = new BN(Q.y, 16).mod(new BN(2)).isZero() ? '0x02' : '0x03';
+  let add = f + new BN(Q.x, 16).toString(16);
+  return ethers.computeAddress(add);
 }

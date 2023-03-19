@@ -143,7 +143,8 @@ export class Pintswap extends PintP2P {
       "/pintswap/0.1.0/create-trade",
     ]);
     let keyShare = await initKeygen(stream);
-    return keyShare;
+    stream.close();
+    console.log(keyShare);
 
     // derive transaction address from ecdsa pubkey
   }
@@ -162,6 +163,8 @@ export class Pintswap extends PintP2P {
       "/pintswap/0.1.0/create-trade",
       async ({ stream, connection, protocol }) => {
         let keyshare = await handleKeygen({ stream });
+        stream.close();
+        console.log(keyshare);
         /*
       const message1 = await pipe(duplex.source, lp.decode());
       const message2 = context.step1(message1);

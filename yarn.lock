@@ -2923,6 +2923,13 @@ it-handshake@^2.0.0:
     it-reader "^3.0.0"
     p-defer "^3.0.0"
 
+it-keepalive@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/it-keepalive/-/it-keepalive-1.2.0.tgz#1ab42e2e92263a0509358125998816de5065393c"
+  integrity sha512-YdV0VcVIkq0i26MFx9JC9tZcRApeJnOaLSDJEaNqJ55RjJHnUpCjPqeFj6An84lrP/Y9iNyHwHhgDOMF7nNbdw==
+  dependencies:
+    get-iterator "^1.0.2"
+
 it-length-prefixed@^5.0.0, it-length-prefixed@^5.0.2:
   version "5.0.3"
   resolved "https://registry.yarnpkg.com/it-length-prefixed/-/it-length-prefixed-5.0.3.tgz#77fbd99b89aa6cdd79fad62c962423b413db7045"

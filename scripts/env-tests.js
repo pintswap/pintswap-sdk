@@ -13,6 +13,7 @@ const { ethers } = require("ethers");
 
 
 	ps.on("peer:discovery", async (peer) => {
+		console.log("testing peer")
 		await ps.createTrade(peer);
 	})
 })()

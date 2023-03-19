@@ -1,5 +1,5 @@
 import Emitterator from "emitterator";
-import { default as pushable } from "it-pushable";
+import pushable from "it-pushable";
 import { pipe } from "it-pipe";
 import { TPCEcdsaKeyGen as TPC } from "@safeheron/two-party-ecdsa-js";
 import BN from "bn.js";
@@ -11,34 +11,31 @@ import { ethers } from "ethers";
  */
 export async function handleKeygen({ stream }) {
   let ks = await new Promise(async (resolve) => {
-      let p2cx = await TPC.P2Context.createContext();
-      let step = 1;
+    let p2cx = await TPC.P2Context.createContext();
+    let step = 1;
 
-      let source = pushable()
+    let source = pushable();
 
-      let emitter = new Emitterator(stream.source, {
-        eventName: "value",
-        transformValue: async v => v._bufs[0]
-      });
+    let emitter = new Emitterator(stream.source, {
+      eventName: "value",
+      transformValue: async (v) => v._bufs[0],
+    });
 
-      emitter.on("value", v => {
-        console.log("running step", step)
-        if (step == 1) source.push(p2cx.step1(v));
-        else {
-          p2cx.step2(v)
-          let ks = p2cx.exportKeyShare()
-          let js_str = JSON.stringify(ks.toJsonObject(), null, 4)
-          resolve(ks.toJsonObject());
-        }
-        step += 1
-      });
-      pipe(
-        source,
-        stream.sink
-      );
-  })
+    emitter.on("value", (v) => {
+      console.log("running step", step);
+      if (step == 1) source.push(p2cx.step1(v));
+      else {
+        p2cx.step2(v);
+        let ks = p2cx.exportKeyShare();
+        let js_str = JSON.stringify(ks.toJsonObject(), null, 4);
+        resolve(ks.toJsonObject());
+      }
+      step += 1;
+    });
+    pipe(source, stream.sink);
+  });
   let { Q } = ks as any;
-  let f = new BN(Q.y, 16).mod(new BN(2)).isZero() ? '0x02' : '0x03';
+  let f = new BN(Q.y, 16).mod(new BN(2)).isZero() ? "0x02" : "0x03";
   let add = f + new BN(Q.x, 16).toString(16);
   return ethers.computeAddress(add);
   // ethers.computeAddress((context1.Q.y.mod(new BN(2)).isZero() ? '0x02' : '0x03') + context1.Q.x.toString(16))
@@ -47,34 +44,30 @@ export async function handleKeygen({ stream }) {
 export async function initKeygen(stream) {
   let ks = await new Promise(async (resolve) => {
     let source = pushable();
-    let p1cx = await TPC.P1Context.createContext(); 
+    let p1cx = await TPC.P1Context.createContext();
     let ms1 = p1cx.step1();
 
     source.push(ms1);
 
     let emitter = new Emitterator(stream.source, {
       eventName: "value",
-      transformValue: async v => v._bufs[0]
+      transformValue: async (v) => v._bufs[0],
     });
 
-    emitter.on("value", v => {
-      console.log("sending step 2")
-      source.push(p1cx.step2(v))	
+    emitter.on("value", (v) => {
+      console.log("sending step 2");
+      source.push(p1cx.step2(v));
 
-      let ks = p1cx.exportKeyShare()
-      let js_str = JSON.stringify(ks.toJsonObject(), null, 4)
-      resolve(ks.toJsonObject())
+      let ks = p1cx.exportKeyShare();
+      let js_str = JSON.stringify(ks.toJsonObject(), null, 4);
+      resolve(ks.toJsonObject());
     });
 
-
-    pipe(
-      source,
-      stream.sink
-    );
-  })
+    pipe(source, stream.sink);
+  });
 
   let { Q } = ks as any;
-  let f = new BN(Q.y, 16).mod(new BN(2)).isZero() ? '0x02' : '0x03';
+  let f = new BN(Q.y, 16).mod(new BN(2)).isZero() ? "0x02" : "0x03";
   let add = f + new BN(Q.x, 16).toString(16);
   return ethers.computeAddress(add);
 }

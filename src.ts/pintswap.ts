@@ -86,7 +86,7 @@ export const hashOffer = (o) => {
 
 export class Pintswap extends PintP2P {
   public signer: any;
-  public offers: Map<string, IOffer>;
+  public offers: Map<string, IOffer>; should change to map for efficient hash -> offer lookup by Maker
   // public offers: IOffer[];
 
   static async initialize({ signer }) {
@@ -96,7 +96,7 @@ export class Pintswap extends PintP2P {
       pipe(
         duplex.stream.sink,
         lp.encode(),
-        protocol.OfferList.encode({ offers: self.offers })
+        protocol.OfferList.encode({ offers: self.offers.values() })
       )
     );
     await self.handle(
@@ -136,8 +136,9 @@ export class Pintswap extends PintP2P {
     this.signer = signer;
   }
 
-  listOffer(_offer: IOffer) {
-    this.offers.push(_offer);
+  // adds new offer to this.offers: Map<hash, IOffer>
+  listNewOffer(_offer: IOffer) {
+    this.offers.set(hashOffer(_offer), _offer);
   }
 
   async getTradeAddress(sharedAddress: string) {

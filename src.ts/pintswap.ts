@@ -137,14 +137,21 @@ export class Pintswap extends PintP2P {
     this.signer = signer;
   }
 
-  async createTrade(peer) {
+  async createTrade(peer, offer) {
     // generate 2p-ecdsa keyshare with indicated peer
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
     ]);
-    let keyShare = await initKeygen(stream);
-    return 
-    // derive transaction address from ecdsa pubkey
+    let [ sharedAddress, keyshare ] = await initKeygen(stream);
+    console.log(sharedAddress, keyshare);
+    // await this.approveTradeAsMaker(offer, sharedAddress as string);
+    // const transaction = await this.createTransaction(
+    //   offer,
+    //   this.signer.wallet,
+    //   sharedAddress as string
+    // );
+
+
   }
 
   static async initialize({ signer }) {
@@ -160,16 +167,15 @@ export class Pintswap extends PintP2P {
     await self.handle(
       "/pintswap/0.1.0/create-trade",
       async ({ stream, connection, protocol }) => {
-        let keyshare = await handleKeygen({ stream });
-        return
-        /*
-      const message1 = await pipe(duplex.source, lp.decode());
-      const message2 = context.step1(message1);
-      await pipe(duplex.sink, lp.encode(), message2);
-      const message3 = await pipe(duplex.source, lp.decode());
-      context.step2(message3);
-      const key = JSON.stringify(context.exportKeyShare());
-     */
+        let [ sharedAddress, keyshare ] = await handleKeygen({ stream });
+
+        console.log(sharedAddress, keyshare);
+        // await self.approveTradeAsMaker(offer, sharedAddress as string);
+        // const transaction = await self.createTransaction(
+        //   offer,
+        //   self.signer.wallet,
+        //   sharedAddress as string
+        // );
         /*
      await this.approveTradeAsMaker(...)
      // wait for taker to approve
@@ -181,7 +187,7 @@ export class Pintswap extends PintP2P {
      const tx = await this.signer.provider.sendTransaction(signedTransaction);
     await tx.wait();
    */
-      }
+      },
     );
     await self.start();
     return self;

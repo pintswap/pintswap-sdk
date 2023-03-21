@@ -25,7 +25,7 @@ export declare class Pintswap extends PintP2P {
         signer: any;
         peerId: any;
     });
-    createTrade(peer: any): Promise<void>;
+    createTrade(peer: any, offer: any): Promise<void>;
     static initialize({ signer }: {
         signer: any;
     }): Promise<Pintswap>;

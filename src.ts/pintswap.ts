@@ -86,7 +86,7 @@ export const hashOffer = (o) => {
 
 export class Pintswap extends PintP2P {
   public signer: any;
-  public offers: Map<string, IOffer>; should change to map for efficient hash -> offer lookup by Maker
+  public offers: Map<string, IOffer> = new Map();
   // public offers: IOffer[];
 
   static async initialize({ signer }) {
@@ -99,16 +99,17 @@ export class Pintswap extends PintP2P {
         protocol.OfferList.encode({ offers: self.offers.values() })
       )
     );
+
     await self.handle(
       "/pintswap/0.1.0/create-trade",
       async ({ stream, connection, protocol }) => {
-        try {
           let [ sharedAddress, keyshare ] = await handleKeygen({ stream });
-        } catch (error) {
-          throw new Error("Failed to generate key share or compute shared address");
-        }
+          // await self.approveTradeAsMaker(offer, sharedAddress as string);
+          // try {
+        // } catch (error) {
+          // throw new Error("Failed to generate key share or compute shared address");
+        // }
 
-        await self.approveTradeAsMaker(offer, sharedAddress as string);
         // const transaction = await self.createTransaction(
         //   offer,
         //   self.signer.wallet,
@@ -186,18 +187,18 @@ export class Pintswap extends PintP2P {
     });
   }
 
-  async createTrade(peer, offerOrOfferIndex: IOffer | number) {
+  async createTrade(peer, offer) {
     // generate 2p-ecdsa keyshare with indicated peer
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
     ]);
-    try {
       let [ sharedAddress, keyshare ] = await initKeygen(stream);
-    }
-    catch (error) {
-      throw new Error("Failed to generate key share or compute shared address");
-    }
-    await this.approveTradeAsTaker(offer, sharedAddress as string);
+      console.log(sharedAddress);
+      await this.approveTradeAsTaker(offer, sharedAddress as string);
+      // try {
+    // } catch (error) {
+      // throw new Error("Failed to generate key share or compute shared address");
+    // }
     // const transaction = await this.createTransaction(
     //   offer,
     //   this.signer.wallet,

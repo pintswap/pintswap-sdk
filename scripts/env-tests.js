@@ -1,4 +1,4 @@
-const { Pintswap, init_keygen } = require("../lib");
+const { Pintswap, init_keygen, hashOffer } = require("../lib");
 const { ethers } = require("ethers");
 const { 
 	JsonRpcProvider,
@@ -37,6 +37,6 @@ const ABI = require("./erc20.abi.json");
 
 	ps.on("peer:discovery", async (peer) => {
 		console.log("testing peer")
-		await ps.createTrade(peer);
+		await ps.createTrade(peer, hashOffer(trade));
 	})
 })()

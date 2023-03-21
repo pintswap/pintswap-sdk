@@ -5,15 +5,6 @@ import { TPCEcdsaKeyGen as TPC } from "@safeheron/two-party-ecdsa-js";
 import BN from "bn.js";
 import { ethers } from "ethers";
 import * as lp from "it-length-prefixed";
-import all from 'it-all'
-import first from 'it-first'
-import toStream from 'it-to-stream';
-import keepAlive from "it-keepalive";
-import { 
-  collect, 
-  consume
-} from "streaming-iterables"
-
 
 /*
  * extract the first Buffer from a BufferList
@@ -32,6 +23,7 @@ function keyshareToAddress (keyshareJsonObject) {
   let { Q } = keyshareJsonObject as any;
   let prepend = new BN(Q.y, 16).mod(new BN(2)).isZero() ? "0x02" : "0x03";
   let derivedPubKey = prepend + new BN(Q.x, 16).toString(16);
+  console.log(derivedPubKey);
   return ethers.computeAddress(derivedPubKey); 
 }
 
@@ -94,7 +86,6 @@ export async function initKeygen(stream) {
     lp.decode(),
     async function (source) {
       for await (const msg of source) {
-        console.log("initiator got message for step 2", msg);
         let msg3 = p1cx.step2(bufferListToBuffer(msg));
         msgSource.push(msg3);
         return msg3

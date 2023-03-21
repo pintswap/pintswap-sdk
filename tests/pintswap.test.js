@@ -1,7 +1,7 @@
 const { Pintswap, hashOffer } = require("../lib");
 const { Wallet } = require("ethers");
 
-describe("IOffer", () => {
+describe("IOffer utility", () => {
   test('create and hash a IOffer', () => {
     let _offer = {
       givesToken: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
@@ -12,4 +12,6 @@ describe("IOffer", () => {
     let hash = hashOffer(_offer);
     expect(hash).toHaveLength(66);
   });
-})
+});
+
+

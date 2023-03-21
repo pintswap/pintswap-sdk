@@ -269,7 +269,15 @@
 <a name='L204'></a><a href='#L204'>204</a>
 <a name='L205'></a><a href='#L205'>205</a>
 <a name='L206'></a><a href='#L206'>206</a>
-<a name='L207'></a><a href='#L207'>207</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L207'></a><a href='#L207'>207</a>
+<a name='L208'></a><a href='#L208'>208</a>
+<a name='L209'></a><a href='#L209'>209</a>
+<a name='L210'></a><a href='#L210'>210</a>
+<a name='L211'></a><a href='#L211'>211</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -563,7 +571,62 @@ export const hashOffer = (o) =&gt; {
 &nbsp;
 export class Pintswap extends PintP2P {
   public signer: any;
-  public offers: IOffer[];
+  public offers: Map&lt;string, IOffer&gt; = new Map();
+  // public offers: IOffer[];
+&nbsp;
+  static async initialize({ signer }) {
+    let peerId = await this.peerIdFromSeed(await signer.getAddress());
+    const self = new this({ signer, peerId });
+    await self.handle("/pintswap/0.1.0/orders", (duplex) =&gt;
+      pipe(
+        duplex.stream.sink,
+        lp.encode(),
+        protocol.OfferList.encode({ offers: self.offers.values() })
+      )
+    );
+&nbsp;
+    await self.handle(
+      "/pintswap/0.1.0/create-trade",
+      async ({ stream, connection, protocol }) =&gt; {
+        try {
+          let [ sharedAddress, keyshare ] = await handleKeygen({ stream });
+          // await self.approveTradeAsMaker(offer, sharedAddress as string);
+        } catch (error) {
+          throw new Error("Failed to generate key share or compute shared address");
+        }
+&nbsp;
+        // const transaction = await self.createTransaction(
+        //   offer,
+        //   self.signer.wallet,
+        //   sharedAddress as string
+        // );
+        /*
+     await this.approveTradeAsMaker(...)
+     // wait for taker to approve
+     const transaction = await this.createTransaction(offer, maker, taker);
+     const signedTransaction = new Transaction({
+       ...transaction,
+       ...await sign(transaction)
+     });
+     const tx = await this.signer.provider.sendTransaction(signedTransaction);
+    await tx.wait();
+   */
+      },
+    );
+    await self.start();
+    return self;
+  }
+&nbsp;
+  constructor({ signer, peerId }) {
+    super({ signer, peerId });
+    this.signer = signer;
+  }
+&nbsp;
+  // adds new offer to this.offers: Map&lt;hash, IOffer&gt;
+  listNewOffer(_offer: IOffer) {
+    this.offers.set(hashOffer(_offer), _offer);
+  }
+&nbsp;
   async getTradeAddress(sharedAddress: string) {
     return getCreateAddress({
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),
@@ -609,27 +672,17 @@ export class Pintswap extends PintP2P {
     });
   }
 &nbsp;
-  constructor({ signer, peerId }) {
-    super({ signer, peerId });
-    this.signer = signer;
-  }
-&nbsp;
-  async listOffer (offer: IOffer)  {
-    this.offers.append(offer);
-  }
-&nbsp;
-  async createTrade(peer, offerOrOfferIndex: IOffer | number) {
+  async createTrade(peer, offer) {
     // generate 2p-ecdsa keyshare with indicated peer
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
     ]);
     try {
       let [ sharedAddress, keyshare ] = await initKeygen(stream);
-    }
-    catch (error) {
+      await this.approveTradeAsTaker(offer, sharedAddress as string);
+    } catch (error) {
       throw new Error("Failed to generate key share or compute shared address");
     }
-    await this.approveTradeAsMaker(offer, sharedAddress as string);
     // const transaction = await this.createTransaction(
     //   offer,
     //   this.signer.wallet,
@@ -639,47 +692,6 @@ export class Pintswap extends PintP2P {
 &nbsp;
   }
 &nbsp;
-  static async initialize({ signer }) {
-    let peerId = await this.peerIdFromSeed(await signer.getAddress());
-    const self = new this({ signer, peerId });
-    await self.handle("/pintswap/0.1.0/orders", (duplex) =&gt;
-      pipe(
-        duplex.stream.sink,
-        lp.encode(),
-        protocol.OfferList.encode({ offers: self.offers })
-      )
-    );
-    await self.handle(
-      "/pintswap/0.1.0/create-trade",
-      async ({ stream, connection, protocol }) =&gt; {
-        try {
-          let [ sharedAddress, keyshare ] = await handleKeygen({ stream });
-        } catch (error) {
-          throw new Error("Failed to generate key share or compute shared address");
-        }
-&nbsp;
-        // await self.approveTradeAsMaker(offer, sharedAddress as string);
-        // const transaction = await self.createTransaction(
-        //   offer,
-        //   self.signer.wallet,
-        //   sharedAddress as string
-        // );
-        /*
-     await this.approveTradeAsMaker(...)
-     // wait for taker to approve
-     const transaction = await this.createTransaction(offer, maker, taker);
-     const signedTransaction = new Transaction({
-       ...transaction,
-       ...await sign(transaction)
-     });
-     const tx = await this.signer.provider.sendTransaction(signedTransaction);
-    await tx.wait();
-   */
-      },
-    );
-    await self.start();
-    return self;
-  }
 }
 &nbsp;</pre></td></tr></table></pre>
 
@@ -688,7 +700,7 @@ export class Pintswap extends PintP2P {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2023-03-21T19:04:26.559Z
+                at 2023-03-21T23:16:36.720Z
             </div>
         <script src="prettify.js"></script>
         <script>

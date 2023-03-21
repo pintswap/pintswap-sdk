@@ -86,7 +86,60 @@ export const hashOffer = (o) => {
 
 export class Pintswap extends PintP2P {
   public signer: any;
-  public offers: IOffer[];
+  public offers: Map<string, IOffer>;
+  // public offers: IOffer[];
+
+  static async initialize({ signer }) {
+    let peerId = await this.peerIdFromSeed(await signer.getAddress());
+    const self = new this({ signer, peerId });
+    await self.handle("/pintswap/0.1.0/orders", (duplex) =>
+      pipe(
+        duplex.stream.sink,
+        lp.encode(),
+        protocol.OfferList.encode({ offers: self.offers })
+      )
+    );
+    await self.handle(
+      "/pintswap/0.1.0/create-trade",
+      async ({ stream, connection, protocol }) => {
+        try {
+          let [ sharedAddress, keyshare ] = await handleKeygen({ stream });
+        } catch (error) {
+          throw new Error("Failed to generate key share or compute shared address");
+        }
+
+        await self.approveTradeAsMaker(offer, sharedAddress as string);
+        // const transaction = await self.createTransaction(
+        //   offer,
+        //   self.signer.wallet,
+        //   sharedAddress as string
+        // );
+        /*
+     await this.approveTradeAsMaker(...)
+     // wait for taker to approve
+     const transaction = await this.createTransaction(offer, maker, taker);
+     const signedTransaction = new Transaction({
+       ...transaction,
+       ...await sign(transaction)
+     });
+     const tx = await this.signer.provider.sendTransaction(signedTransaction);
+    await tx.wait();
+   */
+      },
+    );
+    await self.start();
+    return self;
+  }
+
+  constructor({ signer, peerId }) {
+    super({ signer, peerId });
+    this.signer = signer;
+  }
+
+  listOffer(_offer: IOffer) {
+    this.offers.push(_offer);
+  }
+
   async getTradeAddress(sharedAddress: string) {
     return getCreateAddress({
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),
@@ -132,19 +185,18 @@ export class Pintswap extends PintP2P {
     });
   }
 
-  constructor({ signer, peerId }) {
-    super({ signer, peerId });
-    this.signer = signer;
-  }
-
-  async createTrade(peer, offer) {
+  async createTrade(peer, offerOrOfferIndex: IOffer | number) {
     // generate 2p-ecdsa keyshare with indicated peer
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
     ]);
-    let [ sharedAddress, keyshare ] = await initKeygen(stream);
-    console.log(sharedAddress, keyshare);
-    // await this.approveTradeAsMaker(offer, sharedAddress as string);
+    try {
+      let [ sharedAddress, keyshare ] = await initKeygen(stream);
+    }
+    catch (error) {
+      throw new Error("Failed to generate key share or compute shared address");
+    }
+    await this.approveTradeAsTaker(offer, sharedAddress as string);
     // const transaction = await this.createTransaction(
     //   offer,
     //   this.signer.wallet,
@@ -154,42 +206,4 @@ export class Pintswap extends PintP2P {
 
   }
 
-  static async initialize({ signer }) {
-    let peerId = await this.peerIdFromSeed(await signer.getAddress());
-    const self = new this({ signer, peerId });
-    await self.handle("/pintswap/0.1.0/orders", (duplex) =>
-      pipe(
-        duplex.stream.sink,
-        lp.encode(),
-        protocol.OfferList.encode({ offers: self.offers })
-      )
-    );
-    await self.handle(
-      "/pintswap/0.1.0/create-trade",
-      async ({ stream, connection, protocol }) => {
-        let [ sharedAddress, keyshare ] = await handleKeygen({ stream });
-
-        console.log(sharedAddress, keyshare);
-        // await self.approveTradeAsMaker(offer, sharedAddress as string);
-        // const transaction = await self.createTransaction(
-        //   offer,
-        //   self.signer.wallet,
-        //   sharedAddress as string
-        // );
-        /*
-     await this.approveTradeAsMaker(...)
-     // wait for taker to approve
-     const transaction = await this.createTransaction(offer, maker, taker);
-     const signedTransaction = new Transaction({
-       ...transaction,
-       ...await sign(transaction)
-     });
-     const tx = await this.signer.provider.sendTransaction(signedTransaction);
-    await tx.wait();
-   */
-      },
-    );
-    await self.start();
-    return self;
-  }
 }

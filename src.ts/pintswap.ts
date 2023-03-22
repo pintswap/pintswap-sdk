@@ -193,17 +193,17 @@ export class Pintswap extends PintP2P {
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
     ]);
-      let [ sharedAddress, keyshare ] = await initKeygen(stream);
       try {
+        let [ sharedAddress, keyshare ] = await initKeygen(stream);
         if (typeof sharedAddress == "string") await this.approveTradeAsTaker(offer, sharedAddress);
+        const transaction = await this.createTransaction(
+          offer,
+          this.signer.wallet,
+          sharedAddress as string
+        );
       } catch (error) {
         throw error
       }
-    // const transaction = await this.createTransaction(
-    //   offer,
-    //   this.signer.wallet,
-    //   sharedAddress as string
-    // );
 
 
   }

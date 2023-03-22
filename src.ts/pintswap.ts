@@ -104,6 +104,7 @@ export class Pintswap extends PintP2P {
       "/pintswap/0.1.0/create-trade",
       async ({ stream, connection, protocol }) => {
           let [ sharedAddress, keyshare ] = await handleKeygen({ stream });
+          console.log(sharedAddress, "maker");
           // await self.approveTradeAsMaker(offer, sharedAddress as string);
           // try {
         // } catch (error) {
@@ -144,8 +145,8 @@ export class Pintswap extends PintP2P {
 
   async getTradeAddress(sharedAddress: string) {
     return getCreateAddress({
-      nonce: await this.signer.provider.getTransactionCount(sharedAddress),
-      from: sharedAddress,
+      nonce: await this.signer.provider.getTransactionCount(sharedAddress), 
+      from: sharedAddress, 
     });
   }
   async approveTradeAsMaker(offer: IOffer, sharedAddress: string) {
@@ -193,12 +194,11 @@ export class Pintswap extends PintP2P {
       "/pintswap/0.1.0/create-trade",
     ]);
       let [ sharedAddress, keyshare ] = await initKeygen(stream);
-      console.log(sharedAddress);
-      await this.approveTradeAsTaker(offer, sharedAddress as string);
-      // try {
-    // } catch (error) {
-      // throw new Error("Failed to generate key share or compute shared address");
-    // }
+      try {
+        if (typeof sharedAddress == "string") await this.approveTradeAsTaker(offer, sharedAddress);
+      } catch (error) {
+        throw error
+      }
     // const transaction = await this.createTransaction(
     //   offer,
     //   this.signer.wallet,

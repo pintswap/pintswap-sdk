@@ -102,16 +102,6 @@ export class Pintswap extends PintP2P {
   static async initialize({ signer }) {
     let peerId = await this.peerIdFromSeed(await signer.getAddress());
     const self = new this({ signer, peerId });
-    // self.on("/internal/ecdsa-keygen/context-1", (_event) => {
-    //   _event.on('/internal/ecdsa-keygen/context-1', (step) => { console.log(`${step}`) } )
-    //   _event.on('/internal/ecdsa-keygen/context-1/finish', (jsonKey) => {
-    //   })
-    // });
-
-
-    // self.on("/internal/ecdsa-keygen/context-2", (_event) => {
-      
-    // });
 
     await self.handle("/pintswap/0.1.0/orders", (duplex) =>
       pipe(
@@ -293,8 +283,7 @@ export class Pintswap extends PintP2P {
         await this.signer.getAddress(),
         _address as string
       );
-
-        
+      console.log(_tx);
     });
 
     pipe(

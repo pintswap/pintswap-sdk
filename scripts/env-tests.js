@@ -29,9 +29,6 @@ const ABI = require("./erc20.abi.json");
 	let ps = await Pintswap.initialize({ signer: wallet });
 	let ps_2 = await Pintswap.initialize({ signer: wallet_2 });
 
-	let gp = await wallet.provider.send('eth_gasPrice', [])
-	console.log(ethers.toBigInt(gp));
-
 	let trade = {
 		givesToken: wallet_has,
 		getsToken: wallet_2_has,

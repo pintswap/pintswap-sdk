@@ -3,7 +3,9 @@ const { ethers } = require("ethers");
 const { 
 	JsonRpcProvider,
 	Wallet,
-	Contract
+	Contract,
+	parseEther,
+	toUtf8Bytes
 } = ethers;
 const ABI = require("./erc20.abi.json");
 
@@ -27,12 +29,14 @@ const ABI = require("./erc20.abi.json");
 	let ps = await Pintswap.initialize({ signer: wallet });
 	let ps_2 = await Pintswap.initialize({ signer: wallet_2 });
 
+	let gp = await wallet.provider.send('eth_gasPrice', [])
+	console.log(ethers.toBigInt(gp));
 
 	let trade = {
 		givesToken: wallet_has,
 		getsToken: wallet_2_has,
-		givesAmount: 1000,
-		getsAmount: 1000
+		givesAmount: toUtf8Bytes("1000"),
+		getsAmount: toUtf8Bytes("1000")
 	}
 
 	ps.on("peer:discovery", async (peer) => {

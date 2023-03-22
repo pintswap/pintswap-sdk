@@ -4,8 +4,11 @@ import { ethers } from "ethers";
 import { pipe } from "it-pipe";
 import * as lp from "it-length-prefixed";
 import { handleKeygen, initKeygen } from "./utils";
-import { TPCEcdsaKeyGen } from "@safeheron/two-party-ecdsa-js";
+import { TPCEcdsaKeyGen as TPC } from "@safeheron/two-party-ecdsa-js";
 import { emasm } from "emasm";
+import { EventEmitter } from "node:events";
+import pushable from "it-pushable";
+import BN from "bn.js";
 
 const {
   solidityPackedKeccak256,
@@ -84,6 +87,13 @@ export const hashOffer = (o) => {
   );
 };
 
+function keyshareToAddress (keyshareJsonObject) {
+  let { Q } = keyshareJsonObject as any;
+  let prepend = new BN(Q.y, 16).mod(new BN(2)).isZero() ? "0x02" : "0x03";
+  let derivedPubKey = prepend + new BN(Q.x, 16).toString(16);
+  return ethers.computeAddress(derivedPubKey); 
+}
+
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
@@ -92,6 +102,17 @@ export class Pintswap extends PintP2P {
   static async initialize({ signer }) {
     let peerId = await this.peerIdFromSeed(await signer.getAddress());
     const self = new this({ signer, peerId });
+    // self.on("/internal/ecdsa-keygen/context-1", (_event) => {
+    //   _event.on('/internal/ecdsa-keygen/context-1', (step) => { console.log(`${step}`) } )
+    //   _event.on('/internal/ecdsa-keygen/context-1/finish', (jsonKey) => {
+    //   })
+    // });
+
+
+    // self.on("/internal/ecdsa-keygen/context-2", (_event) => {
+      
+    // });
+
     await self.handle("/pintswap/0.1.0/orders", (duplex) =>
       pipe(
         duplex.stream.sink,
@@ -103,8 +124,47 @@ export class Pintswap extends PintP2P {
     await self.handle(
       "/pintswap/0.1.0/create-trade",
       async ({ stream, connection, protocol }) => {
-          let [ sharedAddress, keyshare ] = await handleKeygen({ stream });
-          console.log(sharedAddress, "maker");
+          let context2 = await TPC.P2Context.createContext();
+          let messages = pushable();
+          let _event = new EventEmitter();
+
+          _event.on('/internal/ecdsa/party2/inbound/msg/1', (message) => {
+            messages.push(
+              context2.step1(message)
+            );
+          })
+
+          _event.on('/internal/ecdsa/party2/inbound/msg/3', (message) => {
+            messages.push(
+              context2.step2(message)
+            );
+
+            let _keyshare = context2.exportKeyShare().toJsonObject();
+            let _address = keyshareToAddress(_keyshare);
+            console.log(
+              `party2 finished keygen with ${ _keyshare } ${ _address }`
+            );
+          })
+
+          pipe(
+            stream.source,
+            lp.decode(),
+            async function (source) {
+              const { value: message1 } = await source.next();
+              _event.emit('/internal/ecdsa/party2/inbound/msg/1', message1.slice());
+              const { value: message3 } = await source.next();
+              _event.emit('/internal/ecdsa/party2/inbound/msg/3', message3.slice());
+            }
+          )
+
+          await pipe(
+            messages,
+            lp.encode(),
+            stream.sink
+          )
+
+          // let [ sharedAddress, keyshare ] = await handleKeygen({ stream });
+          // console.log(sharedAddress, "maker");
           // await self.approveTradeAsMaker(offer, sharedAddress as string);
           // try {
         // } catch (error) {
@@ -171,7 +231,7 @@ export class Pintswap extends PintP2P {
       maker,
       await this.signer.getAddress()
     );
-    const gasPrice = await this.signer.provider.getGasPrice();
+    const gasPrice = ethers.toBigInt(await this.signer.provider.send('eth_gasPrice', []));
     const gasLimit = await this.signer.provider.estimateGas({
       data: contract,
       from: sharedAddress,
@@ -182,29 +242,81 @@ export class Pintswap extends PintP2P {
       gasPrice,
       gasLimit,
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),
-      value: (await this.signer.provider.getBalance(sharedAddress)).sub(
-        gasPrice.mul(gasLimit)
-      ),
+      value: ((await this.signer.provider.getBalance(sharedAddress)) - (
+        gasPrice * gasLimit
+      )),
     });
   }
 
   async createTrade(peer, offer) {
+    console.log( 
+      `Acting on offer ${ offer } with peer ${ peer }`
+    );
+  
+    let _event = new EventEmitter();
+
     // generate 2p-ecdsa keyshare with indicated peer
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
     ]);
-      try {
-        let [ sharedAddress, keyshare ] = await initKeygen(stream);
-        if (typeof sharedAddress == "string") await this.approveTradeAsTaker(offer, sharedAddress);
-        const transaction = await this.createTransaction(
-          offer,
-          this.signer.wallet,
-          sharedAddress as string
-        );
-      } catch (error) {
-        throw error
-      }
+      // try {
+      //   let [ sharedAddress, keyshare ] = await initKeygen(stream);
+      //   if (typeof sharedAddress == "string") await this.approveTradeAsTaker(offer, sharedAddress);
+      //   const transaction = await this.createTransaction(
+      //     offer,
+      //     await this.signer.getAddress(),
+      //     sharedAddress as string
+      //   );
+      // } catch (error) {
+      //   throw error
+      // }
+    let context1 = await TPC.P1Context.createContext();
+    const message1 = context1.step1(); 
+    const messages = pushable(); 
 
+    _event.on('/internal/ecdsa-keygen/party/2/status/step1', () => {
+      let _message1 = context1.step1();
+      console.log(
+        `step 1 with message`
+      );
+      messages.push(_message1);
+    })
+
+    _event.on('/internal/ecdsa/party1/inbound/msg/2', async (message) => {
+      messages.push(
+        context1.step2(message)
+      );
+      let _keyshare = context1.exportKeyShare().toJsonObject();
+      let _address = keyshareToAddress(_keyshare);
+      let _tx = await this.createTransaction(
+        offer,
+        await this.signer.getAddress(),
+        _address as string
+      );
+
+        
+    });
+
+    pipe(
+      stream.source,
+      lp.decode(),
+      async function (source) {
+        messages.push(message1);
+        const { value: message2 } = await source.next();
+        _event.emit('/internal/ecdsa/party1/inbound/msg/2', message2.slice());
+        // const message3 = context1.step2(message2.slice());
+        // messages.push(message3);
+        // messages.end();
+      }
+    )
+    await pipe(
+      messages,
+      lp.encode(),
+      stream.sink
+    )
+    // const keyshare = context1.exportKeyShare().toJsonObject();
+    // const address = keyshareToAddress(keyshare);
+    // return [address, keyshare]; 
 
   }
 

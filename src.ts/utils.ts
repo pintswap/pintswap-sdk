@@ -1,11 +1,9 @@
-import Emitterator from "emitterator";
 import pushable from "it-pushable";
 import { pipe } from "it-pipe";
 import { TPCEcdsaKeyGen as TPC } from "@safeheron/two-party-ecdsa-js";
 import BN from "bn.js";
 import { ethers } from "ethers";
 import * as lp from "it-length-prefixed";
-import all from "it-all";
 
 /*
  * extract the first Buffer from a BufferList

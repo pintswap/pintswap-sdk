@@ -5,6 +5,7 @@ import { TPCEcdsaKeyGen as TPC } from "@safeheron/two-party-ecdsa-js";
 import BN from "bn.js";
 import { ethers } from "ethers";
 import * as lp from "it-length-prefixed";
+import all from "it-all";
 
 /*
  * extract the first Buffer from a BufferList
@@ -23,7 +24,6 @@ function keyshareToAddress (keyshareJsonObject) {
   let { Q } = keyshareJsonObject as any;
   let prepend = new BN(Q.y, 16).mod(new BN(2)).isZero() ? "0x02" : "0x03";
   let derivedPubKey = prepend + new BN(Q.x, 16).toString(16);
-  console.log(derivedPubKey);
   return ethers.computeAddress(derivedPubKey); 
 }
 
@@ -33,34 +33,27 @@ function keyshareToAddress (keyshareJsonObject) {
  * returns (ComputedETHAddress, KeyShareJson) tuple for second party
  */
 export async function handleKeygen({ stream }) {
-  let p2cx = await TPC.P2Context.createContext();
-  let step = 1;
-  let msgSource = pushable(); 
-
-  pipe(
-    msgSource,
-    lp.encode(),
-    stream.sink
-  )
-
-  let result = await pipe(
-    stream.source,
-    lp.decode(),
-    async function (source) {
-      for await (const msg of source) {
-        if (step === 1) {
-          let msg2 = p2cx.step1(bufferListToBuffer(msg));
-          msgSource.push(msg2);
-          step+=1
-        } else {
-          return p2cx.step2(bufferListToBuffer(msg));
-        }
+  let context2 = await TPC.P2Context.createContext();
+    let messages = pushable(); 
+    pipe(
+      stream.source,
+      lp.decode(),
+      async function (source) {
+        const { value: message1 } = await source.next();
+        messages.push(context2.step1(message1.slice()));
+        const { value: message3 } = await source.next();
+        messages.push(context2.step2(message3.slice()));
+	messages.end();
       }
-    }
-  )
+    )
+    await pipe(
+      messages,
+      lp.encode(),
+      stream.sink
+    )
   
-  let keyshare = p2cx.exportKeyShare().toJsonObject();
-  let address = keyshareToAddress(keyshare);
+  const keyshare = context2.exportKeyShare().toJsonObject();
+  const address = keyshareToAddress(keyshare);
 
   return [address, keyshare];
 }
@@ -70,31 +63,26 @@ export async function handleKeygen({ stream }) {
  * returns (ComputedETHAddress, KeyshareJson) tuple for first party
  */
 export async function initKeygen(stream) {
-  let p1cx = await TPC.P1Context.createContext();
-  let ms1 = p1cx.step1(); 
-  let msgSource = pushable(); 
-
+  let context1 = await TPC.P1Context.createContext();
+  const message1 = context1.step1(); 
+  const messages = pushable(); 
   pipe(
-    msgSource,
-    lp.encode(),
-    stream.sink
-  )
-  msgSource.push(ms1);
-
-  let result = await pipe(
     stream.source,
     lp.decode(),
     async function (source) {
-      for await (const msg of source) {
-        let msg3 = p1cx.step2(bufferListToBuffer(msg));
-        msgSource.push(msg3);
-        return msg3
-      }
+      messages.push(message1);
+      const { value: message2 } = await source.next();
+      const message3 = context1.step2(message2.slice());
+      messages.push(message3);
+      messages.end();
     }
   )
-
-  let keyshare = p1cx.exportKeyShare().toJsonObject();
-  let address = keyshareToAddress(keyshare);
+  await pipe(
+    messages,
+    lp.encode(),
+    stream.sink
+  )
+  const keyshare = context1.exportKeyShare().toJsonObject();
+  const address = keyshareToAddress(keyshare);
   return [address, keyshare]; 
 }
-

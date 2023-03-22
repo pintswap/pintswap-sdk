@@ -37,6 +37,6 @@ const ABI = require("./erc20.abi.json");
 
 	ps.on("peer:discovery", async (peer) => {
 		console.log("testing peer")
-		await ps.createTrade(peer, hashOffer(trade));
+		await ps.createTrade(peer, trade);
 	})
 })()

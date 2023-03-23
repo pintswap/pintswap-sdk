@@ -232,9 +232,9 @@ export class Pintswap extends PintP2P {
       gasPrice,
       gasLimit,
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),
-      value: ((await this.signer.provider.getBalance(sharedAddress)) - (
+      value: (await this.signer.provider.getBalance(sharedAddress)) - (
         gasPrice * gasLimit
-      )),
+      ),
     });
   }
 
@@ -243,23 +243,11 @@ export class Pintswap extends PintP2P {
       `Acting on offer ${ offer } with peer ${ peer }`
     );
   
-    let _event = new EventEmitter();
-
-    // generate 2p-ecdsa keyshare with indicated peer
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
     ]);
-      // try {
-      //   let [ sharedAddress, keyshare ] = await initKeygen(stream);
-      //   if (typeof sharedAddress == "string") await this.approveTradeAsTaker(offer, sharedAddress);
-      //   const transaction = await this.createTransaction(
-      //     offer,
-      //     await this.signer.getAddress(),
-      //     sharedAddress as string
-      //   );
-      // } catch (error) {
-      //   throw error
-      // }
+
+    let _event = new EventEmitter();
     let context1 = await TPC.P1Context.createContext();
     const message1 = context1.step1(); 
     const messages = pushable(); 
@@ -283,7 +271,8 @@ export class Pintswap extends PintP2P {
         await this.signer.getAddress(),
         _address as string
       );
-      console.log(_tx);
+      //TODO: fund the sharedAddress from the taker 
+      //TODO: push step 1 of ecdsa-sign with transaction#unsignedHash
     });
 
     pipe(
@@ -293,9 +282,6 @@ export class Pintswap extends PintP2P {
         messages.push(message1);
         const { value: message2 } = await source.next();
         _event.emit('/internal/ecdsa/party1/inbound/msg/2', message2.slice());
-        // const message3 = context1.step2(message2.slice());
-        // messages.push(message3);
-        // messages.end();
       }
     )
     await pipe(
@@ -303,9 +289,6 @@ export class Pintswap extends PintP2P {
       lp.encode(),
       stream.sink
     )
-    // const keyshare = context1.exportKeyShare().toJsonObject();
-    // const address = keyshareToAddress(keyshare);
-    // return [address, keyshare]; 
 
   }
 

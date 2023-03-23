@@ -232,9 +232,7 @@ export class Pintswap extends PintP2P {
       gasPrice,
       gasLimit,
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),
-      value: (await this.signer.provider.getBalance(sharedAddress)) - (
-        gasPrice * gasLimit
-      ),
+      value: await this.signer.provider.getBalance >= ( gasPrice * gasLimit ) ? (await this.signer.provider.getBalance(sharedAddress)) - ( gasPrice * gasLimit ) : BigInt(0), // check: balance >= ( gasPrice * gasLimit ) | resolves ( balance - (gasPrice * gasLimit) ) or 0
     });
   }
 

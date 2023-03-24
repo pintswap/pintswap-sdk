@@ -32,9 +32,11 @@ const ABI = require("./erc20.abi.json");
 	let trade = {
 		givesToken: wallet_has,
 		getsToken: wallet_2_has,
-		givesAmount: toUtf8Bytes("1000"),
-		getsAmount: toUtf8Bytes("1000")
+		givesAmount: ethers.toQuantity(ethers.parseEther("1000")),
+		getsAmount: ethers.toQuantity(ethers.parseEther("1000"))
 	}
+
+	ps_2.listOffer(trade);
 
 	ps.on("peer:discovery", async (peer) => {
 		console.log("testing peer")

@@ -383,8 +383,8 @@ export class Pintswap extends PintP2P {
         const { value: keygenMessage_2} = await source.next();
         _event.emit('/event/ecdsa-keygen/party/1', 2, keygenMessage_2.slice());
         _event.emit('/event/approve-contract');
-        _event.emit('/event/build/tx');
         _event.emit('/event/fund/shared');
+        _event.emit('/event/build/tx');
         const { value: signMessage_2 } = await source.next();
         _event.emit('/event/ecdsa-sign/party/1', 2, signMessage_2.slice())
         const { value: signMessage_4 } = await source.next();

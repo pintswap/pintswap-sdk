@@ -94,7 +94,6 @@ function keyshareToAddress (keyshareJsonObject) {
   let { Q } = keyshareJsonObject as any;
   let prepend = new BN(Q.y, 16).mod(new BN(2)).isZero() ? "0x02" : "0x03";
   let derivedPubKey = prepend + leftZeroPad(new BN(Q.x, 16).toString(16), 64);
-  console.log(prepend, derivedPubKey, prepend.length, derivedPubKey.length);
   return ethers.computeAddress(derivedPubKey as string); 
 }
 

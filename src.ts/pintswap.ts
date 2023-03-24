@@ -4,7 +4,7 @@ import { ethers } from "ethers";
 import { pipe } from "it-pipe";
 import * as lp from "it-length-prefixed";
 import { handleKeygen, initKeygen } from "./utils";
-import { TPCEcdsaKeyGen as TPC } from "@safeheron/two-party-ecdsa-js";
+import { TPCEcdsaKeyGen as TPC, TPCEcdsaSign as TPCsign } from "@safeheron/two-party-ecdsa-js";
 import { emasm } from "emasm";
 import { EventEmitter } from "node:events";
 import pushable from "it-pushable";
@@ -117,6 +117,9 @@ export class Pintswap extends PintP2P {
           let context2 = await TPC.P2Context.createContext();
           let messages = pushable();
           let _event = new EventEmitter();
+          let sharedAddress = null;
+          let keyshareJson = null;
+          let signContext = null;
 
           _event.on('/internal/ecdsa/party2/inbound/msg/1', (message) => {
             messages.push(
@@ -125,16 +128,29 @@ export class Pintswap extends PintP2P {
           })
 
           _event.on('/internal/ecdsa/party2/inbound/msg/3', (message) => {
-            messages.push(
-              context2.step2(message)
-            );
+            context2.step2(message)
 
-            let _keyshare = context2.exportKeyShare().toJsonObject();
-            let _address = keyshareToAddress(_keyshare);
-            console.log(
-              `party2 finished keygen with ${ _keyshare } ${ _address }`
+            keyshareJson = context2.exportKeyShare().toJsonObject();
+            sharedAddress = keyshareToAddress(keyshareJson);
+          })
+
+          _event.on('/pintswap/ecdsa/party2/unsigned-hash', async (message) => {
+            let [ uHash, step1 ] = message;
+            signContext = await TPCsign.P2Context.createContext(
+              JSON.stringify(keyshareJson, null, 4), 
+              new BN(uHash.toString(), 16)
+            );
+            messages.push(
+              signContext.step1(step1)
             );
           })
+
+          _event.on('/pintswap/ecdsa/party2/sign/msg/3', (message) => {
+            messages.push(
+              signContext.step2(message)
+            );
+          })
+
 
           pipe(
             stream.source,
@@ -144,6 +160,11 @@ export class Pintswap extends PintP2P {
               _event.emit('/internal/ecdsa/party2/inbound/msg/1', message1.slice());
               const { value: message3 } = await source.next();
               _event.emit('/internal/ecdsa/party2/inbound/msg/3', message3.slice());
+              const { value: unsignedHash } = await source.next();
+              const { value: signMessage1 } = await source.next();
+              _event.emit('/pintswap/ecdsa/party2/unsigned-hash', [unsignedHash.slice(), signMessage1.slice()]);
+              const { value: signMessage3 } = await source.next();
+              _event.emit('/pintswap/ecdsa/party2/sign/msg/3', signMessage3.slice());
             }
           )
 
@@ -152,31 +173,6 @@ export class Pintswap extends PintP2P {
             lp.encode(),
             stream.sink
           )
-
-          // let [ sharedAddress, keyshare ] = await handleKeygen({ stream });
-          // console.log(sharedAddress, "maker");
-          // await self.approveTradeAsMaker(offer, sharedAddress as string);
-          // try {
-        // } catch (error) {
-          // throw new Error("Failed to generate key share or compute shared address");
-        // }
-
-        // const transaction = await self.createTransaction(
-        //   offer,
-        //   self.signer.wallet,
-        //   sharedAddress as string
-        // );
-        /*
-     await this.approveTradeAsMaker(...)
-     // wait for taker to approve
-     const transaction = await this.createTransaction(offer, maker, taker);
-     const signedTransaction = new Transaction({
-       ...transaction,
-       ...await sign(transaction)
-     });
-     const tx = await this.signer.provider.sendTransaction(signedTransaction);
-    await tx.wait();
-   */
       },
     );
     await self.start();
@@ -229,6 +225,7 @@ export class Pintswap extends PintP2P {
     });
     return Object.assign(new Transaction(), {
       data: createContract(offer, maker, await this.signer.getAddress()),
+      chainId: (await this.signer.provider.getNetwork()).chainId,
       gasPrice,
       gasLimit,
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),
@@ -247,8 +244,12 @@ export class Pintswap extends PintP2P {
 
     let _event = new EventEmitter();
     let context1 = await TPC.P1Context.createContext();
+    let signContext = null;
     const message1 = context1.step1(); 
     const messages = pushable(); 
+    let tx = null;
+    let sharedAddress = null;
+    let keyshareJson = null;
 
     _event.on('/internal/ecdsa-keygen/party/2/status/step1', () => {
       let _message1 = context1.step1();
@@ -258,19 +259,66 @@ export class Pintswap extends PintP2P {
       messages.push(_message1);
     })
 
+    // get keygen message 2 
+    // generate keyshare and shared address as well as transaction
     _event.on('/internal/ecdsa/party1/inbound/msg/2', async (message) => {
       messages.push(
         context1.step2(message)
       );
-      let _keyshare = context1.exportKeyShare().toJsonObject();
-      let _address = keyshareToAddress(_keyshare);
-      let _tx = await this.createTransaction(
+      keyshareJson = context1.exportKeyShare().toJsonObject();
+      sharedAddress = keyshareToAddress(keyshareJson);
+
+      //TODO: extract fund transaction logic to a class method
+      let _fundTx = {
+        to: sharedAddress,
+        value: ethers.parseEther("0.02")
+      }
+      let fundResponse = await this.signer.sendTransaction(_fundTx);
+      // ----- 
+
+      tx = await this.createTransaction(
         offer,
         await this.signer.getAddress(),
-        _address as string
+        sharedAddress as string
       );
-      //TODO: fund the sharedAddress from the taker 
-      //TODO: push step 1 of ecdsa-sign with transaction#unsignedHash
+
+      // convert unsignedHash to a Buffer for wire 
+      let _uhash = (tx.unsignedHash as string).slice(2)
+
+      signContext = await TPCsign.P1Context.createContext(
+        JSON.stringify(keyshareJson, null, 4), 
+        new BN(_uhash, 16)
+      ) 
+
+      messages.push(
+        Buffer.from(_uhash)
+      )
+      messages.push(
+        signContext.step1()
+      )
+    });
+
+    // preform sign step2 with message 2
+    _event.on('/internal/ecdsa/party1/sign/msg/2', (message) => {
+      messages.push(
+        signContext.step2(message)
+      )
+    });
+  
+    // get message 4 and generate a Signature { r, s, v } to sign tx
+    _event.on('/internal/ecdsa/party1/sign/msg/4', async (message) => {
+      signContext.step3(message)
+      let [r, s, v] = signContext.exportSig();
+      let signature = ethers.Signature.from({ 
+        r: '0x' + r.toString(16),
+        s: '0x' + s.toString(16),
+        v: v + 27
+      });
+
+      // make tx a signed transaction
+      tx.signature = signature;
+      let response = await this.signer.provider.broadcastTransaction(tx.serialized);
+      console.log(await response.wait());
     });
 
     pipe(
@@ -280,6 +328,10 @@ export class Pintswap extends PintP2P {
         messages.push(message1);
         const { value: message2 } = await source.next();
         _event.emit('/internal/ecdsa/party1/inbound/msg/2', message2.slice());
+        const { value: signMessage2 } = await source.next();
+        _event.emit('/internal/ecdsa/party1/sign/msg/2', signMessage2.slice());
+        const { value: signMessage4 } = await source.next();
+        _event.emit('/internal/ecdsa/party1/sign/msg/4', signMessage4.slice());
       }
     )
     await pipe(

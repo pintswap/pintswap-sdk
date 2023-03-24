@@ -120,35 +120,56 @@ export class Pintswap extends PintP2P {
           let sharedAddress = null;
           let keyshareJson = null;
           let signContext = null;
+          
 
-          _event.on('/internal/ecdsa/party2/inbound/msg/1', (message) => {
-            messages.push(
-              context2.step1(message)
-            );
-          })
+          _event.on('/ecdsa-keygen/party/2', (step, message) => {
+            switch(step) {
+              case 1:
+                messages.push(
+                  context1.step1(message)
+                )
+              case 3:
+                context1.step2(message)
+                // set keyshare and shared address
+                keyshareJson = context1.exportKeyShare().toJsonObject();
+                sharedAddress = keyshareToAddress(keyshareJson);
+              default:
+                throw new Error("Unexpected message on event /ecdsa-keygen/party/2");
+            }
+          });
 
-          _event.on('/internal/ecdsa/party2/inbound/msg/3', (message) => {
-            context2.step2(message)
+          _event.on('/event/approve-contract', async ( offerHashBuf ) => {
+            try {
+              let offer = self.offers.get(offerHashBuf.toString());
+              await self.approveTradeAsMaker(offer, sharedAddress as string);
+            } catch (err) {
+              throw new Error("couldn't find offering");
+            }
+          });
 
-            keyshareJson = context2.exportKeyShare().toJsonObject();
-            sharedAddress = keyshareToAddress(keyshareJson);
-          })
-
-          _event.on('/pintswap/ecdsa/party2/unsigned-hash', async (message) => {
-            let [ uHash, step1 ] = message;
+          _event.on('/event/ecdsa-sign/party/2/init', async ( unsignedTxHash ) => {
             signContext = await TPCsign.P2Context.createContext(
-              JSON.stringify(keyshareJson, null, 4), 
-              new BN(uHash.toString(), 16)
-            );
-            messages.push(
-              signContext.step1(step1)
-            );
-          })
+              JSON.stringify(keyshareJson, null, 4),
+              new BN(unisgnedTxHash.toString())
+            )
+          });
 
-          _event.on('/pintswap/ecdsa/party2/sign/msg/3', (message) => {
-            messages.push(
-              signContext.step2(message)
-            );
+          _event.on('/event/ecdsa-sign/party/2', (step, message) => {
+            switch(step) {
+              case 1:
+                console.log(`recieved sign message 1`)
+                messages.push(
+                  signContext.step1(message)
+                )
+              case 3:
+                console.log(`received sign message 3`)
+                messages.push(
+                  signContext.step2(message)
+                )
+                // safe to end message iterator
+              default:
+                throw new Error("Unexpeced message on event /ecdsa-sign/party/2");
+            }
           })
 
 
@@ -156,15 +177,22 @@ export class Pintswap extends PintP2P {
             stream.source,
             lp.decode(),
             async function (source) {
-              const { value: message1 } = await source.next();
-              _event.emit('/internal/ecdsa/party2/inbound/msg/1', message1.slice());
-              const { value: message3 } = await source.next();
-              _event.emit('/internal/ecdsa/party2/inbound/msg/3', message3.slice());
-              const { value: unsignedHash } = await source.next();
+              const { value: keygenMessage1 } = await source.next();
+              _event.emit('/event/ecdsa-keygen/party/2', 1, keygenMessage1.slice());
+              const { value: keygenMessage3 } = await source.next();
+              _event.emit('/event/ecdsa-keygen/party/2', 3, keygenMessage3.slice());
+
+              const { value: offerHashBuf } = await source.next(); 
+              _event.emit('/event/approve-contract', offerHashBuf.slice())
+
+              const { value: unsignedTxHash } = await source.next();
+              _event.emit('/event/ecdsa-sign/party/2/init', unsignedTxHash.slice())
+
               const { value: signMessage1 } = await source.next();
-              _event.emit('/pintswap/ecdsa/party2/unsigned-hash', [unsignedHash.slice(), signMessage1.slice()]);
+              _event.emit('/event/ecdsa-sign/party/2', 1, signMessage1.slice())
               const { value: signMessage3 } = await source.next();
-              _event.emit('/pintswap/ecdsa/party2/sign/msg/3', signMessage3.slice());
+              _event.emit('/event/ecdsa-sign/party/2', 3, signMessage3.slice())
+
             }
           )
 
@@ -251,87 +279,96 @@ export class Pintswap extends PintP2P {
     let sharedAddress = null;
     let keyshareJson = null;
 
-    _event.on('/internal/ecdsa-keygen/party/2/status/step1', () => {
-      let _message1 = context1.step1();
-      console.log(
-        `step 1 with message`
-      );
-      messages.push(_message1);
+    _event.on('/event/ecdsa-keygen/party/1', (step, message) => {
+      switch(step) {
+        case 2:
+          console.log(`received key-gen message 2`)
+          messages.push(
+            context1.step2(message)
+          )
+
+          keyshareJson = context1.exportKeyShare().toJsonObject();
+          sharedAddress = keyshareToAddress(keyshareJson);
+        default:
+          throw new Error("unexpected message on event /ecdsa-keygen/party/1");
+      }
     })
 
-    // get keygen message 2 
-    // generate keyshare and shared address as well as transaction
-    _event.on('/internal/ecdsa/party1/inbound/msg/2', async (message) => {
+    /*
+     * Pintswap#approveAsMaker
+     */
+    _event.on('/event/approve-contract', async () => {
       messages.push(
-        context1.step2(message)
-      );
-      keyshareJson = context1.exportKeyShare().toJsonObject();
-      sharedAddress = keyshareToAddress(keyshareJson);
+        Buffer.from(hashOffer(offer)) 
+      )
+      await this.approveTradeAsTaker(offer, sharedAddress as string);
+    });
 
-      //TODO: extract fund transaction logic to a class method
-      let _fundTx = {
-        to: sharedAddress,
-        value: ethers.parseEther("0.02")
-      }
-      let fundResponse = await this.signer.sendTransaction(_fundTx);
-      // ----- 
-
+    _event.on('/event/build/tx', async () => {
       tx = await this.createTransaction(
         offer,
         await this.signer.getAddress(),
         sharedAddress as string
-      );
+      )
+    })
 
-      // convert unsignedHash to a Buffer for wire 
-      let _uhash = (tx.unsignedHash as string).slice(2)
+    _event.on('/event/fund/tx', async () => {
+      await this.signer.sendTransaction({
+        to: sharedAddress,
+        value: ethers.parseEther("0.02") // change to gasPrice * gasLimit
+      });
+    })
 
+    _event.on('/event/ecdsa-sign/party/1/init', () => {
+      let _uhash = (tx.unsignedHash as string).slice(2);
       signContext = await TPCsign.P1Context.createContext(
-        JSON.stringify(keyshareJson, null, 4), 
+        JSON.stringify(keyshareJson, null, 4),
         new BN(_uhash, 16)
-      ) 
+      )
 
       messages.push(
         Buffer.from(_uhash)
       )
-      messages.push(
+      message.push(
         signContext.step1()
       )
     });
 
-    // preform sign step2 with message 2
-    _event.on('/internal/ecdsa/party1/sign/msg/2', (message) => {
-      messages.push(
-        signContext.step2(message)
-      )
-    });
-  
-    // get message 4 and generate a Signature { r, s, v } to sign tx
-    _event.on('/internal/ecdsa/party1/sign/msg/4', async (message) => {
-      signContext.step3(message)
-      let [r, s, v] = signContext.exportSig();
-      let signature = ethers.Signature.from({ 
-        r: '0x' + r.toString(16),
-        s: '0x' + s.toString(16),
-        v: v + 27
-      });
-
-      // make tx a signed transaction
-      tx.signature = signature;
-      let response = await this.signer.provider.broadcastTransaction(tx.serialized);
-      console.log(await response.wait());
-    });
+    _event.on('/event/ecdsa-sign/party/1', (step, message) => {
+      switch(step) {
+        case 2:
+          messages.push(
+            signContext.step2(message)
+          )
+        case 4:
+          signContext.step3(message);
+          let [r, s, v] = signContext.exportSig();
+          tx.signature = ethers.Signature.from({
+            r: '0x' + r.toString(16),
+            s: '0x' + s.toString(16),
+            v: v + 27
+          })
+          _event.emit('/event/broadcasting-tx', await this.signer.provider.broadcastTransaction(tx.serialized));
+        default:
+          throw new Error("Unexpeced message on event /ecdsa-sign/party/2");
+      }
+    })
 
     pipe(
       stream.source,
       lp.decode(),
       async function (source) {
         messages.push(message1);
-        const { value: message2 } = await source.next();
-        _event.emit('/internal/ecdsa/party1/inbound/msg/2', message2.slice());
-        const { value: signMessage2 } = await source.next();
-        _event.emit('/internal/ecdsa/party1/sign/msg/2', signMessage2.slice());
-        const { value: signMessage4 } = await source.next();
-        _event.emit('/internal/ecdsa/party1/sign/msg/4', signMessage4.slice());
+        const { value: keygenMessage_2} = await source.next();
+        _event.emit('/event/ecdsa-keygen/party/1', 2, keygenMessage_1.slice());
+        _event.emit('/event/approve-contract');
+        _event.emit('/event/build/tx');
+        _event.emit('/event/fund/tx');
+        _event.emit('/event/ecdsa-sign/party/1/init');
+        const { value: signMessage_2 } = await source.next();
+        _event.emit('/event/ecdsa-sign/party/1', 2, signMessage_2.slice())
+        const { value: signMessage_4 } = await source.next();
+        _event.emit('/event/ecdsa-sign/party/1', 4, signMessage_4.slice());
       }
     )
     await pipe(

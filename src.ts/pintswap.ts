@@ -97,6 +97,11 @@ function keyshareToAddress (keyshareJsonObject) {
   return ethers.computeAddress(derivedPubKey as string); 
 }
 
+function toBigInt(v) {
+  if (v.toHexString) return v.toBigInt();
+  return v;
+}
+
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
@@ -241,26 +246,38 @@ export class Pintswap extends PintP2P {
   }
 
   async getTradeAddress(sharedAddress: string) {
-    return getCreateAddress({
+    
+    const address = getCreateAddress({
       nonce: await this.signer.provider.getTransactionCount(sharedAddress), 
       from: sharedAddress, 
     });
+    console.log('TRADE ADDRESS: ' + address);
+    return address;
   }
   async approveTradeAsMaker(offer: IOffer, sharedAddress: string) {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
-    return await new Contract(
+    const token = new Contract(
       offer.givesToken,
-      ["function approve(address, uint256) returns (bool)"],
+      ["function approve(address, uint256) returns (bool)", "function allowance(address, address) view returns (uint256)", "function balanceOf(address) view returns (uint256)"],
       this.signer
-    ).approve(tradeAddress, offer.givesAmount);
+    )
+    const tx = await token.approve(tradeAddress, offer.givesAmount);
+    console.log('MAKER BALANCE ' + ethers.formatEther(await token.balanceOf(await this.signer.getAddress())));
+    console.log('MAKER APPROVED BALANCE ' + ethers.formatEther(await token.allowance(await this.signer.getAddress(), tradeAddress)));
+    return tx;
   }
   async approveTradeAsTaker(offer: IOffer, sharedAddress: string) {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
-    return await new Contract(
+    const token = new Contract(
       getAddress(offer.getsToken),
-      ["function approve(address, uint256) returns (bool)"],
+      ["function approve(address, uint256) returns (bool)", "function allowance(address, address) view returns (uint256)", "function balanceOf(address) view returns (uint256)"],
       this.signer
-    ).approve(tradeAddress, offer.getsAmount);
+    );
+    const tx = await token.approve(tradeAddress, offer.getsAmount);
+    console.log('TAKER BALANCE ' + ethers.formatEther(await token.balanceOf(await this.signer.getAddress())));
+    console.log('TAKER APPROVED BALANCE ' + ethers.formatEther(await token.allowance(await this.signer.getAddress(), tradeAddress)));
+    return tx;
+
   }
   async createTransaction(offer: IOffer, maker: string, sharedAddress: string) {
     console.log(
@@ -271,18 +288,15 @@ export class Pintswap extends PintP2P {
       maker,
       await this.signer.getAddress()
     );
-    let gasPrice = typeof (await this.signer.provider.send('eth_gasPrice', [])).toHexString == 'function' ?
-      (await this.signer.provider.send('eth_gasPrice', [])).toBigInt() : ethers.toBigInt(await this.signer.provider.send('eth_gasPrice', []))
+    const gasPrice = toBigInt(await this.signer.provider.getGasPrice());
 
-    let gasLimit = await this.signer.provider.estimateGas({
+    const gasLimit = toBigInt(await this.signer.provider.estimateGas({
       data: contract,
       from: sharedAddress,
       gasPrice,
-    })
-    gasLimit = typeof gasLimit.toHexString == 'function' ? gasLimit.toBigInt() : gasLimit
+    }));
       
-    let sharedAddressBalance = typeof (await this.signer.provider.getBalance(sharedAddress)).toHexString == "function" ?
-      (await this.signer.provider.getBalance(sharedAddress)).toBigInt() : await this.signer.provider.getBalance(sharedAddress)
+    let sharedAddressBalance = toBigInt(await this.signer.provider.getBalance(sharedAddress));
     console.log(
       `network ${ (await this.signer.provider.getNetwork()).chainId }`,
       sharedAddressBalance,

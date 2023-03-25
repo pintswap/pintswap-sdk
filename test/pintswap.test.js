@@ -23,15 +23,15 @@ describe("Pintswap", function () {
   async function setupTestEnv() {
     const [ maker, taker ] = await ethers.getSigners();
 
-    const TestERC20 = await ethers.getContractFactory("TestToken");
-    tt1 = await TestERC20.deploy(100000, "Token1", "TK1");
+    const TestERC20 = await ethers.getContractFactory("TestToken", maker);
+    tt1 = await TestERC20.deploy(ethers.utils.parseEther('1000'), "Token1", "TK1");
 
-    let TakerTestERC20 = TestERC20.connect(taker);
-    tt2 = await TakerTestERC20.deploy(100000, "Token2", "TK2");
+    let TakerTestERC20 = await ethers.getContractFactory("TestToken", taker);
+    tt2 = await TakerTestERC20.deploy(ethers.utils.parseEther('1000'), "Token2", "TK2");
 
     offer = {
-      givesToken: tt2.address,
-      getsToken: tt1.address,
+      givesToken: tt1.address,
+      getsToken: tt2.address,
       givesAmount: ethers.utils.parseUnits("100.0").toHexString(),
       getsAmount: ethers.utils.parseUnits("100.0").toHexString()
     }
@@ -42,10 +42,6 @@ describe("Pintswap", function () {
     const [ makerSigner, takerSigner ] = await ethers.getSigners();
     maker = await Pintswap.initialize({ signer: makerSigner });
     taker = await Pintswap.initialize({ signer: takerSigner })
-    maker.listOffer(offer);
-  })
-
-  beforeEach(async function() {
     await maker.start()
     await taker.start()
     await new Promise((resolve) => {
@@ -58,8 +54,10 @@ describe("Pintswap", function () {
 
       setTimeout(resolve, 4000);
     })
+    maker.listOffer(offer);
   })
 
+	/*
   afterEach(async function() {
     const [makerSigner, takerSigner ] = await ethers.getSigners();
     console.log(
@@ -71,10 +69,13 @@ describe("Pintswap", function () {
     await maker.stop()
     await taker.stop()
   })
+  */
 
+	/*
   it("should test to make sure `Offer` is correctly formatted", function () {
     console.log(offer);
   });
+  */
 
 
   it("`Maker` should dialProtocol `Taker` to create a trade", async function () {

@@ -149,30 +149,7 @@
 <a name='L84'></a><a href='#L84'>84</a>
 <a name='L85'></a><a href='#L85'>85</a>
 <a name='L86'></a><a href='#L86'>86</a>
-<a name='L87'></a><a href='#L87'>87</a>
-<a name='L88'></a><a href='#L88'>88</a>
-<a name='L89'></a><a href='#L89'>89</a>
-<a name='L90'></a><a href='#L90'>90</a>
-<a name='L91'></a><a href='#L91'>91</a>
-<a name='L92'></a><a href='#L92'>92</a>
-<a name='L93'></a><a href='#L93'>93</a>
-<a name='L94'></a><a href='#L94'>94</a>
-<a name='L95'></a><a href='#L95'>95</a>
-<a name='L96'></a><a href='#L96'>96</a>
-<a name='L97'></a><a href='#L97'>97</a>
-<a name='L98'></a><a href='#L98'>98</a>
-<a name='L99'></a><a href='#L99'>99</a>
-<a name='L100'></a><a href='#L100'>100</a>
-<a name='L101'></a><a href='#L101'>101</a>
-<a name='L102'></a><a href='#L102'>102</a>
-<a name='L103'></a><a href='#L103'>103</a>
-<a name='L104'></a><a href='#L104'>104</a>
-<a name='L105'></a><a href='#L105'>105</a>
-<a name='L106'></a><a href='#L106'>106</a>
-<a name='L107'></a><a href='#L107'>107</a>
-<a name='L108'></a><a href='#L108'>108</a>
-<a name='L109'></a><a href='#L109'>109</a>
-<a name='L110'></a><a href='#L110'>110</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L87'></a><a href='#L87'>87</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -258,45 +235,12 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import Emitterator from "emitterator";
-import pushable from "it-pushable";
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import pushable from "it-pushable";
 import { pipe } from "it-pipe";
 import { TPCEcdsaKeyGen as TPC } from "@safeheron/two-party-ecdsa-js";
 import BN from "bn.js";
 import { ethers } from "ethers";
 import * as lp from "it-length-prefixed";
-import all from 'it-all'
-import first from 'it-first'
-import toStream from 'it-to-stream';
-import keepAlive from "it-keepalive";
-import { 
-  collect, 
-  consume
-} from "streaming-iterables"
-&nbsp;
 &nbsp;
 /*
  * extract the first Buffer from a BufferList
@@ -324,34 +268,27 @@ function keyshareToAddress (keyshareJsonObject) {
  * returns (ComputedETHAddress, KeyShareJson) tuple for second party
  */
 export async function handleKeygen({ stream }) {
-  let p2cx = await TPC.P2Context.createContext();
-  let step = 1;
-  let msgSource = pushable(); 
-&nbsp;
-  pipe(
-    msgSource,
-    lp.encode(),
-    stream.sink
-  )
-&nbsp;
-  let result = await pipe(
-    stream.source,
-    lp.decode(),
-    async function (source) {
-      for await (const msg of source) {
-        if (step === 1) {
-          let msg2 = p2cx.step1(bufferListToBuffer(msg));
-          msgSource.push(msg2);
-          step+=1
-        } else {
-          return p2cx.step2(bufferListToBuffer(msg));
-        }
+  let context2 = await TPC.P2Context.createContext();
+    let messages = pushable(); 
+    pipe(
+      stream.source,
+      lp.decode(),
+      async function (source) {
+        const { value: message1 } = await source.next();
+        messages.push(context2.step1(message1.slice()));
+        const { value: message3 } = await source.next();
+        messages.push(context2.step2(message3.slice()));
+	messages.end();
       }
-    }
-  )
+    )
+    await pipe(
+      messages,
+      lp.encode(),
+      stream.sink
+    )
   
-  let keyshare = p2cx.exportKeyShare().toJsonObject();
-  let address = keyshareToAddress(keyshare);
+  const keyshare = context2.exportKeyShare().toJsonObject();
+  const address = keyshareToAddress(keyshare);
 &nbsp;
   return [address, keyshare];
 }
@@ -361,35 +298,29 @@ export async function handleKeygen({ stream }) {
  * returns (ComputedETHAddress, KeyshareJson) tuple for first party
  */
 export async function initKeygen(stream) {
-  let p1cx = await TPC.P1Context.createContext();
-  let ms1 = p1cx.step1(); 
-  let msgSource = pushable(); 
-&nbsp;
+  let context1 = await TPC.P1Context.createContext();
+  const message1 = context1.step1(); 
+  const messages = pushable(); 
   pipe(
-    msgSource,
-    lp.encode(),
-    stream.sink
-  )
-  msgSource.push(ms1);
-&nbsp;
-  let result = await pipe(
     stream.source,
     lp.decode(),
     async function (source) {
-      for await (const msg of source) {
-        console.log("initiator got message for step 2", msg);
-        let msg3 = p1cx.step2(bufferListToBuffer(msg));
-        msgSource.push(msg3);
-        return msg3
-      }
+      messages.push(message1);
+      const { value: message2 } = await source.next();
+      const message3 = context1.step2(message2.slice());
+      messages.push(message3);
+      messages.end();
     }
   )
-&nbsp;
-  let keyshare = p1cx.exportKeyShare().toJsonObject();
-  let address = keyshareToAddress(keyshare);
+  await pipe(
+    messages,
+    lp.encode(),
+    stream.sink
+  )
+  const keyshare = context1.exportKeyShare().toJsonObject();
+  const address = keyshareToAddress(keyshare);
   return [address, keyshare]; 
 }
-&nbsp;
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -397,7 +328,7 @@ export async function initKeygen(stream) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2023-03-21T23:16:36.720Z
+                at 2023-03-25T02:02:31.497Z
             </div>
         <script src="prettify.js"></script>
         <script>

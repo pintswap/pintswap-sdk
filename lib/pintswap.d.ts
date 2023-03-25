@@ -30,6 +30,6 @@ export declare class Pintswap extends PintP2P {
         nonce: any;
         value: number | bigint;
     }>;
-    createTrade(peer: any, offer: any): Promise<string>;
+    createTrade(peer: any, offer: any): Promise<boolean>;
 }
 export {};

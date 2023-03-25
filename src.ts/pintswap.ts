@@ -129,7 +129,7 @@ export class Pintswap extends PintP2P {
             switch(step) {
               case 1:
                 console.log(
-                  `/event/ecdsa-keygen/party/2 handling message: ${step}`
+                  `MAKER:: /event/ecdsa-keygen/party/2 handling message: ${step}`
                 )
                 messages.push(
                   context2.step1(message)
@@ -137,7 +137,7 @@ export class Pintswap extends PintP2P {
                 break;
               case 3:
                 console.log(
-                  `/event/ecdsa-keygen/party/2 handling message: ${step}`
+                  `MAKER:: /event/ecdsa-keygen/party/2 handling message: ${step}`
                 )
                 context2.step2(message)
                 // set keyshare and shared address
@@ -157,9 +157,15 @@ export class Pintswap extends PintP2P {
             } catch (err) {
               throw new Error("couldn't find offering");
             }
+            console.log(
+              `MAKER:: /event/approve-contract approved offer with offer hash: ${ offerHashBuf.toString() }`
+            );
           });
 
           _event.on('/event/ecdsa-sign/party/2/init', async ( unsignedTxHash ) => {
+            console.log(
+              `MAKER:: /event/ecdsa-sign/party/2/init received unsigned hash: ${ unsignedTxHash.toString() }`
+            );
             signContext = await TPCsign.P2Context.createContext(
               JSON.stringify(keyshareJson, null, 4),
               new BN(unsignedTxHash.toString(), 16)
@@ -169,16 +175,17 @@ export class Pintswap extends PintP2P {
           _event.on('/event/ecdsa-sign/party/2', (step, message) => {
             switch(step) {
               case 1:
-                console.log(`/event/ecdsa-keygen/party/2 handling message: ${step}`)
+                console.log(`MAKER:: /event/ecdsa-sign/party/2 handling message: ${step}`)
                 messages.push(
                   signContext.step1(message)
                 )
                 break;
               case 3:
-                console.log(`/event/ecdsa-sign/party/2 handling message ${step}`)
+                console.log(`MAKER:: /event/ecdsa-sign/party/2 handling message ${step}`)
                 messages.push(
                   signContext.step2(message)
                 )
+                messages.end()
                 break;
                 // safe to end message iterator
               default:
@@ -256,24 +263,39 @@ export class Pintswap extends PintP2P {
     ).approve(tradeAddress, offer.getsAmount);
   }
   async createTransaction(offer: IOffer, maker: string, sharedAddress: string) {
+    console.log(
+      `/internal/creating a new transaction`
+    )
     const contract = createContract(
       offer,
       maker,
       await this.signer.getAddress()
     );
-    const gasPrice = ethers.toBigInt(await this.signer.provider.send('eth_gasPrice', []));
-    const gasLimit = await this.signer.provider.estimateGas({
+    let gasPrice = typeof (await this.signer.provider.send('eth_gasPrice', [])).toHexString == 'function' ?
+      (await this.signer.provider.send('eth_gasPrice', [])).toBigInt() : ethers.toBigInt(await this.signer.provider.send('eth_gasPrice', []))
+
+    let gasLimit = await this.signer.provider.estimateGas({
       data: contract,
       from: sharedAddress,
       gasPrice,
-    });
+    })
+    gasLimit = typeof gasLimit.toHexString == 'function' ? gasLimit.toBigInt() : gasLimit
+      
+    let sharedAddressBalance = typeof (await this.signer.provider.getBalance(sharedAddress)).toHexString == "function" ?
+      (await this.signer.provider.getBalance(sharedAddress)).toBigInt() : await this.signer.provider.getBalance(sharedAddress)
+    console.log(
+      `network ${ (await this.signer.provider.getNetwork()).chainId }`,
+      sharedAddressBalance,
+      gasPrice,
+      gasLimit
+    )
     return Object.assign(new Transaction(), {
       data: createContract(offer, maker, await this.signer.getAddress()),
       chainId: (await this.signer.provider.getNetwork()).chainId,
       gasPrice,
       gasLimit,
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),
-      value: await this.signer.provider.getBalance >= ( gasPrice * gasLimit ) ? (await this.signer.provider.getBalance(sharedAddress)) - ( gasPrice * gasLimit ) : BigInt(0), // check: balance >= ( gasPrice * gasLimit ) | resolves ( balance - (gasPrice * gasLimit) ) or 0
+      value: sharedAddressBalance >= ( gasPrice * gasLimit ) ? (sharedAddressBalance) - ( gasPrice * gasLimit ) : BigInt(0), // check: balance >= ( gasPrice * gasLimit ) | resolves ( balance - (gasPrice * gasLimit) ) or 0
     });
   }
 
@@ -298,7 +320,11 @@ export class Pintswap extends PintP2P {
     _event.on('/event/ecdsa-keygen/party/1', (step, message) => {
       switch(step) {
         case 2:
-          console.log(`/event/ecdsa-keygen/party/1 handling message: ${step}`)
+          //handling message 2
+          console.log(
+            `TAKER:: /event/ecdsa-keygen/party/1 handling message: ${step}`
+          )
+
           messages.push(
             context1.step2(message)
           )
@@ -315,6 +341,10 @@ export class Pintswap extends PintP2P {
      * Pintswap#approveAsMaker
      */
     _event.on('/event/approve-contract', async () => {
+      // approve as maker
+      console.log(
+        `TAKER:: /event/approve-contract approving offer: ${offer} of shared Address ${ sharedAddress }`
+      );
       messages.push(
         Buffer.from(hashOffer(offer)) 
       )
@@ -322,10 +352,26 @@ export class Pintswap extends PintP2P {
     });
 
     _event.on('/event/build/tx', async () => {
+
+      console.log(
+        `/event/build/tx funding sharedAddress ${ sharedAddress }`
+      );
+      await this.signer.sendTransaction({
+        to: sharedAddress,
+        value: ethers.parseEther("0.02") // change to gasPrice * gasLimit
+      });
+
+
+      console.log(
+        `TAKER:: /event/build/tx building transaction with params: ${offer}, ${await this.signer.getAddress()}, ${ sharedAddress }`
+      );
       tx = await this.createTransaction(
         offer,
         await this.signer.getAddress(),
         sharedAddress as string
+      )
+      console.log(
+        `TAKER:: /event/build/tx built transaction`
       )
 
       let _uhash = (tx.unsignedHash as string).slice(2);
@@ -333,6 +379,10 @@ export class Pintswap extends PintP2P {
         JSON.stringify(keyshareJson, null, 4),
         new BN(_uhash, 16)
       )
+
+      console.log(
+        `TAKER:: /event/build/tx sending unsigned transaction hash & signing step 1`
+      );
 
       messages.push(
         Buffer.from(_uhash)
@@ -342,23 +392,16 @@ export class Pintswap extends PintP2P {
       )
     })
 
-    _event.on('/event/fund/shared', async () => {
-      await this.signer.sendTransaction({
-        to: sharedAddress,
-        value: ethers.parseEther("0.02") // change to gasPrice * gasLimit
-      });
-    })
-
     _event.on('/event/ecdsa-sign/party/1', async (step, message) => {
       switch(step) {
         case 2:
-          console.log(`/event/ecdsa-sign/party/1 handling message ${step}`)
+          console.log(`TAKER:: /event/ecdsa-sign/party/1 handling message ${step}`)
           messages.push(
             signContext.step2(message)
           )
           break;
         case 4:
-          console.log(`/event/ecdsa-sign/party/1 handling message ${step}`)
+          console.log(`TAKER:: /event/ecdsa-sign/party/1 handling message ${step}`)
           signContext.step3(message);
           let [r, s, v] = signContext.exportSig();
           tx.signature = ethers.Signature.from({
@@ -366,7 +409,10 @@ export class Pintswap extends PintP2P {
             s: '0x' + s.toString(16),
             v: v + 27
           })
-          _event.emit('/event/broadcasting-tx', await this.signer.provider.broadcastTransaction(tx.serialized));
+          let txReceipt = typeof this.signer.provider.sendTransaction == 'function' ? await this.signer.provider.sendTransaction(tx.serialized) : await this.signer.provider.broadcastTransaction(tx.serialized);
+          console.log(await txReceipt.wait());
+          messages.end()
+          stream.close();
           break;
         default:
           throw new Error("Unexpeced message on event /ecdsa-sign/party/2");
@@ -374,7 +420,7 @@ export class Pintswap extends PintP2P {
       }
     })
 
-    pipe(
+    let result = pipe(
       stream.source,
       lp.decode(),
       async function (source) {
@@ -382,7 +428,6 @@ export class Pintswap extends PintP2P {
         const { value: keygenMessage_2} = await source.next();
         _event.emit('/event/ecdsa-keygen/party/1', 2, keygenMessage_2.slice());
         _event.emit('/event/approve-contract');
-        _event.emit('/event/fund/shared');
         _event.emit('/event/build/tx');
         const { value: signMessage_2 } = await source.next();
         _event.emit('/event/ecdsa-sign/party/1', 2, signMessage_2.slice())
@@ -390,11 +435,15 @@ export class Pintswap extends PintP2P {
         _event.emit('/event/ecdsa-sign/party/1', 4, signMessage_4.slice());
       }
     )
+
     await pipe(
       messages,
       lp.encode(),
       stream.sink
     )
+
+    console.log("end");
+    return 'good'
 
   }
 

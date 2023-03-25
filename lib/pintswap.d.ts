@@ -25,11 +25,11 @@ export declare class Pintswap extends PintP2P {
     createTransaction(offer: IOffer, maker: string, sharedAddress: string): Promise<ethers.Transaction & {
         data: any;
         chainId: any;
-        gasPrice: bigint;
+        gasPrice: any;
         gasLimit: any;
         nonce: any;
-        value: bigint;
+        value: number | bigint;
     }>;
-    createTrade(peer: any, offer: any): Promise<void>;
+    createTrade(peer: any, offer: any): Promise<string>;
 }
 export {};

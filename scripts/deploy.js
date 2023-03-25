@@ -1,5 +1,5 @@
-import { ethers } from "hardhat";
-
+// const { ethers } = require("hardhat");
+const { ethers } = require('hardhat');
 async function main() {
   const TestToken = await ethers.getContractFactory("TestToken");
   const _testToken = await TestToken.deploy(100000, "TestToken1", "TTK1");
@@ -27,6 +27,7 @@ async function main() {
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
 main().catch((error) => {
+  console.log("error");
   console.error(error);
   process.exitCode = 1;
 });

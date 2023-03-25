@@ -442,8 +442,7 @@ export class Pintswap extends PintP2P {
       stream.sink
     )
 
-    console.log("end");
-    return 'good'
+    return true 
 
   }
 

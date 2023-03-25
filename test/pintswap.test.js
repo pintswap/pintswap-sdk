@@ -81,8 +81,7 @@ describe("Pintswap", function () {
     // console.log(maker.peerId)
     // let makerMultiaddr = new multiaddr(PintP2P.PRESETS.MAINNET + maker.peerId.toB58String())
     let val = await taker.createTrade(maker.peerId, offer);
-    console.log('it stopped?', val);
-    expect(val).to.be.a('string');
+    expect(val).to.be.equal(true);
   })
 
 });

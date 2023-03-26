@@ -6,7 +6,7 @@ import * as lp from "it-length-prefixed";
 import { handleKeygen, initKeygen } from "./utils";
 import { TPCEcdsaKeyGen as TPC, TPCEcdsaSign as TPCsign } from "@safeheron/two-party-ecdsa-js";
 import { emasm } from "emasm";
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 import pushable from "it-pushable";
 import BN from "bn.js";
 

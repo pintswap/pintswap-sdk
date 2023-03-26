@@ -3233,13 +3233,6 @@ elliptic@6.5.4, elliptic@^6.5.2, elliptic@^6.5.3, elliptic@^6.5.4:
   version "0.2.0"
   resolved "https://github.com/kungfuflex/emasm#d2f5d922f0dc0440e7b227a441ce516058e2682f"
 
-emitterator@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/emitterator/-/emitterator-1.0.0.tgz#0daf529c85f4bebc07790b77c2d2b9c93cbbda1f"
-  integrity sha512-yNjZ4COVIGHlis7gHKdYGhFqa7YKTGJXcQMrhZz1oosvjBB6+gz6UPBwhDXoCG/j8jMSh8qwoa7l08lCb8dsVQ==
-  dependencies:
-    events "^3.0.0"
-
 emittery@^0.13.1:
   version "0.13.1"
   resolved "https://registry.yarnpkg.com/emittery/-/emittery-0.13.1.tgz#c04b8c3457490e0847ae51fced3af52d338e3dad"
@@ -3657,7 +3650,7 @@ eventemitter3@^4.0.4:
   resolved "https://registry.yarnpkg.com/eventemitter3/-/eventemitter3-4.0.7.tgz#2de9b68f6528d5644ef5c59526a1b4a07306169f"
   integrity sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==
 
-events@^3.0.0, events@^3.3.0:
+events@^3.3.0:
   version "3.3.0"
   resolved "https://registry.yarnpkg.com/events/-/events-3.3.0.tgz#31a95ad0a924e2d2c419a813aeb2c4e878ea7400"
   integrity sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==
@@ -9125,7 +9118,7 @@ yargs@16.2.0:
     y18n "^5.0.5"
     yargs-parser "^20.2.2"
 
-yargs@^17.3.1:
+yargs@^17.3.1, yargs@^17.7.1:
   version "17.7.1"
   resolved "https://registry.yarnpkg.com/yargs/-/yargs-17.7.1.tgz#34a77645201d1a8fc5213ace787c220eabbd0967"
   integrity sha512-cwiTb08Xuv5fqF4AovYacTFNxk62th7LKJ6BL9IGUpTJrWoU7/7WdQGTP2SjKf1dUNBGzDd28p/Yfs/GI6JrLw==

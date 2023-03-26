@@ -9,7 +9,8 @@
     "build:ts": "tsc",
     "build": "npm-run-all build:proto build:ts",
     "run-script": "node",
-    "test": "jest"
+    "test": "jest",
+    "test-localhost": "HARDHAT_NETWORK=localhost node"
   },
   "repository": "https://github.com/pintswap/pintswap-sdk",
   "author": "flex",
@@ -23,12 +24,10 @@
     "assert": "^2.0.0",
     "base64url": "^3.0.1",
     "bn.js": "^5.2.1",
-    "browserify-zlib": "^0.2.0",
     "buffer": "^6.0.3",
     "chai": "^4.2.0",
     "cryptico-js": "^1.1.0",
     "emasm": "https://github.com/kungfuflex/emasm",
-    "emitterator": "^1.0.0",
     "ethers": "^6.1.0",
     "hardhat-gas-reporter": "^1.0.9",
     "https-browserify": "^1.0.0",
@@ -50,13 +49,15 @@
     "peer-info": "^0.17.5",
     "ristretto255": "^0.1.2",
     "solidity-coverage": "^0.8.2",
-    "stream-http": "^3.2.0",
     "the-global-object": "^1.0.2",
     "typechain": "^8.1.1",
     "uuid": "^8.3.2",
-    "wrtc": "^0.4.7"
+    "wrtc": "^0.4.7",
+    "yargs": "^17.7.1"
   },
   "devDependencies": {
+    "stream-http": "^3.2.0",
+    "browserify-zlib": "^0.2.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
     "@nomicfoundation/hardhat-toolbox": "^2.0.0",

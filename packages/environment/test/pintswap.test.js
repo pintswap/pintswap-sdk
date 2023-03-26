@@ -4,10 +4,10 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
-const { Pintswap } = require("../lib");
+const { Pintswap } = require("@pintswap-sdk/pintswap");
 const { toB58String } = require("peer-id");
 const { multiaddr } = require("multiaddr");
-const { PintP2P } = require("../lib"); 
+const { PintP2P } = require("@pintswap-sdk/pintswap"); 
 
 
 describe("Pintswap", function () {

@@ -2,12 +2,6 @@
   "name": "pintswap-sdk",
   "version": "0.1.0",
   "description": "pintswap SDK",
-  "repository": "https//github.com/pintswap/pintswap-sdk",
-  "scripts": {
-    "environment": "yarn workspace @pintswap-sdk/environment",
-    "environment:test": "yarn environment hardhat test --network localhost",
-    "environment:node": "yarn environment hardhat node"
-  },
   "main": "lib/index.js",
   "type": "commonjs",
   "scripts": {

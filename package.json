@@ -27,7 +27,6 @@
     "chai": "^4.2.0",
     "emasm": "https://github.com/kungfuflex/emasm",
     "ethers": "^6.1.0",
-    "it-keepalive": "^1.2.0",
     "libp2p": "^0.36.2",
     "libp2p-bootstrap": "^0.14.0",
     "libp2p-crypto": "^0.21.2",

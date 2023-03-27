@@ -3,7 +3,6 @@ import { PintP2P } from "./p2p";
 import { ethers } from "ethers";
 import { pipe } from "it-pipe";
 import * as lp from "it-length-prefixed";
-import { handleKeygen, initKeygen } from "./utils";
 import { TPCEcdsaKeyGen as TPC, TPCEcdsaSign as TPCsign } from "@safeheron/two-party-ecdsa-js";
 import { emasm } from "emasm";
 import { EventEmitter } from "events";

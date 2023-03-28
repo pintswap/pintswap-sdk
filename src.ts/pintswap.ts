@@ -8,6 +8,14 @@ import { emasm } from "emasm";
 import { EventEmitter } from "events";
 import pushable from "it-pushable";
 import BN from "bn.js";
+import { 
+  keyshareToAddress,
+  createContract,
+  hashOffer,
+  leftZeroPad,
+  toBigInt
+} from "./trade";
+import { type IOffer } from "./types";
 
 const {
   solidityPackedKeccak256,
@@ -19,106 +27,42 @@ const {
   Transaction,
 } = ethers;
 
-interface IOffer {
-  givesToken: string;
-  getsToken: string;
-  givesAmount: any;
-  getsAmount: any;
-}
-
-export const createContract = (offer: IOffer, maker: string, taker: string) => {
-  return emasm([
-    "pc",
-    "returndatasize",
-    "0x64",
-    "returndatasize",
-    "returndatasize",
-    getAddress(offer.givesToken),
-    "0x23b872dd00000000000000000000000000000000000000000000000000000000",
-    "returndatasize",
-    "mstore",
-    getAddress(maker),
-    "0x4",
-    "mstore",
-    getAddress(taker),
-    "0x24",
-    "mstore",
-    hexlify(offer.givesAmount),
-    "0x44",
-    "mstore",
-    "gas",
-    "call",
-    "0x0",
-    "0x0",
-    "0x64",
-    "0x0",
-    "0x0",
-    getAddress(offer.getsToken),
-    getAddress(taker),
-    "0x4",
-    "mstore",
-    getAddress(maker),
-    "0x24",
-    "mstore",
-    hexlify(offer.getsAmount),
-    "0x44",
-    "mstore",
-    "gas",
-    "call",
-    "and",
-    "failure",
-    "jumpi",
-    getAddress(maker),
-    "selfdestruct",
-    ["failure", ["0x0", "0x0", "revert"]],
-  ]);
-};
-
-export const hashOffer = (o) => {
-  return solidityPackedKeccak256(
-    ["address", "address", "uint256", "uint256"],
-    [
-      getAddress(o.givesToken),
-      getAddress(o.getsToken),
-      o.givesAmount,
-      o.getsAmount,
-    ]
-  );
-};
-function leftZeroPad(s, n) { 
-  return '0'.repeat(n - s.length) + s; 
-}
-
-function keyshareToAddress (keyshareJsonObject) {
-  let { Q } = keyshareJsonObject as any;
-  let prepend = new BN(Q.y, 16).mod(new BN(2)).isZero() ? "0x02" : "0x03";
-  let derivedPubKey = prepend + leftZeroPad(new BN(Q.x, 16).toString(16), 64);
-  return ethers.computeAddress(derivedPubKey as string); 
-}
-
-function toBigInt(v) {
-  if (v.toHexString) return v.toBigInt();
-  return v;
-}
-
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
-  // public offers: IOffer[];
+
 
   static async initialize({ signer }) {
     let peerId = await this.peerIdFromSeed(await signer.getAddress());
-    const self = new this({ signer, peerId });
+    return new this({ signer, peerId });
+  }
 
-    await self.handle("/pintswap/0.1.0/orders", (duplex) =>
+  constructor({ signer, peerId }) {
+    super({ signer, peerId });
+    this.signer = signer;
+  }
+
+  async startNode() {
+    await this.start();
+    await this.handleBroadcastedOffers();
+    this.emit(`Pintswap:: started libp2p`);
+  }
+
+  async stopNode() {
+    await this.stop();
+    this.emit(`Pintswap:: stopped libp2p`);
+  }
+
+  async handleBroadcastedOffers() {
+    await this.handle("/pintswap/0.1.0/orders", (duplex) =>
       pipe(
         duplex.stream.sink,
         lp.encode(),
-        protocol.OfferList.encode({ offers: self.offers.values() })
+        protocol.OfferList.encode({ offers: this.offers.values() })
       )
     );
 
-    await self.handle(
+    await this.handle(
       "/pintswap/0.1.0/create-trade",
       async ({ stream, connection, protocol }) => {
           let context2 = await TPC.P2Context.createContext();
@@ -156,8 +100,8 @@ export class Pintswap extends PintP2P {
 
           _event.on('/event/approve-contract', async ( offerHashBuf ) => {
             try {
-              let offer = self.offers.get(offerHashBuf.toString());
-              await self.approveTradeAsMaker(offer, sharedAddress as string);
+              let offer = this.offers.get(offerHashBuf.toString());
+              await this.approveTradeAsMaker(offer, sharedAddress as string);
             } catch (err) {
               throw new Error("couldn't find offering");
             }
@@ -229,14 +173,8 @@ export class Pintswap extends PintP2P {
           )
       },
     );
-    await self.start();
-    return self;
   }
 
-  constructor({ signer, peerId }) {
-    super({ signer, peerId });
-    this.signer = signer;
-  }
 
   // adds new offer to this.offers: Map<hash, IOffer>
   listOffer(_offer: IOffer) {
@@ -333,7 +271,6 @@ export class Pintswap extends PintP2P {
     _event.on('/event/ecdsa-keygen/party/1', (step, message) => {
       switch(step) {
         case 2:
-          //handling message 2
           console.log(
             `TAKER:: /event/ecdsa-keygen/party/1 handling message: ${step}`
           )

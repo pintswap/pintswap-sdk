@@ -55,14 +55,14 @@ export class Pintswap extends PintP2P {
   }
 
   async handleBroadcastedOffers() {
-    await this.handle("/pintswap/0.1.0/orders", (duplex) =>
-      this.emit(`/pintswap/request/orders`)
-      pipe(
-        duplex.stream.sink,
-        lp.encode(),
-        protocol.OfferList.encode({ offers: this.offers.values() })
-      )
-    );
+    await this.handle("/pintswap/0.1.0/orders", (duplex) => {
+        this.emit(`/pintswap/request/orders`)
+        pipe(
+          duplex.stream.sink,
+          lp.encode(),
+          protocol.OfferList.encode({ offers: this.offers.values() })
+        )
+      });
 
     await this.handle(
       "/pintswap/0.1.0/create-trade",

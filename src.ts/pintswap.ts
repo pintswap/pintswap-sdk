@@ -45,17 +45,18 @@ export class Pintswap extends PintP2P {
   async startNode() {
     await this.handleBroadcastedOffers();
     await this.start();
-    this.emit(`Pintswap:: started libp2p`);
+    this.emit(`pintswap/node/status`, 1);
   }
 
   async stopNode() {
     await this.unhandle(["/pintswap/0.1.0/orders", "/pintswap/0.1.0/create-trade"]);
     await this.stop();
-    this.emit(`Pintswap:: stopped libp2p`);
+    this.emit(`pintswap/node/status`, 0);
   }
 
   async handleBroadcastedOffers() {
     await this.handle("/pintswap/0.1.0/orders", (duplex) =>
+      this.emit(`/pintswap/request/orders`)
       pipe(
         duplex.stream.sink,
         lp.encode(),
@@ -66,6 +67,7 @@ export class Pintswap extends PintP2P {
     await this.handle(
       "/pintswap/0.1.0/create-trade",
       async ({ stream, connection, protocol }) => {
+          this.emit(`/pintswap/request/create-trade`);
           let context2 = await TPC.P2Context.createContext();
           let messages = pushable();
           let _event = new EventEmitter();
@@ -102,6 +104,7 @@ export class Pintswap extends PintP2P {
           _event.on('/event/approve-contract', async ( offerHashBuf ) => {
             try {
               let offer = this.offers.get(offerHashBuf.toString());
+              this.emit(`pintswap/request/create-trade/fulfilling`, offerHashBuf.toString(), offer); // emits offer hash and offer object to frontend
               await this.approveTradeAsMaker(offer, sharedAddress as string);
             } catch (err) {
               throw new Error("couldn't find offering");

@@ -40,48 +40,36 @@ describe("Pintswap", function () {
   before(async function() {
     await setupTestEnv()
     const [ makerSigner, takerSigner ] = await ethers.getSigners();
-    maker = await Pintswap.initialize({ signer: makerSigner });
-    taker = await Pintswap.initialize({ signer: takerSigner })
-    await maker.startNode();
-    await taker.startNode();
 
-    await new Promise((resolve) => {
-
+    await new Promise(async (resolve) => {
+      maker = await Pintswap.initialize({ signer: makerSigner });
+      await maker.startNode();
       maker.on("peer:discovery", async (peer) => {
         console.log(
-          `found peer with id: ${peer}`
+          `Maker:: found peer with id: ${peer}`
         )
       })
-
+      maker.broadcastOffer(offer);
       setTimeout(resolve, 4000);
-    })
-    maker.listOffer(offer);
-  })
+    });
 
-	/*
-  afterEach(async function() {
-    const [makerSigner, takerSigner ] = await ethers.getSigners();
-    console.log(
-      await tt1.balanceOf(makerSigner.address),
-      await tt1.balanceOf(takerSigner.address),
-      await tt2.balanceOf(makerSigner.address),
-      await tt2.balanceOf(takerSigner.address)
-    )
-    await maker.stop()
-    await taker.stop()
-  })
-  */
-
-	/*
-  it("should test to make sure `Offer` is correctly formatted", function () {
-    console.log(offer);
+    await new Promise(async (resolve) => {
+      taker = await Pintswap.initialize({ signer: takerSigner });
+      await taker.startNode();
+      taker.on("peer:discovery", async (peer) => {
+        console.log(
+          `Taker:: found peer with id: ${peer}`
+        )
+      })
+      setTimeout(resolve, 4000);
+    });
   });
-  */
 
+  it("`Maker` should be started", async function () {
+    expect(maker.isStarted()).to.be.equal(true);
+  });
 
   it("`Maker` should dialProtocol `Taker` to create a trade", async function () {
-    // console.log(maker.peerId)
-    // let makerMultiaddr = new multiaddr(PintP2P.PRESETS.MAINNET + maker.peerId.toB58String())
     let val = await taker.createTrade(maker.peerId, offer);
     expect(val).to.be.equal(true);
   })

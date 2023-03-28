@@ -34,7 +34,7 @@ export class Pintswap extends PintP2P {
 
   static async initialize({ signer }) {
     let peerId = await this.peerIdFromSeed(await signer.getAddress());
-    return new this({ signer, peerId });
+    return new Pintswap({ signer, peerId });
   }
 
   constructor({ signer, peerId }) {
@@ -43,12 +43,13 @@ export class Pintswap extends PintP2P {
   }
 
   async startNode() {
-    await this.start();
     await this.handleBroadcastedOffers();
+    await this.start();
     this.emit(`Pintswap:: started libp2p`);
   }
 
   async stopNode() {
+    await this.unhandle(["/pintswap/0.1.0/orders", "/pintswap/0.1.0/create-trade"]);
     await this.stop();
     this.emit(`Pintswap:: stopped libp2p`);
   }
@@ -175,15 +176,13 @@ export class Pintswap extends PintP2P {
     );
   }
 
-
   // adds new offer to this.offers: Map<hash, IOffer>
-  listOffer(_offer: IOffer) {
+  broadcastOffer(_offer: IOffer) {
       console.log('trying to list new offer');
       this.offers.set(hashOffer(_offer), _offer);
   }
 
   async getTradeAddress(sharedAddress: string) {
-    
     const address = getCreateAddress({
       nonce: await this.signer.provider.getTransactionCount(sharedAddress), 
       from: sharedAddress, 
@@ -191,6 +190,7 @@ export class Pintswap extends PintP2P {
     console.log('TRADE ADDRESS: ' + address);
     return address;
   }
+
   async approveTradeAsMaker(offer: IOffer, sharedAddress: string) {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
     const token = new Contract(
@@ -203,6 +203,7 @@ export class Pintswap extends PintP2P {
     console.log('MAKER APPROVED BALANCE ' + ethers.formatEther(await token.allowance(await this.signer.getAddress(), tradeAddress)));
     return tx;
   }
+
   async approveTradeAsTaker(offer: IOffer, sharedAddress: string) {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
     const token = new Contract(

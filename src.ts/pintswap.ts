@@ -15,7 +15,7 @@ import {
   leftZeroPad,
   toBigInt
 } from "./trade";
-import { type IOffer } from "./types";
+import { IOffer } from "./types";
 
 const {
   solidityPackedKeccak256,

@@ -1,6 +1,6 @@
 import { PintP2P } from "./p2p";
 import { ethers } from "ethers";
-import { type IOffer } from "./types";
+import { IOffer } from "./types";
 export declare class Pintswap extends PintP2P {
     signer: any;
     offers: Map<string, IOffer>;

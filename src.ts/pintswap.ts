@@ -44,7 +44,7 @@ export const testMapToBuffers = async function (seed) {
   return await cryptico.generateRSAKey(seed, 2048);
 }
 
-export function testLongConvert(key) {
+export const testLongConvert = function (key) {
   return crypto.keys.supportedKeys.rsa.unmarshalRsaPrivateKey((new (crypto.keys.supportedKeys.rsa.RsaPrivateKey as any)(key, key) as any).marshal());
 }
 

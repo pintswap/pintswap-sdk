@@ -33,7 +33,9 @@ export class Pintswap extends PintP2P {
 
 
   static async initialize({ signer }) {
+    if (!signer.getAddress()) return new Error(`ERROR: pintswap-sdk.ts: invalid signer?`);
     let peerId = await Pintswap.peerIdFromSeed(await signer.getAddress());
+    if (!peerId) return new Error(`ERROR: pintswap-sdk.ts: failed to create peerId`);
     return new Pintswap({ signer, peerId });
   }
 

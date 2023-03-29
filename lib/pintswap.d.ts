@@ -6,7 +6,7 @@ export declare class Pintswap extends PintP2P {
     offers: Map<string, IOffer>;
     static initialize({ signer }: {
         signer: any;
-    }): Promise<Pintswap>;
+    }): Promise<Pintswap | Error>;
     constructor({ signer, peerId }: {
         signer: any;
         peerId: any;

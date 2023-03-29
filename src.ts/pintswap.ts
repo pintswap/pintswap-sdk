@@ -17,10 +17,6 @@ import {
 } from "./trade";
 import { IOffer } from "./types";
 import PeerId from "peer-id";
-import crypto from "libp2p-crypto";
-import cryptico from "cryptico-js";
-import base64url from "base64url";
-import { mapValues } from "lodash";
 
 const {
   solidityPackedKeccak256,

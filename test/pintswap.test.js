@@ -71,8 +71,7 @@ describe("Pintswap", function () {
 
   it("`Maker` should dialProtocol `Taker` to create a trade", async function () {
     let val = await taker.createTrade(maker.peerId, offer);
-    expect(val.isSuccess).to.be.equal(true);
-    expect(val.orderHash).to.contain('0x')
+    expect(val).to.be.equal(true);
   })
 
 });

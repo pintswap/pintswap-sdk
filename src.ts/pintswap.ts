@@ -396,8 +396,10 @@ export class Pintswap extends PintP2P {
       stream.sink
     )
 
-    return true 
-
+    return {
+      isSuccess: true,
+      orderHash: tx.unsignedHash
+    } 
   }
 
 }

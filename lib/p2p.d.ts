@@ -1,6 +1,6 @@
 import PeerId from "peer-id";
 import { VoidSigner } from "ethers";
-import Libp2p = require("libp2p");
+import Libp2p from "libp2p";
 export declare function bufferToString(buf: Uint8Array): string;
 export declare function stringToBuffer(text: string): Uint8Array;
 export declare function fromBufferToJSON(buf: Uint8Array): any;

@@ -33,7 +33,7 @@ export class Pintswap extends PintP2P {
 
 
   static async initialize({ signer }) {
-    let peerId = await this.peerIdFromSeed(await signer.getAddress());
+    let peerId = await Pintswap.peerIdFromSeed(await signer.getAddress());
     return new Pintswap({ signer, peerId });
   }
 

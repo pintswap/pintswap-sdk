@@ -1,22 +1,22 @@
 "use strict";
-import Mplex = require("libp2p-mplex");
+import Mplex from "libp2p-mplex";
 import { NOISE } from 'libp2p-noise';
-import KadDHT = require("libp2p-kad-dht");
-import Bootstrap = require("libp2p-bootstrap");
-import PeerId = require("peer-id");
-import GossipSub = require("libp2p-gossipsub");
-import RelayConstants = require('libp2p/src/circuit/constants')
-import WStar = require("libp2p-webrtc-star");
-import isBrowser = require("is-browser");
+import KadDHT from "libp2p-kad-dht";
+import Bootstrap from "libp2p-bootstrap";
+import PeerId from "peer-id";
+import GossipSub from "libp2p-gossipsub";
+import RelayConstants from 'libp2p/src/circuit/constants'
+import WStar from "libp2p-webrtc-star";
+import isBrowser from "is-browser";
 import { VoidSigner, hexlify, solidityPackedKeccak256 } from "ethers";
-import Libp2p = require("libp2p");
+import Libp2p from "libp2p";
 import crypto from "libp2p-crypto";
-import wrtc = require("wrtc");
-import cryptico = require('cryptico-js');
-import globalObject = require('the-global-object');
+import wrtc from "wrtc";
+import cryptico from 'cryptico-js';
+import globalObject from 'the-global-object';
 import { Buffer } from 'buffer';
 import { mapValues } from 'lodash';
-import base64url = require('base64url');
+import base64url from 'base64url';
 
 
 export function bufferToString(buf: Uint8Array): string {

@@ -16,6 +16,7 @@ import {
   toBigInt
 } from "./trade";
 import { IOffer } from "./types";
+import PeerId from "peer-id";
 
 const {
   solidityPackedKeccak256,

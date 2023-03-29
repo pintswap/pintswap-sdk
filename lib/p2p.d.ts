@@ -1,4 +1,4 @@
-import PeerId = require("peer-id");
+import PeerId from "peer-id";
 import { VoidSigner } from "ethers";
 import Libp2p = require("libp2p");
 export declare function bufferToString(buf: Uint8Array): string;

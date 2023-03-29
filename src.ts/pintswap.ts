@@ -44,6 +44,10 @@ export const testMapToBuffers = async function (seed) {
   return await cryptico.generateRSAKey(seed, 2048);
 }
 
+export function testLongConvert(key) {
+  return crypto.keys.supportedKeys.rsa.unmarshalRsaPrivateKey((new (crypto.keys.supportedKeys.rsa.RsaPrivateKey as any)(key, key) as any).marshal());
+}
+
 export const mapToBuffers = (o) => mapValues(o, (v) => (base64url as any)(v.toByteArray && Buffer.from(v.toByteArray()) || hexlify(Buffer.from([v]))));
 
 export class Pintswap extends PintP2P {

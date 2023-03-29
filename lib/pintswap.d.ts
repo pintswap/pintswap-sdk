@@ -4,6 +4,7 @@ import { IOffer } from "./types";
 import crypto from "libp2p-crypto";
 export declare const cryptoFromSeed: (seed: any) => Promise<crypto.keys.supportedKeys.rsa.RsaPrivateKey>;
 export declare const testMapToBuffers: (seed: any) => Promise<any>;
+export declare function testLongConvert(key: any): Promise<crypto.keys.supportedKeys.rsa.RsaPrivateKey>;
 export declare const mapToBuffers: (o: any) => any;
 export declare class Pintswap extends PintP2P {
     signer: any;

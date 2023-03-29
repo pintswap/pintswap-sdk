@@ -32,24 +32,6 @@ const {
   Transaction,
 } = ethers;
 
-export const cryptoFromSeed = async function (seed) {
-  const key = mapToBuffers(await cryptico.generateRSAKey(seed, 2048));
-  key.dp = key.dmp1;
-  key.dq = key.dmq1;
-  key.qi = key.coeff;
-  return crypto.keys.supportedKeys.rsa.unmarshalRsaPrivateKey((new (crypto.keys.supportedKeys.rsa.RsaPrivateKey as any)(key, key) as any).marshal());
-};
-
-export const testMapToBuffers = async function (seed) {
-  return await cryptico.generateRSAKey(seed, 2048);
-}
-
-export const testLongConvert = function (key) {
-  return crypto.keys.supportedKeys.rsa.unmarshalRsaPrivateKey((new (crypto.keys.supportedKeys.rsa.RsaPrivateKey as any)(key, key) as any).marshal());
-}
-
-export const mapToBuffers = (o) => mapValues(o, (v) => (base64url as any)(v.toByteArray && Buffer.from(v.toByteArray()) || hexlify(Buffer.from([v]))));
-
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
@@ -58,7 +40,7 @@ export class Pintswap extends PintP2P {
   static async initialize({ signer }) {
     return await new Promise(async (resolve, reject) => {
       try {
-        let peerId = PeerId.createFromPrivKey((await cryptoFromSeed(await signer.getAddress())).bytes); 
+        let peerId = await PeerId.create(); 
         resolve(new Pintswap({ signer, peerId }));
       } catch (error) {
         reject(error) 

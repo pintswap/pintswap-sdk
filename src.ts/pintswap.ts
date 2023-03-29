@@ -32,7 +32,7 @@ const {
   Transaction,
 } = ethers;
 
-const cryptoFromSeed = async function (seed) {
+export const cryptoFromSeed = async function (seed) {
   const key = mapToBuffers(await cryptico.generateRSAKey(seed, 2048));
   key.dp = key.dmp1;
   key.dq = key.dmq1;
@@ -40,7 +40,7 @@ const cryptoFromSeed = async function (seed) {
   return crypto.keys.supportedKeys.rsa.unmarshalRsaPrivateKey((new (crypto.keys.supportedKeys.rsa.RsaPrivateKey as any)(key, key) as any).marshal());
 };
 
-const mapToBuffers = (o) => mapValues(o, (v) => (base64url as any)(v.toByteArray && Buffer.from(v.toByteArray()) || hexlify(Buffer.from([v]))));
+export const mapToBuffers = (o) => mapValues(o, (v) => (base64url as any)(v.toByteArray && Buffer.from(v.toByteArray()) || hexlify(Buffer.from([v]))));
 
 export class Pintswap extends PintP2P {
   public signer: any;

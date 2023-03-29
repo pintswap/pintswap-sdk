@@ -53,7 +53,7 @@ export class Pintswap extends PintP2P {
         let peerId = PeerId.createFromPrivKey((await cryptoFromSeed(await signer.getAddress())).bytes); 
         resolve(new Pintswap({ signer, peerId }));
       } catch (error) {
-        reject(new Error("failed to initialize Pintswap")) 
+        reject(error) 
       }
     })
   }

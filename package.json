@@ -44,6 +44,7 @@
     "peer-info": "^0.17.5",
     "ristretto255": "^0.1.2",
     "the-global-object": "^1.0.2",
+    "canonical-weth": "^1.4.0",
     "uuid": "^8.3.2",
     "wrtc": "^0.4.7",
     "yargs": "^17.7.1"
@@ -59,7 +60,6 @@
     "@typechain/hardhat": "^6.1.2",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.15.3",
-    "canonical-weth": "^1.4.0",
     "cross-env": "^7.0.3",
     "hardhat": "^2.13.0",
     "hardhat-gas-reporter": "^1.0.9",

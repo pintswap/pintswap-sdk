@@ -10,7 +10,7 @@
     "build": "npm-run-all build:proto build:ts",
     "run-script": "node",
     "test": "jest",
-    "test-localhost": "HARDHAT_NETWORK=localhost node"
+    "test:client": "HARDHAT_NETWORK=localhost node"
   },
   "repository": "https://github.com/pintswap/pintswap-sdk",
   "author": "flex",

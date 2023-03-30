@@ -2,7 +2,7 @@ const hre = require('hardhat');
 const ethers = hre.ethers;
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
-const { Pintswap } = require('../lib');
+const { Pintswap, hashOffer } = require('../lib');
 const argv = yargs(hideBin(process.argv))
   .string(['wallet'])
   .boolean(['mockMaker', 'mockTaker'])
@@ -45,6 +45,15 @@ async function main() {
 
     await makerOwnedTestToken.deployed();
 
+    const maker = await Pintswap.initialize({ signer: makerSigner });
+
+    const offer = { 
+      givesToken: makerOwnedTestToken.address,
+      getsToken: testToken.address,
+      givesAmount: ethers.utils.parseUnits("50.0").toHexString(),
+      getsAmount: ethers.utils.parseUnits("50.0").toHexString()
+    }
+
     console.log(
       ` constructing offer \n
         Offer<IOffer> : { \n
@@ -52,18 +61,14 @@ async function main() {
         \t getsTokens: ${ testToken.address }, \n
         \t givesAmount: ${ ethers.utils.parseUnits("50.0").toHexString() }, \n
         \t getsAmounts: ${ ethers.utils.parseUnits("50.0").toHexString() }, \n
+
+        offerHash: ${ hashOffer(offer) }
+        multiaddr: ${ maker.peerId.toB58String() }
       }`
     );
     
-    const maker = await Pintswap.initialize({ signer: makerSigner });
-    console.log("test maker initialized...");
 
-    maker.broadcastOffer({ 
-      givesToken: makerOwnedTestToken.address,
-      getsToken: testToken.address,
-      givesAmount: ethers.utils.parseUnits("50.0").toHexString(),
-      getsAmount: ethers.utils.parseUnits("50.0").toHexString()
-    });
+    maker.broadcastOffer(offer);
 
     maker.on("peer:discovered", (peer) => {
       console.log(

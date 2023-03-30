@@ -18,6 +18,15 @@ Runs a localhost node environment to run various transactions on.
 
 Runs the jest test file which goes through the entire workflow of pintswap from creating the trade to completing the trade.
 
-#### `yarn test-localhost`
+#### `yarn test:client <script>`
 
 Runs any passed script on the localhost network.
+
+Available scripts for `yarn test:client`:
+- `scripts/client-test.js`
+
+Available flags for `scripts/client-test.js`:
+- `--wallet <your wallet>` (Funds provided wallet with 6000 ETH)
+- `--mockMaker true` (Creates an arbitrary offer by an arbitrary 'maker')
+
+Example: `yarn test:client scripts/client-test.js --wallet <your wallet> --mockMaker true`

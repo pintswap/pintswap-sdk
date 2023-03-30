@@ -71,6 +71,8 @@ export class Pintswap extends PintP2P {
           lp.encode(),
           duplex.stream.sink,
         )
+        console.log("offerList:", protocol.OfferList);
+        console.log("encodedOfferList:", protocol.OfferList.encode({ offers: this.offers.values() }))
         messages.push(protocol.OfferList.encode({ offers: this.offers.values() }).finish());
 	messages.end();
       });

@@ -70,7 +70,6 @@ describe("Pintswap", function () {
   });
 
   it("`Maker` should dialProtocol `Taker` to create a trade", async function () {
-    console.log("MAKER PEER ID", maker.peerId)
     let val = await taker.createTrade(maker.peerId, offer);
     expect(val).to.be.equal(true);
   })

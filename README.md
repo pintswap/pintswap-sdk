@@ -1,13 +1,23 @@
-# Sample Hardhat Project
+# PintSwap SDK
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+This is the software development kit for PintSwap, an ERC20 peer-to-peer swap.
 
-Try running some of the following tasks:
+## Installation
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.js
-```
+#### `yarn`
+
+This will install all the appropriate dependencies.
+
+## Scripts
+
+#### `yarn hardhat node`
+
+Runs a localhost node environment to run various transactions on.
+
+#### `yarn hardhat test`
+
+Runs the jest test file which goes through the entire workflow of pintswap from creating the trade to completing the trade.
+
+#### `yarn test-localhost`
+
+Runs any passed script on the localhost network.

@@ -65,9 +65,9 @@ export class Pintswap extends PintP2P {
     await this.handle("/pintswap/0.1.0/orders", (duplex) => {
         this.emit(`/pintswap/request/orders`)
         pipe(
-          duplex.stream.sink,
+          protocol.OfferList.encode({ offers: this.offers.values() }),
           lp.encode(),
-          protocol.OfferList.encode({ offers: this.offers.values() })
+          duplex.stream.sink,
         )
       });
 

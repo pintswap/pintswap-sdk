@@ -1,7 +1,6 @@
 import { PintP2P } from "./p2p";
 import { ethers } from "ethers";
 import { IOffer } from "./types";
-import PeerId from "peer-id";
 export declare class Pintswap extends PintP2P {
     signer: any;
     offers: Map<string, IOffer>;
@@ -16,7 +15,7 @@ export declare class Pintswap extends PintP2P {
     stopNode(): Promise<void>;
     handleBroadcastedOffers(): Promise<void>;
     broadcastOffer(_offer: IOffer): void;
-    getTradesByPeerId(peerId: string | PeerId): Promise<any>;
+    getTradesByPeerId(peerId: string): Promise<any>;
     getTradeAddress(sharedAddress: string): Promise<string>;
     approveTradeAsMaker(offer: IOffer, sharedAddress: string): Promise<any>;
     approveTradeAsTaker(offer: IOffer, sharedAddress: string): Promise<any>;

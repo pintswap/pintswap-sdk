@@ -208,7 +208,7 @@ export class Pintswap extends PintP2P {
     //    return vals
     //   }
     // )
-    const result = await (pipe(stream.source, lp.decode()).next());
+    const result = await (await pipe(stream.source, lp.decode()).next());
     console.log("STREAM RESULT:", result);
     return result;
   }

@@ -63,10 +63,9 @@ async function main() {
         \t getsAmounts: ${ ethers.utils.parseUnits("50.0").toHexString() }, \n
 
         offerHash: ${ hashOffer(offer) }
-        multiaddr: ${ maker.peerId.toB58String() }
+        mock maker multiaddr: ${ maker.peerId.toB58String() }
       }`
     );
-    
 
     maker.broadcastOffer(offer);
 
@@ -82,7 +81,7 @@ async function main() {
   //=====> test maker
 
   console.log(
-    `Done! please add token ${ testToken.address } to your list of tokens...`
+    `Done! if your using metamask add token: ${ testToken.address } to your tokens list...`
   );
 
 }

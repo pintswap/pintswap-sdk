@@ -273,9 +273,6 @@ export class Pintswap extends PintP2P {
     console.log( 
       `Acting on offer ${ offer } with peer ${ peer }`
     );
-
-    // this.emit("/pintswap/taker", 'taker', { status: 'INIT', data: null, error: false });
-    
   
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
@@ -283,7 +280,6 @@ export class Pintswap extends PintP2P {
 
     let _event = new EventEmitter();
 
-    // this.emit('/pintswap/internal/taker', _event);
     let context1 = await TPC.P1Context.createContext();
     let signContext = null;
     const message1 = context1.step1(); 

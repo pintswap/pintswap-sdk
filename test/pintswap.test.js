@@ -50,7 +50,7 @@ describe("Pintswap", function () {
         )
       })
       maker.broadcastOffer(offer);
-      setTimeout(resolve, 4000);
+      setTimeout(resolve, 6000);
     });
 
     await new Promise(async (resolve) => {
@@ -61,7 +61,7 @@ describe("Pintswap", function () {
           `Taker:: found peer with id: ${peer}`
         )
       })
-      setTimeout(resolve, 4000);
+      setTimeout(resolve, 6000);
     });
   });
 

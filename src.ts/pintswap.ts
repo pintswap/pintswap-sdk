@@ -197,18 +197,17 @@ export class Pintswap extends PintP2P {
   async getTradesByPeerId(peerId: string) {
     let pid = PeerId.createFromB58String(peerId);
     const { stream } = await this.dialProtocol(pid, '/pintswap/0.1.0/orders');
-    // const result = pipe(
-    //   stream.source, 
-    //   lp.decode(),
-    //   async function collect (source) {
-    //    const vals = []
-    //    for await (const val of source) {
-    //     vals.push(val)
-    //    } 
-    //    return vals
-    //   }
-    // )
-    const result = await (await pipe(stream.source, lp.decode()).next());
+    const result = pipe(
+      stream.source, 
+      lp.decode(),
+      async function collect (source) {
+       const vals = []
+       for await (const val of source) {
+        vals.push(val)
+       } 
+       return vals
+      }
+    )
     console.log("STREAM RESULT:", result);
     return result;
   }

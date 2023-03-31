@@ -65,6 +65,11 @@ describe("Pintswap", function () {
     });
   });
 
+  it("`Taker` should be able to dial and get the trade of the `Maker`", async function () {
+    let offers = await taker.getTradesByPeerId(maker.peerId.toB58String());
+    console.log(offers);
+  });
+
   it("`Maker` should be started", async function () {
     expect(maker.isStarted()).to.be.equal(true);
   });

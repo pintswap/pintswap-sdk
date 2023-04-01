@@ -210,7 +210,7 @@ export class Pintswap extends PintP2P {
       }
     )
 
-    return protocol.OfferList.toObject(protocol.OfferList.decode(result), {
+    const offer = protocol.OfferList.toObject(protocol.OfferList.decode(result), {
       enums: String,
       longs: String,
       bytes: String,
@@ -219,6 +219,9 @@ export class Pintswap extends PintP2P {
       objects: true,
       oneofs: true
     })
+
+    console.log("offer before it is sent to trade.ts on fe", offer);
+    return offer;
   }
 
   async getTradeAddress(sharedAddress: string) {

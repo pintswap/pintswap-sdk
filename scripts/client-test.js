@@ -62,8 +62,9 @@ async function main() {
         \t givesAmount: ${ ethers.utils.parseUnits("50.0").toHexString() }, \n
         \t getsAmounts: ${ ethers.utils.parseUnits("50.0").toHexString() }, \n
 
-        offerHash: ${ hashOffer(offer) }
-        mock maker multiaddr: ${ maker.peerId.toB58String() }
+        offerHash: ${ hashOffer(offer) } \n
+        mock maker multiaddr: ${ maker.peerId.toB58String() } \n
+        url: http://localhost:3000/#/${maker.peerId.toB58String()}/${hashOffer(offer)}
       }`
     );
 

@@ -7,6 +7,7 @@ import { TPCEcdsaKeyGen as TPC, TPCEcdsaSign as TPCsign } from "@safeheron/two-p
 import { emasm } from "emasm";
 import { EventEmitter } from "events";
 import pushable from "it-pushable";
+import { mapValues } from "lodash";
 import BN from "bn.js";
 import { 
   keyshareToAddress,
@@ -65,7 +66,7 @@ export class Pintswap extends PintP2P {
     await this.handle("/pintswap/0.1.0/orders", ({ stream }) => {
         console.log('handling order request from peer');
         this.emit(`/pintswap/request/orders`);
-        let _offerList = protocol.OfferList.encode({ offers: [...this.offers.values()] }).finish();
+        let _offerList = protocol.OfferList.encode({ offers: [...this.offers.values().map((v) => mapValues(v, (v) => Buffer.from(ethers.toBeArray(v))))] }).finish();
         pipe(
           [ _offerList ],
           lp.encode(),
@@ -210,7 +211,7 @@ export class Pintswap extends PintP2P {
       }
     )
 
-    const offer = protocol.OfferList.toObject(protocol.OfferList.decode(result), {
+    const offers = protocol.OfferList.toObject(protocol.OfferList.decode(result), {
       enums: String,
       longs: String,
       bytes: String,
@@ -218,10 +219,10 @@ export class Pintswap extends PintP2P {
       arrays: true,
       objects: true,
       oneofs: true
-    })
+    }).offers.map((v) => mapValues(v, (v) => ethers.hexlify(v)));
 
-    console.log("offer before it is sent to trade.ts on fe", offer);
-    return offer;
+    console.log("offer before it is sent to trade.ts on fe", offers);
+    return { offers };
   }
 
   async getTradeAddress(sharedAddress: string) {

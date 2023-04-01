@@ -15,7 +15,9 @@ export declare class Pintswap extends PintP2P {
     stopNode(): Promise<void>;
     handleBroadcastedOffers(): Promise<void>;
     broadcastOffer(_offer: IOffer): void;
-    getTradesByPeerId(peerId: string): Promise<any>;
+    getTradesByPeerId(peerId: string): Promise<{
+        offers: any;
+    }>;
     getTradeAddress(sharedAddress: string): Promise<string>;
     approveTradeAsMaker(offer: IOffer, sharedAddress: string): Promise<any>;
     approveTradeAsTaker(offer: IOffer, sharedAddress: string): Promise<any>;

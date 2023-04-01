@@ -2,10 +2,10 @@ syntax = "proto3";
 package pintswap;
 
 message Offer {
-  string gives_token = 1;
-  string gets_token = 2;
-  string gives_amount = 3;
-  string gets_amount = 4;
+  bytes gives_token = 1;
+  bytes gets_token = 2;
+  bytes gives_amount = 3;
+  bytes gets_amount = 4;
 }
 
 message OfferList {

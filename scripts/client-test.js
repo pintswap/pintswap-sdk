@@ -3,6 +3,7 @@ const ethers = hre.ethers;
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
 const { Pintswap, hashOffer } = require('../lib');
+const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const argv = yargs(hideBin(process.argv))
   .string(['wallet'])
   .boolean(['mockMaker', 'mockTaker'])
@@ -24,8 +25,17 @@ async function main() {
 
   await hre.network.provider.send('hardhat_setBalance', [
     argv.wallet,
-    ethers.utils.hexValue(ethers.utils.parseEther("100.0"))
+    ethers.utils.hexValue(ethers.utils.parseEther("1000.0"))
   ]);
+
+  console.log( await hre.network.provider.send("eth_accounts"))
+
+  let balance = await hre.network.provider.send("eth_getBalance", [
+    argv.wallet
+  ]);
+
+  console.log(balance);
+  
 
   const client = await ethers.getSigner(argv.wallet);
 

@@ -266,6 +266,7 @@ export class Pintswap extends PintP2P {
     return tx;
 
   }
+
   async createTransaction(offer: IOffer, maker: string, sharedAddress: string) {
     console.log(
       `/internal/creating a new transaction`

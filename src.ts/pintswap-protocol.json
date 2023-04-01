@@ -5,19 +5,19 @@
         "Offer": {
           "fields": {
             "givesToken": {
-              "type": "bytes",
+              "type": "string",
               "id": 1
             },
             "getsToken": {
-              "type": "bytes",
+              "type": "string",
               "id": 2
             },
             "givesAmount": {
-              "type": "bytes",
+              "type": "string",
               "id": 3
             },
             "getsAmount": {
-              "type": "bytes",
+              "type": "string",
               "id": 4
             }
           }

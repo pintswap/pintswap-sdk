@@ -66,7 +66,7 @@ export class Pintswap extends PintP2P {
     await this.handle("/pintswap/0.1.0/orders", ({ stream }) => {
         console.log('handling order request from peer');
         this.emit(`/pintswap/request/orders`);
-        let _offerList = protocol.OfferList.encode({ offers: [...this.offers.values().map((v) => mapValues(v, (v) => Buffer.from(ethers.toBeArray(v))))] }).finish();
+        let _offerList = protocol.OfferList.encode({ offers: [...this.offers.values()].map((v) => mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))) }).finish();
         pipe(
           [ _offerList ],
           lp.encode(),

@@ -219,7 +219,7 @@ export class Pintswap extends PintP2P {
       arrays: true,
       objects: true,
       oneofs: true
-    }).offers.map((v) => mapValues(v, (v) => ethers.hexlify(v)));
+    }).offers.map((v) => mapValues(v, (v) => ethers.hexlify(ethers.toBeArray(Buffer.from(v, 'base64') as any))));
 
     console.log("offer before it is sent to trade.ts on fe", offers);
     return { offers };

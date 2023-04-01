@@ -212,7 +212,7 @@ export class Pintswap extends PintP2P {
       }
     )
 
-    let offer = protocol.OfferList.toObject(protocol.OfferList.decode(result), {
+    return protocol.OfferList.toObject(protocol.OfferList.decode(result), {
       enums: String,
       longs: String,
       bytes: String,
@@ -220,10 +220,11 @@ export class Pintswap extends PintP2P {
       arrays: true,
       objects: true,
       oneofs: true
-    }).offers.map((v) => mapValues(v, (v) => ethers.hexlify(ethers.toBeArray(Buffer.from(v, 'base64') as any))));
-    
-    console.log("offer", offer);
-    return offer
+    }).offers.map((v) => {
+      return mapValues(v, (v) => {
+        return ethers.hexlify(ethers.decodeBase64(v))
+      });
+    });
   }
 
   async getTradeAddress(sharedAddress: string) {

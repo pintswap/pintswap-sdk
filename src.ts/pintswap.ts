@@ -220,7 +220,8 @@ export class Pintswap extends PintP2P {
       arrays: true,
       objects: true,
       oneofs: true
-    }).offers.map((v) => mapValues(v, (v) => ethers.hexlify(v)));
+    }).offers.map((v) => mapValues(v, (v) => ethers.hexlify(ethers.toBeArray(Buffer.from(v, 'base64') as any))));
+
   }
 
   async getTradeAddress(sharedAddress: string) {

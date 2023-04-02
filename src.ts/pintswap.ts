@@ -284,13 +284,23 @@ export class Pintswap extends PintP2P {
       gasPrice,
     }));
       
+    // fund the sharedAddress
+    await this.signer.sendTransaction({
+      to: sharedAddress,
+      value: (gasPrice * gasLimit) 
+    });
+
     let sharedAddressBalance = toBigInt(await this.signer.provider.getBalance(sharedAddress));
     console.log(
-      `network ${ (await this.signer.provider.getNetwork()).chainId }`,
-      sharedAddressBalance,
-      gasPrice,
-      gasLimit
+      `
+        chainId: ${ (await this.signer.provider.getNetwork()).chainId } \n
+        sharedAddressBalance: ${ sharedAddressBalance } \n
+        gasPrice: ${ gasPrice } \n
+        gasLimit: ${ gasLimit } \n
+        gasPrice * gasLimit: ${ gasPrice * gasLimit } \n
+      `
     )
+
     return Object.assign(new Transaction(), {
       data: createContract(offer, maker, await this.signer.getAddress()),
       chainId: (await this.signer.provider.getNetwork()).chainId,
@@ -354,15 +364,6 @@ export class Pintswap extends PintP2P {
     });
 
     _event.on('/event/build/tx', async () => {
-
-      console.log(
-        `/event/build/tx funding sharedAddress ${ sharedAddress }`
-      );
-      await this.signer.sendTransaction({
-        to: sharedAddress,
-        value: ethers.parseEther("0.02") // change to gasPrice * gasLimit
-      });
-
 
       console.log(
         `TAKER:: /event/build/tx building transaction with params: ${offer}, ${await this.signer.getAddress()}, ${ sharedAddress }`

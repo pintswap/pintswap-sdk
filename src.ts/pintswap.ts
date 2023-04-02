@@ -29,6 +29,18 @@ const {
   Transaction,
 } = ethers;
 
+const transactionToObject = (tx) => ({
+  nonce: tx.nonce,
+  value: tx.value,
+  from: tx.from,
+  gasPrice: tx.gasPrice,
+  gasLimit: tx.gasLimit,
+  chainId: tx.chainId,
+  data: tx.data,
+  maxFeePerGas: tx.maxFeePerGas,
+  maxPriorityFeePerGas: tx.maxPriorityFeePerGas
+});
+
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
@@ -408,11 +420,12 @@ export class Pintswap extends PintP2P {
           signContext.step3(message);
           let [r, s, v] = signContext.exportSig();
           tx.signature = ethers.Signature.from({
-            r: '0x' + r.toString(16),
-            s: '0x' + s.toString(16),
+            r: '0x' + leftZeroPad(r.toString(16), 64),
+            s: '0x' + leftZeroPad(s.toString(16), 64),
             v: v + 27
           })
-          let txReceipt = typeof this.signer.provider.sendTransaction == 'function' ? await this.signer.provider.sendTransaction(tx.serialized) : await this.signer.provider.broadcastTransaction(tx.serialized);
+          //let txReceipt = typeof this.signer.provider.sendTransaction == 'function' ? await this.signer.provider.sendTransaction(tx.serialized) : await this.signer.provider.broadcastTransaction(tx.serialized);
+	  let txReceipt = await this.signer.provider.broadcastTransaction(tx.serialized);
           console.log(await txReceipt.wait());
           messages.end()
           stream.close();

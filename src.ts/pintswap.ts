@@ -4,7 +4,6 @@ import { ethers } from "ethers";
 import { pipe } from "it-pipe";
 import * as lp from "it-length-prefixed";
 import { TPCEcdsaKeyGen as TPC, TPCEcdsaSign as TPCsign } from "@safeheron/two-party-ecdsa-js";
-import { emasm } from "emasm";
 import { EventEmitter } from "events";
 import pushable from "it-pushable";
 import BN from "bn.js";
@@ -12,7 +11,6 @@ import {
   keyshareToAddress,
   createContract,
   hashOffer,
-  leftZeroPad,
   toBigInt
 } from "./trade";
 import { IOffer } from "./types";
@@ -22,7 +20,6 @@ import { mapValues } from "lodash";
 const {
   getAddress,
   getCreateAddress,
-  VoidSigner,
   Contract,
   Transaction,
 } = ethers;
@@ -30,7 +27,6 @@ const {
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
-
 
   static async initialize({ signer }) {
     return await new Promise(async (resolve, reject) => {

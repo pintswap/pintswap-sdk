@@ -208,20 +208,6 @@ export class Pintswap extends PintP2P {
        return vals[0].slice()
       }
     )
-    
-    // --- DEPRECATED ---
-    // const offer = protocol.OfferList.toObject(protocol.OfferList.decode(result), {
-    //   enums: String,
-    //   longs: String,
-    //   bytes: String,
-    //   defaults: true,
-    //   arrays: true,
-    //   objects: true,
-    //   oneofs: true
-    // })
-
-    // console.log("offer before it is sent to trade.ts on fe", offer);
-    // return offer;
 
     let offerList = protocol.OfferList.toObject(protocol.OfferList.decode(result), {
       enums: String,

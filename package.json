@@ -24,6 +24,7 @@
     "base64url": "^3.0.1",
     "bn.js": "^5.2.1",
     "buffer": "^6.0.3",
+    "canonical-weth": "^1.4.0",
     "chai": "^4.2.0",
     "cryptico-js": "^1.1.0",
     "emasm": "https://github.com/kungfuflex/emasm",
@@ -44,7 +45,6 @@
     "peer-info": "^0.17.5",
     "ristretto255": "^0.1.2",
     "the-global-object": "^1.0.2",
-    "canonical-weth": "^1.4.0",
     "uuid": "^8.3.2",
     "wrtc": "^0.4.7",
     "yargs": "^17.7.1"

@@ -13,6 +13,7 @@ export declare class Pintswap extends PintP2P {
     });
     startNode(): Promise<void>;
     stopNode(): Promise<void>;
+    ln(v: any): any;
     handleBroadcastedOffers(): Promise<void>;
     broadcastOffer(_offer: IOffer): void;
     getTradesByPeerId(peerId: string): Promise<any>;

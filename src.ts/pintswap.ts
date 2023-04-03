@@ -55,12 +55,13 @@ export class Pintswap extends PintP2P {
     await this.stop();
     this.emit(`pintswap/node/status`, 0);
   }
+  ln(v) { console.log(v); return v; }
 
   async handleBroadcastedOffers() {
     await this.handle("/pintswap/0.1.0/orders", ({ stream }) => {
         console.log('handling order request from peer');
         this.emit(`/pintswap/request/orders`);
-        let _offerList = protocol.OfferList.encode({ offers: [...this.offers.values()] }).finish();
+        let _offerList = protocol.OfferList.encode({ offers: this.ln([...this.offers.values()].map((v) => mapValues(v, (v) => Buffer.from(ethers.toBeArray(v))))) }).finish();
         pipe(
           [ _offerList ],
           lp.encode(),
@@ -213,7 +214,7 @@ export class Pintswap extends PintP2P {
       arrays: true,
       objects: true,
       oneofs: true
-    })
+    });
 
     let remap = offerList.offers.map((v) => {
       return mapValues(v, (v) => {

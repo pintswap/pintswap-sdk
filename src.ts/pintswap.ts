@@ -241,6 +241,7 @@ export class Pintswap extends PintP2P {
       ["function approve(address, uint256) returns (bool)", "function allowance(address, address) view returns (uint256)", "function balanceOf(address) view returns (uint256)"],
       this.signer
     )
+    console.log('MAKER APPROVING GAS ESTIMATE', this.signer.provider.estimateGas())
     console.log('MAKER BALANCE BEFORE APPROVING ' + ethers.formatEther(await token.balanceOf(await this.signer.getAddress())));
     const tx = await token.approve(tradeAddress, offer.givesAmount);
     console.log('MAKER BALANCE AFTER APPROVING ' + ethers.formatEther(await token.allowance(await this.signer.getAddress(), tradeAddress)));
@@ -254,6 +255,7 @@ export class Pintswap extends PintP2P {
       ["function approve(address, uint256) returns (bool)", "function allowance(address, address) view returns (uint256)", "function balanceOf(address) view returns (uint256)"],
       this.signer
     );
+    console.log('TAKER APPROVING GAS ESTIMATE', this.signer.provider.estimateGas())
     console.log('TAKER BALANCE BEFORE APPROVING ' + ethers.formatEther(await token.balanceOf(await this.signer.getAddress())));
     const tx = await token.approve(tradeAddress, offer.getsAmount);
     console.log('TAKER BALANCE AFTER APPROVING ' + ethers.formatEther(await token.balanceOf(await this.signer.getAddress())));

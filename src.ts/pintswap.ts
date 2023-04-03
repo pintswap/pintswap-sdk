@@ -4,7 +4,6 @@ import { ethers } from "ethers";
 import { pipe } from "it-pipe";
 import * as lp from "it-length-prefixed";
 import { TPCEcdsaKeyGen as TPC, TPCEcdsaSign as TPCsign } from "@safeheron/two-party-ecdsa-js";
-import { emasm } from "emasm";
 import { EventEmitter } from "events";
 import pushable from "it-pushable";
 import BN from "bn.js";
@@ -12,18 +11,15 @@ import {
   keyshareToAddress,
   createContract,
   hashOffer,
-  leftZeroPad,
   toBigInt
 } from "./trade";
 import { IOffer } from "./types";
 import PeerId from "peer-id";
+import { mapValues } from "lodash";
 
 const {
-  solidityPackedKeccak256,
-  hexlify,
   getAddress,
   getCreateAddress,
-  VoidSigner,
   Contract,
   Transaction,
 } = ethers;
@@ -31,7 +27,6 @@ const {
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
-
 
   static async initialize({ signer }) {
     return await new Promise(async (resolve, reject) => {
@@ -210,7 +205,7 @@ export class Pintswap extends PintP2P {
       }
     )
 
-    const offer = protocol.OfferList.toObject(protocol.OfferList.decode(result), {
+    let offerList = protocol.OfferList.toObject(protocol.OfferList.decode(result), {
       enums: String,
       longs: String,
       bytes: String,
@@ -220,8 +215,13 @@ export class Pintswap extends PintP2P {
       oneofs: true
     })
 
-    console.log("offer before it is sent to trade.ts on fe", offer);
-    return offer;
+    let remap = offerList.offers.map((v) => {
+      return mapValues(v, (v) => {
+        return ethers.hexlify(ethers.decodeBase64(v))
+      });
+    });
+
+    return Object.assign(offerList, { offers: remap });
   }
 
   async getTradeAddress(sharedAddress: string) {

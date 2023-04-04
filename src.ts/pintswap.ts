@@ -614,3 +614,5 @@ export class Pintswap extends PintP2P {
     return true;
   }
 }
+
+export { setFallbackWETH } from "./trade";

@@ -30,12 +30,17 @@ export const WETH_ADDRESSES = Object.assign(
   }
 );
 
+let fallbackWETH = null;
+
+export const setFallbackWETH = (address) => {
+  fallbackWETH = address;
+}
+
 export const toWETH = (chainId: number | string = 1) => {
   const chain = String(chainId);
   const address = WETH_ADDRESSES[chain];
   return (
-    address ||
-    (() => {
+    address || fallbackWETH || (() => {
       throw Error("no WETH contract found for chainid " + chain);
     })()
   );

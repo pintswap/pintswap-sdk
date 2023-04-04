@@ -7,6 +7,7 @@ export declare const WETH_ADDRESSES: {
     "10": string;
     "43112": string;
 };
+export declare const setFallbackWETH: (address: any) => void;
 export declare const toWETH: (chainId?: number | string) => any;
 export declare const hashOffer: (o: any) => string;
 export declare const createContract: (offer: IOffer, maker: string, taker: string, chainId?: string | number, permitData?: any) => any;

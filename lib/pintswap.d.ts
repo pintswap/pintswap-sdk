@@ -29,3 +29,4 @@ export declare class Pintswap extends PintP2P {
     createTransaction(txParams: any, sharedAddress: string): Promise<any>;
     createTrade(peer: any, offer: any): Promise<boolean>;
 }
+export { setFallbackWETH } from "./trade";

@@ -3,7 +3,7 @@ const ethers = hre.ethers;
 const ethersModule = require('ethers');
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
-const { Pintswap, hashOffer } = require('../lib');
+const { setFallbackWETH, Pintswap, hashOffer } = require('../lib');
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const argv = yargs(hideBin(process.argv))
   .string(['wallet'])
@@ -56,6 +56,7 @@ async function main() {
       .deploy();
 
     const weth = await makerOwnedTestToken.deployed();
+    setFallbackWETH(weth.address);
     await weth.deposit({ value: '100' + '0'.repeat(18) });
 	  console.log('deposited');
 

@@ -184,7 +184,8 @@ export class Pintswap extends PintP2P {
               createContract(
                 offer,
                 await this.signer.getAddress(),
-                takerAddress
+                takerAddress,
+		(await this.signer.provider.getNetwork()).chainId
               )
             )
               throw Error("transaction data is not a pintswap");
@@ -381,7 +382,8 @@ export class Pintswap extends PintP2P {
     const contract = createContract(
       offer,
       maker,
-      await this.signer.getAddress()
+      await this.signer.getAddress(),
+      (await this.signer.provider.getNetwork()).chainId
     );
     const gasPrice = toBigInt(await this.signer.provider.getGasPrice());
 

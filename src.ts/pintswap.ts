@@ -20,7 +20,6 @@ import {
 } from "./trade";
 import { IOffer } from "./types";
 import PeerId from "peer-id";
-import { mapValues } from "lodash";
 import { createLogger } from "./logger";
 
 const logger = createLogger("pintswap");

@@ -1,9 +1,10 @@
 import { PintP2P } from "./p2p";
-import { ethers } from "ethers";
 import { IOffer } from "./types";
+import { createLogger } from "./logger";
 export declare class Pintswap extends PintP2P {
     signer: any;
     offers: Map<string, IOffer>;
+    logger: ReturnType<typeof createLogger>;
     static initialize({ signer }: {
         signer: any;
     }): Promise<unknown>;
@@ -19,13 +20,11 @@ export declare class Pintswap extends PintP2P {
     getTradeAddress(sharedAddress: string): Promise<string>;
     approveTradeAsMaker(offer: IOffer, sharedAddress: string): Promise<any>;
     approveTradeAsTaker(offer: IOffer, sharedAddress: string): Promise<any>;
-    createTransaction(offer: IOffer, maker: string, sharedAddress: string): Promise<ethers.Transaction & {
+    prepareTransaction(offer: IOffer, maker: string, sharedAddress: string): Promise<{
         data: any;
-        chainId: any;
         gasPrice: any;
         gasLimit: any;
-        nonce: any;
-        value: number | bigint;
     }>;
+    createTransaction(txParams: any, sharedAddress: string): Promise<any>;
     createTrade(peer: any, offer: any): Promise<boolean>;
 }

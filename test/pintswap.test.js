@@ -32,8 +32,8 @@ describe("Pintswap", function () {
     offer = {
       givesToken: tt1.address,
       getsToken: tt2.address,
-      givesAmount: ethers.utils.parseUnits("100.0").toHexString(),
-      getsAmount: ethers.utils.parseUnits("100.0").toHexString()
+      givesAmount: ethers.utils.parseUnits("100.0", 18).toHexString(),
+      getsAmount: ethers.utils.parseUnits("100.0", 18).toHexString()
     }
   }
 

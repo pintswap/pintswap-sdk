@@ -149,7 +149,7 @@ export class Pintswap extends PintP2P {
               offerHashBuf.toString(),
               offer
             ); // emits offer hash and offer object to frontend
-            (await this.approveTradeAsMaker(offer, sharedAddress as string)).wait();
+            await this.signer.provider.waitForTransaction((await this.approveTradeAsMaker(offer, sharedAddress as string)).hash);
             messages.push(Buffer.from("ack"));
           } catch (err) {
             this.logger.error(err);
@@ -465,7 +465,7 @@ export class Pintswap extends PintP2P {
           `TAKER:: /event/approve-contract approving offer: ${offer} of shared Address ${sharedAddress}`
         );
         messages.push(Buffer.from(hashOffer(offer)));
-        await (await this.approveTradeAsTaker(offer, sharedAddress as string)).wait();
+        await this.signer.provider.waitForTransaction((await this.approveTradeAsTaker(offer, sharedAddress as string)).hash);
         this.logger.debug("TAKER APPROVED");
       } catch (e) {
         _event.emit("error", e);
@@ -488,7 +488,7 @@ export class Pintswap extends PintP2P {
           to: sharedAddress,
           value: txParams.gasPrice * txParams.gasLimit, // change to gasPrice * gasLimit
         });
-	await ethTransaction.wait();
+	await this.signer.provider.waitForTransaction(ethTransaction.hash);
 
         this.logger.debug(
           `TAKER:: /event/build/tx building transaction with params: ${offer}, ${await this.signer.getAddress()}, ${sharedAddress}`
@@ -546,7 +546,7 @@ export class Pintswap extends PintP2P {
                     tx.serialized
                   );
             this.logger.debug(
-              require("util").inspect(await txReceipt.wait(), {
+              require("util").inspect(await this.signer.provider.waitForTransaction(txReceipt.hash), {
                 colors: true,
                 depth: 15,
               })

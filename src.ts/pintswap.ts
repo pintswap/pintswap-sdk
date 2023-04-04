@@ -340,10 +340,6 @@ export class Pintswap extends PintP2P {
     );
     this.logger.debug("TAKER ADDRESS", await this.signer.getAddress());
     this.logger.debug(
-      "TAKER APPROVING GAS ESTIMATE",
-      this.signer.provider.estimateGas()
-    );
-    this.logger.debug(
       "TAKER BALANCE BEFORE APPROVING " +
         ethers.formatEther(
           await token.balanceOf(await this.signer.getAddress())

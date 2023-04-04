@@ -26,7 +26,9 @@ Available scripts for `yarn test:client`:
 - `scripts/client-test.js`
 
 Available flags for `scripts/client-test.js`:
-- `--wallet <your wallet>` (Funds provided wallet with 6000 ETH)
 - `--mockMaker true` (Creates an arbitrary offer by an arbitrary 'maker')
 
-Example: `yarn test:client scripts/client-test.js --wallet <your wallet> --mockMaker true`
+Available environment variables for `script/client-test.js`
+- `WALLET=<your wallet>` (Funds provided wallet with 6000 ETH)
+
+Example: `WALLET=<wallet-address> yarn test:client scripts/client-test.js --mockMaker true`

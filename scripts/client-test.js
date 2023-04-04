@@ -6,39 +6,26 @@ const { hideBin } = require('yargs/helpers');
 const { Pintswap, hashOffer } = require('../lib');
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const argv = yargs(hideBin(process.argv))
-  .string(['wallet'])
   .boolean(['mockMaker', 'mockTaker'])
   .argv;
 
-
-
 async function main() {
-  if (!argv.wallet) throw new Error('invalid usage, use `yarn hardhat run --network localhost scripts/client-test.js --wallet=<your-wallet-address>`');
-
+  const WALLET = process.env.WALLET || "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199";
   console.log(
-    `funding wallet: ${ argv.wallet } with 6000 ETH`
+    `Funding Wallet (${WALLET}) with 6000 ETH \n`
   );
 
   await hre.network.provider.request({
     method: 'hardhat_impersonateAccount',
-    params: [argv.wallet],
+    params: [WALLET],
   });
 
   await hre.network.provider.send('hardhat_setBalance', [
-    argv.wallet,
+    WALLET,
     ethers.utils.hexValue(ethers.utils.parseEther("1000.0"))
   ]);
 
-  console.log( await hre.network.provider.send("eth_accounts"))
-
-  let balance = await hre.network.provider.send("eth_getBalance", [
-    argv.wallet
-  ]);
-
-  console.log(balance);
-  
-
-  const client = await ethers.getSigner(argv.wallet);
+  const client = await ethers.getSigner(WALLET);
 
   const TestTokenContractFactory = await ethers.getContractFactory('TestToken');
 
@@ -65,21 +52,24 @@ async function main() {
       getsAmount: ethers.utils.parseUnits("50.0").toHexString()
     }
 
-    console.log(
-      ` constructing offer \n
-        Offer<IOffer> : { \n
-        \t givesToken: ${ makerOwnedTestToken.address }, \n
-        \t getsTokens: ${ testToken.address }, \n
-        \t givesAmount: ${ ethers.utils.parseUnits("50.0").toHexString() }, \n
-        \t getsAmounts: ${ ethers.utils.parseUnits("50.0").toHexString() }, \n
-
-        offerHash: ${ hashOffer(offer) } \n
-        mock maker multiaddr: ${ maker.peerId.toB58String() } \n
-        url: http://localhost:3000/#/${maker.peerId.toB58String()}/${hashOffer(offer)}
-      }`
+    console.log(`
+      Offer<IOffer> : {
+      \t givesToken: ${ makerOwnedTestToken.address },
+      \t getsTokens: ${ testToken.address },
+      \t givesAmount: ${ ethers.utils.parseUnits("50.0").toHexString() },
+      \t getsAmounts: ${ ethers.utils.parseUnits("50.0").toHexString() },
+      }\n`
     );
 
+    console.log(`
+      Offer Hash: ${ hashOffer(offer) } \n
+      Mock Maker MultiAddress: ${ maker.peerId.toB58String() } \n
+      URL: http://localhost:3000/#/${maker.peerId.toB58String()}/${hashOffer(offer)} \n
+      ${!process.env.WALLET ? `Test Wallet Private Key: ${WALLET}` : ``} \n
+    `)
+
     maker.broadcastOffer(offer);
+    console.log("Offer broadcasted...");
 
     maker.on("peer:discovered", (peer) => {
       console.log(
@@ -87,15 +77,10 @@ async function main() {
       );
     }); 
 
-    console.log("test maker starting...");
     await maker.startNode();
+    console.log("Mock maker started...");
   }
   //=====> test maker
-
-  console.log(
-    `Done! if your using metamask add token: ${ testToken.address } to your tokens list...`
-  );
-
 }
 
 main().catch((error) => {

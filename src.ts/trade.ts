@@ -1,10 +1,11 @@
-import { IOffer } from "./types";
-import { ethers } from "ethers";
+import { IAvailableChainIds, IOffer } from "./types";
+import { Contract, ethers, Signer } from "ethers";
 import { emasm } from "emasm";
 import BN from "bn.js";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
 const { solidityPackedKeccak256, getAddress, computeAddress, hexlify } = ethers;
 
+// UTILS
 export function toBigInt(v) {
   if (v.toHexString) return v.toBigInt();
   return v;
@@ -17,6 +18,23 @@ export function keyshareToAddress(keyshareJsonObject) {
   return computeAddress(derivedPubKey as string);
 }
 
+export const hashOffer = (o) => {
+  return solidityPackedKeccak256(
+    ["address", "address", "uint256", "uint256"],
+    [
+      getAddress(o.givesToken),
+      getAddress(o.getsToken),
+      o.givesAmount,
+      o.getsAmount,
+    ]
+  );
+};
+
+export function leftZeroPad(s, n) {
+  return "0".repeat(n - s.length) + s;
+}
+
+// ETH/WETH
 export const WETH_ADDRESSES = Object.assign(
   Object.entries(WETH9.networks).reduce((r, [chainId, { address }]: any) => {
     r[chainId] = address;
@@ -46,18 +64,18 @@ export const toWETH = (chainId: number | string = 1) => {
   );
 };
 
-export const hashOffer = (o) => {
-  return solidityPackedKeccak256(
-    ["address", "address", "uint256", "uint256"],
-    [
-      getAddress(o.givesToken),
-      getAddress(o.getsToken),
-      o.givesAmount,
-      o.getsAmount,
-    ]
-  );
-};
+export async function wrapEther(signer: Signer, chainId: IAvailableChainIds, amount: string) {
+  const WETH = new Contract(WETH_ADDRESSES[chainId], WETH9.abi, signer);
+  const tx = await WETH.deposit({
+      value: ethers.parseEther(amount),
+  });
+  console.log("WETH Deposit TX:", tx);
+  const tx2 = await WETH.approve(await signer.getAddress(), amount);
+  console.log("WETH Approve TX:", tx2);
+  return tx2;
+}
 
+// SWAP CONTRACT
 export const createContract = (
   offer: IOffer,
   maker: string,
@@ -729,7 +747,3 @@ export const createContract = (
     ["failure", ["0x0", "0x0", "revert"]],
   ]);
 };
-
-export function leftZeroPad(s, n) {
-  return "0".repeat(n - s.length) + s;
-}

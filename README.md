@@ -18,6 +18,14 @@ Runs a localhost node environment to run various transactions on.
 
 Runs the jest test file which goes through the entire workflow of pintswap from creating the trade to completing the trade.
 
+#### `yarn test:maker`
+
+After running `yarn hardhat node`, this script will create a mock 'maker' that proposes a trade which can be then fulfilled on the frontend.
+
+Available environment variables for `yarn test:maker`
+- `WALLET=<your wallet>` (Funds provided wallet with 6000 ETH)
+- `WETH=1` (Tests swapping of ETH which requires first wrapping then approving ETH before making the swap)
+
 #### `yarn test:client <script>`
 
 Runs any passed script on the localhost network.

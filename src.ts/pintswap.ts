@@ -20,6 +20,9 @@ import {
 import { IOffer } from "./types";
 import PeerId from "peer-id";
 import { mapValues } from "lodash";
+import { createLogger } from "./logger";
+
+const logger = createLogger("pintswap");
 
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
@@ -40,6 +43,7 @@ const defer = () => {
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
+  public logger: ReturnType<typeof createLogger>;
 
   static async initialize({ signer }) {
     return await new Promise(async (resolve, reject) => {
@@ -55,6 +59,7 @@ export class Pintswap extends PintP2P {
   constructor({ signer, peerId }) {
     super({ signer, peerId });
     this.signer = signer;
+    this.logger = logger;
   }
 
   async startNode() {
@@ -71,21 +76,15 @@ export class Pintswap extends PintP2P {
     await this.stop();
     this.emit(`pintswap/node/status`, 0);
   }
-  ln(v) {
-    console.log(v);
-    return v;
-  }
 
   async handleBroadcastedOffers() {
     const address = await this.signer.getAddress();
     await this.handle("/pintswap/0.1.0/orders", ({ stream }) => {
-      console.log("handling order request from peer");
+      this.logger.debug("handling order request from peer");
       this.emit(`/pintswap/request/orders`);
       let _offerList = protocol.OfferList.encode({
-        offers: this.ln(
-          [...this.offers.values()].map((v) =>
-            mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))
-          )
+        offers: [...this.offers.values()].map((v) =>
+          mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))
         ),
       }).finish();
       pipe([_offerList], lp.encode(), stream.sink);
@@ -106,14 +105,14 @@ export class Pintswap extends PintP2P {
         _event.on("/event/ecdsa-keygen/party/2", (step, message) => {
           switch (step) {
             case 1:
-              console.log(
+              this.logger.debug(
                 `MAKER:: /event/ecdsa-keygen/party/2 handling message: ${step}`
               );
               messages.push(context2.step1(message));
               messages.push(Buffer.from(address.substr(2), "hex"));
               break;
             case 3:
-              console.log(
+              this.logger.debug(
                 `MAKER:: /event/ecdsa-keygen/party/2 handling message: ${step}`
               );
               context2.step2(message);
@@ -139,12 +138,12 @@ export class Pintswap extends PintP2P {
               offer
             ); // emits offer hash and offer object to frontend
             await this.approveTradeAsMaker(offer, sharedAddress as string);
-	    messages.push(Buffer.from('ack'));
+            messages.push(Buffer.from("ack"));
           } catch (err) {
-            console.error(err);
+            this.logger.error(err);
             throw new Error("couldn't find offering");
           }
-          console.log(
+          this.logger.debug(
             `MAKER:: /event/approve-contract approved offer with offer hash: ${offerHashBuf.toString()}`
           );
         });
@@ -152,7 +151,7 @@ export class Pintswap extends PintP2P {
         _event.on("/event/ecdsa-sign/party/2/init", async (serializedTx) => {
           try {
             const serialized = ethers.hexlify(serializedTx);
-            console.log(
+            this.logger.debug(
               `MAKER:: /event/ecdsa-sign/party/2/init received transaction: ${serialized}`
             );
             const transaction = ethers.Transaction.from(serialized);
@@ -173,20 +172,20 @@ export class Pintswap extends PintP2P {
               new BN(transaction.unsignedHash.substr(2), 16)
             );
           } catch (e) {
-            console.error(e);
+            this.logger.error(e);
           }
         });
 
         _event.on("/event/ecdsa-sign/party/2", (step, message) => {
           switch (step) {
             case 1:
-              console.log(
+              this.logger.debug(
                 `MAKER:: /event/ecdsa-sign/party/2 handling message: ${step}`
               );
               messages.push(signContext.step1(message));
               break;
             case 3:
-              console.log(
+              this.logger.debug(
                 `MAKER:: /event/ecdsa-sign/party/2 handling message ${step}`
               );
               messages.push(signContext.step2(message));
@@ -198,6 +197,7 @@ export class Pintswap extends PintP2P {
               break;
           }
         });
+	const self = this;
 
         pipe(stream.source, lp.decode(), async function (source) {
           const { value: keygenMessage1 } = await source.next();
@@ -208,13 +208,13 @@ export class Pintswap extends PintP2P {
           const { value: offerHashBuf } = await source.next();
           _event.emit("/event/approve-contract", offerHashBuf.slice());
 
-          console.log("SHOULD RECEIVE SERIALIZED");
+          self.logger.debug("SHOULD RECEIVE SERIALIZED");
           const { value: serializedTx } = await source.next();
           const { value: _takerAddress } = await source.next();
           takerAddress = ethers.getAddress(
             ethers.hexlify(_takerAddress.slice())
           );
-          console.log("RECEIVED SERIALIZED", serializedTx.slice());
+          self.logger.debug("RECEIVED SERIALIZED", serializedTx.slice());
           _event.emit("/event/ecdsa-sign/party/2/init", serializedTx.slice());
 
           const { value: signMessage1 } = await source.next();
@@ -230,7 +230,7 @@ export class Pintswap extends PintP2P {
 
   // adds new offer to this.offers: Map<hash, IOffer>
   broadcastOffer(_offer: IOffer) {
-    console.log("trying to list new offer");
+    this.logger.debug("trying to list new offer");
     this.offers.set(hashOffer(_offer), _offer);
   }
 
@@ -277,7 +277,7 @@ export class Pintswap extends PintP2P {
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),
       from: sharedAddress,
     });
-    console.log("TRADE ADDRESS: " + address);
+    this.logger.debug("TRADE ADDRESS: " + address);
     return address;
   }
 
@@ -292,22 +292,22 @@ export class Pintswap extends PintP2P {
       ],
       this.signer
     );
-    console.log("MAKER ADDRESS", await this.signer.getAddress());
-    console.log(
+    this.logger.debug("MAKER ADDRESS", await this.signer.getAddress());
+    logger.debug(
       "MAKER BALANCE BEFORE APPROVING " +
         ethers.formatEther(
           await token.balanceOf(await this.signer.getAddress())
         )
     );
     const tx = await token.approve(tradeAddress, offer.givesAmount);
-    console.log("TRADE ADDRESS", tradeAddress);
-    console.log(
+    this.logger.debug("TRADE ADDRESS", tradeAddress);
+    this.logger.debug(
       "MAKER BALANCE AFTER APPROVING " +
         ethers.formatEther(
           await token.balanceOf(await this.signer.getAddress())
         )
     );
-    console.log(
+    this.logger.debug(
       "MAKER ALLOWANCE AFTER APPROVING " +
         ethers.formatEther(
           await token.allowance(await this.signer.getAddress(), tradeAddress)
@@ -327,19 +327,19 @@ export class Pintswap extends PintP2P {
       ],
       this.signer
     );
-    console.log("TAKER ADDRESS", await this.signer.getAddress());
-    console.log(
+    this.logger.debug("TAKER ADDRESS", await this.signer.getAddress());
+    this.logger.debug(
       "TAKER APPROVING GAS ESTIMATE",
       this.signer.provider.estimateGas()
     );
-    console.log(
+    this.logger.debug(
       "TAKER BALANCE BEFORE APPROVING " +
         ethers.formatEther(
           await token.balanceOf(await this.signer.getAddress())
         )
     );
     const tx = await token.approve(tradeAddress, offer.getsAmount);
-    console.log(
+    this.logger.debug(
       "TAKER BALANCE AFTER APPROVING " +
         ethers.formatEther(
           await token.balanceOf(await this.signer.getAddress())
@@ -380,7 +380,7 @@ export class Pintswap extends PintP2P {
     let sharedAddressBalance = toBigInt(
       await this.signer.provider.getBalance(sharedAddress)
     );
-    console.log(
+    this.logger.debug(
       `network ${(await this.signer.provider.getNetwork()).chainId}`,
       sharedAddressBalance,
       gasPrice,
@@ -397,7 +397,7 @@ export class Pintswap extends PintP2P {
   }
 
   async createTrade(peer, offer) {
-    console.log(`Acting on offer ${offer} with peer ${peer}`);
+    this.logger.debug(`Acting on offer ${offer} with peer ${peer}`);
 
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
@@ -428,7 +428,7 @@ export class Pintswap extends PintP2P {
       try {
         switch (step) {
           case 2:
-            console.log(
+            this.logger.debug(
               `TAKER:: /event/ecdsa-keygen/party/1 handling message: ${step}`
             );
 
@@ -454,12 +454,12 @@ export class Pintswap extends PintP2P {
     _event.on("/event/approve-contract", async () => {
       try {
         // approve as maker
-        console.log(
+        this.logger.debug(
           `TAKER:: /event/approve-contract approving offer: ${offer} of shared Address ${sharedAddress}`
         );
         messages.push(Buffer.from(hashOffer(offer)));
         await this.approveTradeAsTaker(offer, sharedAddress as string);
-        console.log("TAKER APPROVED");
+        this.logger.debug("TAKER APPROVED");
       } catch (e) {
         _event.emit("error", e);
       }
@@ -469,7 +469,9 @@ export class Pintswap extends PintP2P {
 
     _event.on("/event/build/tx", async () => {
       try {
-        console.log(`/event/build/tx funding sharedAddress ${sharedAddress}`);
+        this.logger.debug(
+          `/event/build/tx funding sharedAddress ${sharedAddress}`
+        );
         const txParams = await this.prepareTransaction(
           offer,
           makerAddress,
@@ -480,11 +482,11 @@ export class Pintswap extends PintP2P {
           value: txParams.gasPrice * txParams.gasLimit, // change to gasPrice * gasLimit
         });
 
-        console.log(
+        this.logger.debug(
           `TAKER:: /event/build/tx building transaction with params: ${offer}, ${await this.signer.getAddress()}, ${sharedAddress}`
         );
         tx = await this.createTransaction(txParams, sharedAddress as string);
-        console.log(`TAKER:: /event/build/tx built transaction`);
+        this.logger.debug(`TAKER:: /event/build/tx built transaction`);
 
         let _uhash = (tx.unsignedHash as string).slice(2);
         const serialized = Buffer.from(ethers.toBeArray(tx.unsignedSerialized));
@@ -493,7 +495,7 @@ export class Pintswap extends PintP2P {
           new BN(_uhash, 16)
         );
 
-        console.log(
+        this.logger.debug(
           `TAKER:: /event/build/tx sending unsigned transaction hash & signing step 1`
         );
 
@@ -503,7 +505,7 @@ export class Pintswap extends PintP2P {
         );
         messages.push(signContext.step1());
       } catch (e) {
-        console.error(e); 
+        this.logger.error(e);
         _event.emit("error", e);
       }
       _event.emit("tick");
@@ -513,13 +515,13 @@ export class Pintswap extends PintP2P {
       try {
         switch (step) {
           case 2:
-            console.log(
+            this.logger.debug(
               `TAKER:: /event/ecdsa-sign/party/1 handling message ${step}`
             );
             messages.push(signContext.step2(message));
             break;
           case 4:
-            console.log(
+            this.logger.debug(
               `TAKER:: /event/ecdsa-sign/party/1 handling message ${step}`
             );
             signContext.step3(message);
@@ -535,7 +537,7 @@ export class Pintswap extends PintP2P {
                 : await this.signer.provider.broadcastTransaction(
                     tx.serialized
                   );
-            console.log(
+            this.logger.debug(
               require("util").inspect(await txReceipt.wait(), {
                 colors: true,
                 depth: 15,
@@ -553,20 +555,21 @@ export class Pintswap extends PintP2P {
         _event.emit("error", e);
       }
     });
+    const self = this;
     let result = pipe(stream.source, lp.decode(), async function (source) {
       try {
         messages.push(message1); // message 1
         const { value: keygenMessage_2 } = await source.next(); // message 2
-        console.log(keygenMessage_2.slice());
+        self.logger.debug(keygenMessage_2.slice());
         const { value: _makerAddress } = await source.next(); // message 2
-        console.log(_makerAddress.slice());
+        self.logger.debug(_makerAddress.slice());
         makerAddress = ethers.getAddress(ethers.hexlify(_makerAddress.slice()));
         _event.emit("/event/ecdsa-keygen/party/1", 2, keygenMessage_2.slice()); // message 3
         await _event.wait();
         _event.emit("/event/approve-contract");
         await _event.wait();
-	await source.next();
-        console.log("enter /event/build/tx");
+        await source.next();
+        self.logger.debug("enter /event/build/tx");
         _event.emit("/event/build/tx");
         await _event.wait();
         const { value: signMessage_2 } = await source.next();
@@ -576,7 +579,7 @@ export class Pintswap extends PintP2P {
         _event.emit("/event/ecdsa-sign/party/1", 4, signMessage_4.slice());
         await _event.wait();
       } catch (e) {
-        console.error(e);
+        self.logger.error(e);
       }
     });
 

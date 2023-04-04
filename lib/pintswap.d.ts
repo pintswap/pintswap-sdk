@@ -1,8 +1,10 @@
 import { PintP2P } from "./p2p";
 import { IOffer } from "./types";
+import { createLogger } from "./logger";
 export declare class Pintswap extends PintP2P {
     signer: any;
     offers: Map<string, IOffer>;
+    logger: ReturnType<typeof createLogger>;
     static initialize({ signer }: {
         signer: any;
     }): Promise<unknown>;
@@ -12,7 +14,6 @@ export declare class Pintswap extends PintP2P {
     });
     startNode(): Promise<void>;
     stopNode(): Promise<void>;
-    ln(v: any): any;
     handleBroadcastedOffers(): Promise<void>;
     broadcastOffer(_offer: IOffer): void;
     getTradesByPeerId(peerId: string): Promise<any>;

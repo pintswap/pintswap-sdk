@@ -285,7 +285,8 @@ export class Pintswap extends PintP2P {
 
     let remap = offerList.offers.map((v) => {
       return mapValues(v, (v) => {
-        return ethers.hexlify(ethers.decodeBase64(v));
+        const address = ethers.hexlify(ethers.decodeBase64(v));
+	return '0x' + leftZeroPad(address.substr(2), 40);
       });
     });
 

@@ -62,7 +62,7 @@ async function main() {
     const maker = await Pintswap.initialize({ signer: await (new ethersModule.JsonRpcProvider('http://localhost:8545').getSigner(0)) });
 
     const offer = { 
-      givesToken: makerOwnedTestToken.address,
+      givesToken: '0x' + '0'.repeat(40),
       getsToken: testToken.address,
       givesAmount: ethers.utils.parseUnits("50.0").toHexString(),
       getsAmount: ethers.utils.parseUnits("50.0").toHexString()

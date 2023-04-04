@@ -11,17 +11,19 @@ describe('ETH to WETH', () => {
     
     const WETH = new ethers.ContractFactory(WETH9.abi, WETH9.bytecode, owner);
     weth = await WETH.deploy();
-
-    console.log(signer)
   })
 
   it('should wrap ETH', async () => {
-    let balance = await weth.balanceOf(await signer.getAddress())
+    let balance = await weth.balanceOf(signer.address)
     expect(balance).to.be.equal(ethers.utils.parseEther('0'));
 
-    const wrapTx = await wrapEther(signer, '31337', '5');
+    // const wrapTx = await wrapEther(signer, '31337', '5');
+    await signer.sendTransaction({
+      to: weth.address,
+      value: ethers.utils.parseEther('5')
+    })
 
-    balance = await weth.balanceOf(await signer.getAddress())
+    balance = await weth.balanceOf(signer.address)
     expect(balance).to.be.equal(ethers.utils.parseEther('5'));
   })
 })

@@ -1,9 +1,9 @@
 import { IAvailableChainIds, IOffer } from "./types";
-import { Contract, ethers, Signer } from "ethers";
+import { ethers } from "ethers";
 import { emasm } from "emasm";
 import BN from "bn.js";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
-const { solidityPackedKeccak256, getAddress, computeAddress, hexlify } = ethers;
+const { solidityPackedKeccak256, getAddress, computeAddress, hexlify, Contract } = ethers;
 
 // UTILS
 export function toBigInt(v) {
@@ -64,7 +64,7 @@ export const toWETH = (chainId: number | string = 1) => {
   );
 };
 
-export async function wrapEther(signer: Signer, chainId: IAvailableChainIds, amount: string) {
+export async function wrapEther(signer: any, chainId: IAvailableChainIds, amount: string) {
   const WETH = new Contract(WETH_ADDRESSES[chainId], WETH9.abi, signer);
   const tx = await WETH.deposit({
       value: ethers.parseEther(amount),

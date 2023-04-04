@@ -1,5 +1,6 @@
 const hre = require('hardhat');
 const ethers = hre.ethers;
+const ethersModule = require('ethers');
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
 const { Pintswap, hashOffer } = require('../lib');
@@ -55,7 +56,7 @@ async function main() {
 
     await makerOwnedTestToken.deployed();
 
-    const maker = await Pintswap.initialize({ signer: makerSigner });
+    const maker = await Pintswap.initialize({ signer: await (new ethersModule.JsonRpcProvider('http://localhost:8545').getSigner(0)) });
 
     const offer = { 
       givesToken: makerOwnedTestToken.address,

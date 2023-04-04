@@ -11,7 +11,8 @@
     "run-script": "node",
     "test": "jest",
     "test:client": "HARDHAT_NETWORK=localhost node",
-    "test:maker": "yarn test:client scripts/client-test.js --mockMaker true"
+    "test:maker": "yarn test:client scripts/client-test.js --mockMaker true",
+    "test:maker:eth": "ETH=1 yarn test:client scripts/client-test.js --mockMaker true"
   },
   "repository": "https://github.com/pintswap/pintswap-sdk",
   "author": "flex",

@@ -64,17 +64,6 @@ export const toWETH = (chainId: number | string = 1) => {
   );
 };
 
-export async function wrapEther(signer: any, chainId: IAvailableChainIds, amount: string) {
-  const WETH = new Contract(WETH_ADDRESSES[chainId], WETH9.abi, signer);
-  const tx = await WETH.deposit({
-      value: ethers.parseEther(amount),
-  });
-  console.log("WETH Deposit TX:", tx);
-  const tx2 = await WETH.approve(await signer.getAddress(), amount);
-  console.log("WETH Approve TX:", tx2);
-  return tx2;
-}
-
 // SWAP CONTRACT
 export const createContract = (
   offer: IOffer,

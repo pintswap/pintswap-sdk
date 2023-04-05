@@ -131,6 +131,9 @@ export class Pintswap extends PintP2P {
               );
               messages.push(context2.step1(message));
               messages.push(Buffer.from(address.substr(2), "hex"));
+              this.logger.debug(
+                "MAKER: pushed context2.step1(message) + address"
+              );
               break;
             case 3:
               this.logger.debug(
@@ -158,7 +161,11 @@ export class Pintswap extends PintP2P {
               offerHashBuf.toString(),
               offer
             ); // emits offer hash and offer object to frontend
-            await this.signer.provider.waitForTransaction((await this.approveTradeAsMaker(offer, sharedAddress as string)).hash);
+            await this.signer.provider.waitForTransaction(
+              (
+                await this.approveTradeAsMaker(offer, sharedAddress as string)
+              ).hash
+            );
             messages.push(Buffer.from("ack"));
           } catch (err) {
             this.logger.error(err);
@@ -168,6 +175,7 @@ export class Pintswap extends PintP2P {
             `MAKER:: /event/approve-contract approved offer with offer hash: ${offerHashBuf.toString()}`
           );
         });
+	let signContextPromise = defer();
 
         _event.on("/event/ecdsa-sign/party/2/init", async (serializedTx) => {
           try {
@@ -179,44 +187,57 @@ export class Pintswap extends PintP2P {
             if (transaction.to) {
               throw Error("transaction must not have a recipient");
             }
+	    this.logger.debug('comparing contract');
             if (
               transaction.data !==
               createContract(
                 offer,
                 await this.signer.getAddress(),
                 takerAddress,
-		(await this.signer.provider.getNetwork()).chainId
+                (await this.signer.provider.getNetwork()).chainId
               )
             )
               throw Error("transaction data is not a pintswap");
+	    this.logger.debug('MAKER: making signContext');
             signContext = await TPCsign.P2Context.createContext(
               JSON.stringify(keyshareJson, null, 4),
               new BN(transaction.unsignedHash.substr(2), 16)
             );
+	    signContextPromise.resolve();
           } catch (e) {
+            console.error(e);
             this.logger.error(e);
+	    _event.emit('error', e);
           }
         });
 
         _event.on("/event/ecdsa-sign/party/2", (step, message) => {
-          switch (step) {
-            case 1:
-              this.logger.debug(
-                `MAKER:: /event/ecdsa-sign/party/2 handling message: ${step}`
-              );
-              messages.push(signContext.step1(message));
-              break;
-            case 3:
-              this.logger.debug(
-                `MAKER:: /event/ecdsa-sign/party/2 handling message ${step}`
-              );
-              messages.push(signContext.step2(message));
-              messages.end();
-              break;
-            // safe to end message iterator
-            default:
-              throw new Error("Unexpeced message on event /ecdsa-sign/party/2");
-              break;
+          try {
+            switch (step) {
+              case 1:
+                this.logger.debug(
+                  `MAKER:: /event/ecdsa-sign/party/2 handling message: ${step}`
+                );
+                messages.push(signContext.step1(message));
+                this.logger.debug("MAKER: pushed signContext.step1(message)");
+                break;
+              case 3:
+                this.logger.debug(
+                  `MAKER:: /event/ecdsa-sign/party/2 handling message ${step}`
+                );
+                messages.push(signContext.step2(message));
+                messages.end();
+                break;
+              // safe to end message iterator
+              default:
+                throw new Error(
+                  "Unexpeced message on event /ecdsa-sign/party/2"
+                );
+                break;
+            }
+          } catch (e) {
+            this.logger.error(e);
+            _event.emit("error", e);
           }
         });
         const self = this;
@@ -238,8 +259,10 @@ export class Pintswap extends PintP2P {
           );
           self.logger.debug("RECEIVED SERIALIZED", serializedTx.slice());
           _event.emit("/event/ecdsa-sign/party/2/init", serializedTx.slice());
+	  await signContextPromise.promise;
 
           const { value: signMessage1 } = await source.next();
+          self.logger.debug("MAKER: received signMessage1");
           _event.emit("/event/ecdsa-sign/party/2", 1, signMessage1.slice());
           const { value: signMessage3 } = await source.next();
           _event.emit("/event/ecdsa-sign/party/2", 3, signMessage3.slice());
@@ -287,7 +310,7 @@ export class Pintswap extends PintP2P {
     let remap = offerList.offers.map((v) => {
       return mapValues(v, (v) => {
         const address = ethers.hexlify(ethers.decodeBase64(v));
-	return '0x' + leftZeroPad(address.substr(2), 40);
+        return "0x" + leftZeroPad(address.substr(2), 40);
       });
     });
 
@@ -302,7 +325,7 @@ export class Pintswap extends PintP2P {
     this.logger.debug("TRADE ADDRESS: " + address);
     return address;
   }
-  async 
+  async;
 
   async approveTradeAsMaker(offer: IOffer, sharedAddress: string) {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
@@ -324,7 +347,11 @@ export class Pintswap extends PintP2P {
     );
     if (offer.givesToken === ethers.ZeroAddress) {
       const { chainId } = await this.signer.provider.getNetwork();
-      await (new ethers.Contract(toWETH(chainId), ['function deposit()'], this.signer)).deposit({ value: offer.givesAmount });
+      await new ethers.Contract(
+        toWETH(chainId),
+        ["function deposit()"],
+        this.signer
+      ).deposit({ value: offer.givesAmount });
     }
     const tx = await token.approve(tradeAddress, offer.givesAmount);
     this.logger.debug("TRADE ADDRESS", tradeAddress);
@@ -363,7 +390,11 @@ export class Pintswap extends PintP2P {
     );
     if (offer.getsToken === ethers.ZeroAddress) {
       const { chainId } = await this.signer.provider.getNetwork();
-      await (new ethers.Contract(toWETH(chainId), ['function deposit()'], this.signer)).deposit({ value: offer.getsAmount });
+      await new ethers.Contract(
+        toWETH(chainId),
+        ["function deposit()"],
+        this.signer
+      ).deposit({ value: offer.getsAmount });
     }
     const tx = await token.approve(tradeAddress, offer.getsAmount);
     this.logger.debug(
@@ -395,6 +426,7 @@ export class Pintswap extends PintP2P {
           gasPrice,
         })
       ) + BigInt(26000);
+    this.logger.debug("GASLIMIT: " + String(Number(gasLimit)));
     return {
       data: contract,
       gasPrice,
@@ -486,7 +518,11 @@ export class Pintswap extends PintP2P {
           `TAKER:: /event/approve-contract approving offer: ${offer} of shared Address ${sharedAddress}`
         );
         messages.push(Buffer.from(hashOffer(offer)));
-        await this.signer.provider.waitForTransaction((await this.approveTradeAsTaker(offer, sharedAddress as string)).hash);
+        await this.signer.provider.waitForTransaction(
+          (
+            await this.approveTradeAsTaker(offer, sharedAddress as string)
+          ).hash
+        );
         this.logger.debug("TAKER APPROVED");
       } catch (e) {
         _event.emit("error", e);
@@ -509,7 +545,7 @@ export class Pintswap extends PintP2P {
           to: sharedAddress,
           value: txParams.gasPrice * txParams.gasLimit, // change to gasPrice * gasLimit
         });
-	await this.signer.provider.waitForTransaction(ethTransaction.hash);
+        await this.signer.provider.waitForTransaction(ethTransaction.hash);
 
         this.logger.debug(
           `TAKER:: /event/build/tx building transaction with params: ${offer}, ${await this.signer.getAddress()}, ${sharedAddress}`
@@ -533,6 +569,7 @@ export class Pintswap extends PintP2P {
           Buffer.from(ethers.toBeArray(await this.signer.getAddress()))
         );
         messages.push(signContext.step1());
+        this.logger.debug("TAKER: pushed signContext.step1()");
       } catch (e) {
         this.logger.error(e);
         _event.emit("error", e);
@@ -567,10 +604,13 @@ export class Pintswap extends PintP2P {
                     tx.serialized
                   );
             this.logger.debug(
-              require("util").inspect(await this.signer.provider.waitForTransaction(txReceipt.hash), {
-                colors: true,
-                depth: 15,
-              })
+              require("util").inspect(
+                await this.signer.provider.waitForTransaction(txReceipt.hash),
+                {
+                  colors: true,
+                  depth: 15,
+                }
+              )
             );
             messages.end();
             stream.close();
@@ -600,11 +640,17 @@ export class Pintswap extends PintP2P {
         await source.next();
         self.logger.debug("enter /event/build/tx");
         _event.emit("/event/build/tx");
+        self.logger.debug("TAKER: WAITING FOR /event/build/tx");
         await _event.wait();
+        self.logger.debug("TAKER: COMPLETED");
         const { value: signMessage_2 } = await source.next();
+        self.logger.debug("TAKER: GOT signMessage_2");
         _event.emit("/event/ecdsa-sign/party/1", 2, signMessage_2.slice());
+        self.logger.debug("TAKER: WAITING FOR /event/ecdsa-sign/party/1");
         await _event.wait();
+        self.logger.debug("TAKER: COMPLETED");
         const { value: signMessage_4 } = await source.next();
+        self.logger.debug("TAKER: GOT signMessage_4");
         _event.emit("/event/ecdsa-sign/party/1", 4, signMessage_4.slice());
         await _event.wait();
       } catch (e) {
@@ -617,4 +663,3 @@ export class Pintswap extends PintP2P {
     return true;
   }
 }
-

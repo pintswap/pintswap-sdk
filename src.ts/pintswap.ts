@@ -10,7 +10,7 @@ import {
 import { EventEmitter } from "events";
 import pushable from "it-pushable";
 import { mapValues } from "lodash";
-import { toWETH } from "./trade";
+import { wrapEth } from "./trade";
 import BN from "bn.js";
 import {
   keyshareToAddress,
@@ -18,48 +18,16 @@ import {
   leftZeroPad,
   hashOffer,
   toBigInt,
+  coerceToWeth,
+  genericAbi,
+  defer,
 } from "./trade";
 import { IOffer } from "./types";
 import PeerId from "peer-id";
 import { createLogger } from "./logger";
-
-const logger = createLogger("pintswap");
-
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
-const coerceToWeth = async (address, signer) => {
-  if (address === ethers.ZeroAddress) {
-    const { chainId } = await signer.provider.getNetwork();
-    return toWETH(chainId);
-  }
-  return address;
-};
-
-const defer = () => {
-  let resolve,
-    reject,
-    promise = new Promise((_resolve, _reject) => {
-      resolve = _resolve;
-      reject = _reject;
-    });
-  return {
-    resolve,
-    reject,
-    promise,
-  };
-};
-
-const transactionToObject = (tx) => ({
-  nonce: tx.nonce,
-  value: tx.value,
-  from: tx.from,
-  gasPrice: tx.gasPrice,
-  gasLimit: tx.gasLimit,
-  chainId: tx.chainId,
-  data: tx.data,
-  maxFeePerGas: tx.maxFeePerGas,
-  maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
-});
+const logger = createLogger("pintswap");
 
 export class Pintswap extends PintP2P {
   public signer: any;
@@ -185,7 +153,7 @@ export class Pintswap extends PintP2P {
                 offer,
                 await this.signer.getAddress(),
                 takerAddress,
-		(await this.signer.provider.getNetwork()).chainId
+		            (await this.signer.provider.getNetwork()).chainId
               )
             )
               throw Error("transaction data is not a pintswap");
@@ -302,17 +270,12 @@ export class Pintswap extends PintP2P {
     this.logger.debug("TRADE ADDRESS: " + address);
     return address;
   }
-  async 
 
   async approveTradeAsMaker(offer: IOffer, sharedAddress: string) {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
     const token = new Contract(
       await coerceToWeth(ethers.getAddress(offer.givesToken), this.signer),
-      [
-        "function approve(address, uint256) returns (bool)",
-        "function allowance(address, address) view returns (uint256)",
-        "function balanceOf(address) view returns (uint256)",
-      ],
+      genericAbi,
       this.signer
     );
     this.logger.debug("MAKER ADDRESS", await this.signer.getAddress());
@@ -322,10 +285,7 @@ export class Pintswap extends PintP2P {
           await token.balanceOf(await this.signer.getAddress())
         )
     );
-    if (offer.givesToken === ethers.ZeroAddress) {
-      const { chainId } = await this.signer.provider.getNetwork();
-      await (new ethers.Contract(toWETH(chainId), ['function deposit()'], this.signer)).deposit({ value: offer.givesAmount });
-    }
+    if (offer.givesToken === ethers.ZeroAddress) wrapEth(this.signer, offer.givesAmount)
     const tx = await token.approve(tradeAddress, offer.givesAmount);
     this.logger.debug("TRADE ADDRESS", tradeAddress);
     this.logger.debug(
@@ -347,11 +307,7 @@ export class Pintswap extends PintP2P {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
     const token = new Contract(
       await coerceToWeth(getAddress(offer.getsToken), this.signer),
-      [
-        "function approve(address, uint256) returns (bool)",
-        "function allowance(address, address) view returns (uint256)",
-        "function balanceOf(address) view returns (uint256)",
-      ],
+      genericAbi,
       this.signer
     );
     this.logger.debug("TAKER ADDRESS", await this.signer.getAddress());
@@ -361,10 +317,7 @@ export class Pintswap extends PintP2P {
           await token.balanceOf(await this.signer.getAddress())
         )
     );
-    if (offer.getsToken === ethers.ZeroAddress) {
-      const { chainId } = await this.signer.provider.getNetwork();
-      await (new ethers.Contract(toWETH(chainId), ['function deposit()'], this.signer)).deposit({ value: offer.getsAmount });
-    }
+    if (offer.getsToken === ethers.ZeroAddress) wrapEth(this.signer, offer.getsAmount)
     const tx = await token.approve(tradeAddress, offer.getsAmount);
     this.logger.debug(
       "TAKER BALANCE AFTER APPROVING " +
@@ -493,6 +446,7 @@ export class Pintswap extends PintP2P {
       }
       _event.emit("tick");
     });
+    
     let ethTransaction = null;
 
     _event.on("/event/build/tx", async () => {
@@ -509,7 +463,7 @@ export class Pintswap extends PintP2P {
           to: sharedAddress,
           value: txParams.gasPrice * txParams.gasLimit, // change to gasPrice * gasLimit
         });
-	await this.signer.provider.waitForTransaction(ethTransaction.hash);
+	      await this.signer.provider.waitForTransaction(ethTransaction.hash);
 
         this.logger.debug(
           `TAKER:: /event/build/tx building transaction with params: ${offer}, ${await this.signer.getAddress()}, ${sharedAddress}`
@@ -584,7 +538,9 @@ export class Pintswap extends PintP2P {
         _event.emit("error", e);
       }
     });
+
     const self = this;
+
     let result = pipe(stream.source, lp.decode(), async function (source) {
       try {
         messages.push(message1); // message 1

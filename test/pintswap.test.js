@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { Pintswap, setFallbackWETH } = require("../lib");
 const WETH9 = require("canonical-weth/build/contracts/WETH9.json");
 
-describe("Pintswap", function () {
+describe("Pintswap - Integration Tests", function () {
   const testingEth = process.env.ETH ? true : false;
   let tt1; // test token held by maker
   let tt2; // test token held by taker
@@ -77,5 +77,4 @@ describe("Pintswap", function () {
     let val = await taker.createTrade(maker.peerId, offer);
     expect(val).to.be.equal(true);
   })
-
 });

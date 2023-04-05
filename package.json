@@ -17,7 +17,9 @@
     "test:unit": "yarn test ./test/utils.test.js",
     "test:integration": "yarn test ./test/pintswap.test.js",
 
-    "test:client": "HARDHAT_NETWORK=localhost node",
+    "node:client": "HARDHAT_NETWORK=localhost node",
+    "node": "yarn hardhat node",
+
     "script:maker": "yarn test:client scripts/client-test.js --mockMaker true",
     "script:maker:eth": "ETH=1 yarn test:client scripts/client-test.js --mockMaker true"
   },

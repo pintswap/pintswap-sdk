@@ -1,24 +1,14 @@
-const { 
-  time,
-  loadFixture
-} = require("@nomicfoundation/hardhat-network-helpers");
-const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
-const { Pintswap } = require("../lib");
-const { toB58String } = require("peer-id");
-const { multiaddr } = require("multiaddr");
-const { PintP2P } = require("../lib"); 
-
+const { Pintswap, setFallbackWETH } = require("../lib");
+const WETH9 = require("canonical-weth/build/contracts/WETH9.json");
 
 describe("Pintswap", function () {
-  // this.timeout("120000"); // one minute timeout
+  const testingEth = process.env.ETH ? true : false;
   let tt1; // test token held by maker
   let tt2; // test token held by taker
+  let weth;
   let offer;
-
-
-  let maker;
-  let taker;
+  let maker, taker;
 
   async function setupTestEnv() {
     const [ maker, taker ] = await ethers.getSigners();
@@ -29,8 +19,15 @@ describe("Pintswap", function () {
     let TakerTestERC20 = await ethers.getContractFactory("TestToken", taker);
     tt2 = await TakerTestERC20.deploy(ethers.utils.parseEther('1000'), "Token2", "TK2");
 
+    if(testingEth) {
+      const WETH = new ethers.ContractFactory(WETH9.abi, WETH9.bytecode, maker);
+      weth = await WETH.connect(maker).deploy();
+      weth = await weth.deployed();
+      setFallbackWETH(weth.address);
+    }
+
     offer = {
-      givesToken: tt1.address,
+      givesToken: testingEth ? ethers.constants.AddressZero : tt1.address,
       getsToken: tt2.address,
       givesAmount: ethers.utils.parseUnits("100.0", 18).toHexString(),
       getsAmount: ethers.utils.parseUnits("100.0", 18).toHexString()

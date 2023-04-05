@@ -65,7 +65,7 @@ async function main() {
 
     console.log(`
       Offer<IOffer> : {
-      \t givesToken: ${ testingEth ? '0x' + '0'.repeat(40) : makerOwnedTestToken.address },
+      \t givesToken: ${ testingEth ? ethers.constants.AddressZero : makerOwnedTestToken.address },
       \t getsTokens: ${ testToken.address },
       \t givesAmount: ${ ethers.utils.parseUnits("50.0").toHexString() },
       \t getsAmounts: ${ ethers.utils.parseUnits("50.0").toHexString() },

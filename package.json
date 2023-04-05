@@ -9,13 +9,19 @@
     "build:ts": "tsc",
     "build": "npm-run-all build:proto build:ts",
     "run-script": "node",
+
     "test": "yarn hardhat test",
     "test:eth": "ETH=1 yarn hardhat test",
     "test:localhost": "yarn hardhat test --network localhost",
     "test:localhost:eth": "ETH=1 yarn hardhat test --network localhost",
-    "test:client": "HARDHAT_NETWORK=localhost node",
-    "test:maker": "yarn test:client scripts/client-test.js --mockMaker true",
-    "test:maker:eth": "ETH=1 yarn test:client scripts/client-test.js --mockMaker true"
+    "test:unit": "yarn test ./test/utils.test.js",
+    "test:integration": "yarn test ./test/pintswap.test.js",
+
+    "node:client": "HARDHAT_NETWORK=localhost node",
+    "node": "yarn hardhat node",
+
+    "script:maker": "yarn test:client scripts/client-test.js --mockMaker true",
+    "script:maker:eth": "ETH=1 yarn test:client scripts/client-test.js --mockMaker true"
   },
   "repository": "https://github.com/pintswap/pintswap-sdk",
   "author": "flex",
@@ -66,6 +72,7 @@
     "@openzeppelin/contracts": "^4.8.2",
     "@typechain/ethers-v5": "^10.1.0",
     "@typechain/hardhat": "^6.1.2",
+    "@types/jest": "^29.5.0",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.15.3",
     "cross-env": "^7.0.3",

@@ -1,9 +1,9 @@
-import { IAvailableChainIds, IOffer } from "./types";
-import { ethers } from "ethers";
+import { IOffer } from "./types";
+import { BigNumberish, ethers, Signer } from "ethers";
 import { emasm } from "emasm";
 import BN from "bn.js";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
-const { solidityPackedKeccak256, getAddress, computeAddress, hexlify, Contract } = ethers;
+const { solidityPackedKeccak256, getAddress, computeAddress, hexlify } = ethers;
 
 // UTILS
 export function toBigInt(v) {
@@ -34,6 +34,38 @@ export function leftZeroPad(s, n) {
   return "0".repeat(n - s.length) + s;
 }
 
+export const genericAbi = [
+  "function approve(address, uint256) returns (bool)",
+  "function allowance(address, address) view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+];
+
+export const defer = () => {
+  let resolve,
+    reject,
+    promise = new Promise((_resolve, _reject) => {
+      resolve = _resolve;
+      reject = _reject;
+    });
+  return {
+    resolve,
+    reject,
+    promise,
+  };
+};
+
+export const transactionToObject = (tx) => ({
+  nonce: tx.nonce,
+  value: tx.value,
+  from: tx.from,
+  gasPrice: tx.gasPrice,
+  gasLimit: tx.gasLimit,
+  chainId: tx.chainId,
+  data: tx.data,
+  maxFeePerGas: tx.maxFeePerGas,
+  maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
+});
+
 // ETH/WETH
 export const WETH_ADDRESSES = Object.assign(
   Object.entries(WETH9.networks).reduce((r, [chainId, { address }]: any) => {
@@ -49,10 +81,17 @@ export const WETH_ADDRESSES = Object.assign(
 );
 
 let fallbackWETH = null;
-
 export const setFallbackWETH = (address) => {
   fallbackWETH = address;
 }
+
+export const coerceToWeth = async (address, signer) => {
+  if (address === ethers.ZeroAddress) {
+    const { chainId } = await signer.provider.getNetwork();
+    return toWETH(chainId);
+  }
+  return address;
+};
 
 export const toWETH = (chainId: number | string = 1) => {
   const chain = String(chainId);
@@ -63,6 +102,17 @@ export const toWETH = (chainId: number | string = 1) => {
     })()
   );
 };
+
+export const wrapEth = async (signer: Signer, amount: BigNumberish) => {
+  try {
+    const { chainId } = await signer.provider.getNetwork();
+    await (new ethers.Contract(toWETH(chainId.toString()), ['function deposit()'], signer)).deposit({ value: amount });
+    return true
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+}
 
 // SWAP CONTRACT
 export const createContract = (

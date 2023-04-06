@@ -76,7 +76,10 @@ export class Pintswap extends PintP2P {
           mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))
         ),
       }).finish();
-      pipe([_offerList], lp.encode(), stream.sink);
+      const messages = pushable();
+      pipe(messages, lp.encode(), stream.sink);
+      messages.push(_offerList);
+      messages.end();
     });
 
     await this.handle(
@@ -251,17 +254,12 @@ export class Pintswap extends PintP2P {
   async getTradesByPeerId(peerId: string) {
     let pid = PeerId.createFromB58String(peerId);
     const { stream } = await this.dialProtocol(pid, "/pintswap/0.1.0/orders");
-    const result = await pipe(
+    const decoded = pipe(
       stream.source,
-      lp.decode(),
-      async function collect(source) {
-        const vals = [];
-        for await (const val of source) {
-          vals.push(val);
-        }
-        return vals[0].slice();
-      }
+      lp.decode()
     );
+    const { value: offerListBufferList } = await decoded.next();
+    const result = offerListBufferList.slice();
     let offerList = protocol.OfferList.toObject(
       protocol.OfferList.decode(result),
       {

@@ -38,6 +38,26 @@
               "id": 1
             }
           }
+        },
+        "PermitData": {
+          "fields": {
+            "v": {
+              "type": "bytes",
+              "id": 1
+            },
+            "r": {
+              "type": "bytes",
+              "id": 2
+            },
+            "s": {
+              "type": "bytes",
+              "id": 3
+            },
+            "expiry": {
+              "type": "bytes",
+              "id": 4
+            }
+          }
         }
       }
     }

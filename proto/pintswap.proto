@@ -15,3 +15,10 @@ message OfferList {
 message Transmission {
   bytes data = 1;
 }
+
+message PermitData {
+  bytes v = 1;
+  bytes r = 2;
+  bytes s = 3;
+  bytes expiry = 4;
+}

@@ -4,8 +4,12 @@ import {
   Signature,
   Contract,
   zeroPadValue,
+  decodeBase64,
+  toBeArray,
   getAddress,
 } from "ethers";
+import { protocol } from "./protocol";
+import { mapValues } from "lodash";
 
 export const ASSETS = {
   MATIC: {
@@ -267,4 +271,34 @@ export async function sign(o, signer) {
       ])
     );
   }
+}
+
+export function encode(request, signature) {
+  const payload = protocol.PermitData.encode(
+    mapValues({ ...signature, expiry: request.expiry }, (v) =>
+      Buffer.from(toBeArray(hexlify(String(v))))
+    )
+  ).finish();
+  return payload;
+}
+
+export function decode(data) {
+  const permitData = mapValues(
+    protocol.PermitData.toObject(protocol.PermitData.decode(data), {
+      enums: String,
+      longs: String,
+      bytes: String,
+      defaults: true,
+      arrays: true,
+      objects: true,
+      oneofs: true,
+    }),
+    (v) => hexlify(decodeBase64(v))
+  );
+  return {
+    expiry: Number(permitData.expiry),
+    v: Number(permitData.v),
+    r: zeroPadValue(permitData.r, 32),
+    s: zeroPadValue(permitData.s, 32),
+  };
 }

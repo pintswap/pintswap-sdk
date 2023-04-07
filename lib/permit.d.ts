@@ -125,3 +125,10 @@ export declare function sign(o: any, signer: any): Promise<{
     r: string;
     s: string;
 }>;
+export declare function encode(request: any, signature: any): any;
+export declare function decode(data: any): {
+    expiry: number;
+    v: number;
+    r: string;
+    s: string;
+};

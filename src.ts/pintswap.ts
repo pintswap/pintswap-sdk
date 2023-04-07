@@ -69,17 +69,25 @@ export class Pintswap extends PintP2P {
   async handleBroadcastedOffers() {
     const address = await this.signer.getAddress();
     await this.handle("/pintswap/0.1.0/orders", ({ stream }) => {
-      this.logger.debug("handling order request from peer");
-      this.emit(`/pintswap/request/orders`);
-      let _offerList = protocol.OfferList.encode({
-        offers: [...this.offers.values()].map((v) =>
-          mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))
-        ),
-      }).finish();
-      const messages = pushable();
-      pipe(messages, lp.encode(), stream.sink);
-      messages.push(_offerList);
-      messages.end();
+      try {
+        this.logger.debug("handling order request from peer");
+        this.emit(`/pintswap/request/orders`);
+        this.logger.debug("emitted /pintswap/request/orders");
+        let _offerList = protocol.OfferList.encode({
+          offers: [...this.offers.values()].map((v) =>
+            mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))
+          ),
+        }).finish();
+        this.logger.debug("_offerList encoded");
+        console.debug(_offerList);
+        const messages = pushable();
+        pipe(messages, lp.encode(), stream.sink);
+        messages.push(_offerList);
+        messages.end();
+        this.logger.debug("piped");
+      } catch (e) {
+        this.logger.error(e);
+      }
     });
 
     await this.handle(
@@ -146,7 +154,7 @@ export class Pintswap extends PintP2P {
             `MAKER:: /event/approve-contract approved offer with offer hash: ${offerHashBuf.toString()}`
           );
         });
-	let signContextPromise = defer();
+        let signContextPromise = defer();
 
         _event.on("/event/ecdsa-sign/party/2/init", async (serializedTx) => {
           try {
@@ -158,7 +166,7 @@ export class Pintswap extends PintP2P {
             if (transaction.to) {
               throw Error("transaction must not have a recipient");
             }
-	    this.logger.debug('comparing contract');
+            this.logger.debug("comparing contract");
             if (
               transaction.data !==
               createContract(
@@ -169,16 +177,16 @@ export class Pintswap extends PintP2P {
               )
             )
               throw Error("transaction data is not a pintswap");
-	    this.logger.debug('MAKER: making signContext');
+            this.logger.debug("MAKER: making signContext");
             signContext = await TPCsign.P2Context.createContext(
               JSON.stringify(keyshareJson, null, 4),
               new BN(transaction.unsignedHash.substr(2), 16)
             );
-	    signContextPromise.resolve();
+            signContextPromise.resolve();
           } catch (e) {
             console.error(e);
             this.logger.error(e);
-	    _event.emit('error', e);
+            _event.emit("error", e);
           }
         });
 
@@ -230,7 +238,7 @@ export class Pintswap extends PintP2P {
           );
           self.logger.debug("RECEIVED SERIALIZED", serializedTx.slice());
           _event.emit("/event/ecdsa-sign/party/2/init", serializedTx.slice());
-	  await signContextPromise.promise;
+          await signContextPromise.promise;
 
           const { value: signMessage1 } = await source.next();
           self.logger.debug("MAKER: received signMessage1");
@@ -254,10 +262,7 @@ export class Pintswap extends PintP2P {
   async getTradesByPeerId(peerId: string) {
     let pid = PeerId.createFromB58String(peerId);
     const { stream } = await this.dialProtocol(pid, "/pintswap/0.1.0/orders");
-    const decoded = pipe(
-      stream.source,
-      lp.decode()
-    );
+    const decoded = pipe(stream.source, lp.decode());
     const { value: offerListBufferList } = await decoded.next();
     const result = offerListBufferList.slice();
     let offerList = protocol.OfferList.toObject(
@@ -378,8 +383,8 @@ export class Pintswap extends PintP2P {
       toBigInt(
         await this.signer.provider.estimateGas({
           data: contract,
-          from: sharedAddress,
-          gasPrice,
+          from: sharedAddress
+//          gasPrice,
         })
       ) + BigInt(26000);
     this.logger.debug("GASLIMIT: " + String(Number(gasLimit)));
@@ -485,7 +490,7 @@ export class Pintswap extends PintP2P {
       }
       _event.emit("tick");
     });
-    
+
     let ethTransaction = null;
 
     _event.on("/event/build/tx", async () => {
@@ -597,6 +602,14 @@ export class Pintswap extends PintP2P {
         _event.emit("/event/approve-contract");
         await _event.wait();
         await source.next();
+	self.logger.debug('waiting one block');
+	await new Promise<void>((resolve) => {
+	  const listener = () => {
+	    self.signer.provider.removeListener('block', listener);
+	    resolve();
+	  };
+	  self.signer.provider.on('block', listener);
+	});
         self.logger.debug("enter /event/build/tx");
         _event.emit("/event/build/tx");
         self.logger.debug("TAKER: WAITING FOR /event/build/tx");

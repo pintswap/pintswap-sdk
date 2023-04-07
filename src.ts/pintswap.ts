@@ -71,14 +71,12 @@ export class Pintswap extends PintP2P {
     await this.handle("/pintswap/0.1.0/orders", ({ stream }) => {
       try {
         this.logger.debug("handling order request from peer");
-        this.emit(`/pintswap/request/orders`);
-        this.logger.debug("emitted /pintswap/request/orders");
         let _offerList = protocol.OfferList.encode({
           offers: [...this.offers.values()].map((v) =>
             mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))
           ),
         }).finish();
-        this.logger.debug("_offerList encoded");
+        this.logger.debug("_offerList encoded:");
         console.debug(_offerList);
         const messages = pushable();
         pipe(messages, lp.encode(), stream.sink);
@@ -255,16 +253,21 @@ export class Pintswap extends PintP2P {
   // adds new offer to this.offers: Map<hash, IOffer>
   broadcastOffer(_offer: IOffer) {
     this.logger.debug("trying to list new offer");
-    this.offers.set(hashOffer(_offer), _offer);
+    const hash = hashOffer(_offer);
+    this.offers.set(hash, _offer);
+    this.emit('pintswap/trade/broadcast', hash);
   }
 
   // Takes in a peerId and returns a list of exisiting trades
   async getTradesByPeerId(peerId: string) {
     let pid = PeerId.createFromB58String(peerId);
+    this.emit('pintswap/trade/peer', 0); // start finding peer's orders
     const { stream } = await this.dialProtocol(pid, "/pintswap/0.1.0/orders");
+    this.emit('pintswap/trade/peer', 1); // peer found
     const decoded = pipe(stream.source, lp.decode());
     const { value: offerListBufferList } = await decoded.next();
     const result = offerListBufferList.slice();
+    this.emit('pintswap/trade/peer', 2); // got offers
     let offerList = protocol.OfferList.toObject(
       protocol.OfferList.decode(result),
       {
@@ -285,6 +288,7 @@ export class Pintswap extends PintP2P {
       });
     });
 
+    this.emit('pintswap/trade/peer', 3) // offers decoded and returning
     return Object.assign(offerList, { offers: remap });
   }
 
@@ -419,7 +423,7 @@ export class Pintswap extends PintP2P {
 
   async createTrade(peer, offer) {
     this.logger.debug(`Acting on offer ${offer} with peer ${peer}`);
-
+    this.emit('pintswap/trade/fulfill', 0); // start fulfilling trade
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
     ]);
@@ -473,6 +477,7 @@ export class Pintswap extends PintP2P {
      * Pintswap#approveAsMaker
      */
     _event.on("/event/approve-contract", async () => {
+      this.emit('pintswap/trade/fulfill', 1); // taker approving token swap
       try {
         // approve as maker
         this.logger.debug(
@@ -489,11 +494,13 @@ export class Pintswap extends PintP2P {
         _event.emit("error", e);
       }
       _event.emit("tick");
+      this.emit('pintswap/trade/fulfill', 2); // taker approved token swap
     });
 
     let ethTransaction = null;
 
     _event.on("/event/build/tx", async () => {
+      this.emit('pintswap/trade/fulfill', 3); // building transaction
       try {
         this.logger.debug(
           `/event/build/tx funding sharedAddress ${sharedAddress}`
@@ -537,6 +544,7 @@ export class Pintswap extends PintP2P {
         _event.emit("error", e);
       }
       _event.emit("tick");
+      this.emit('pintswap/trade/fulfill', 4); // transaction built
     });
 
     _event.on("/event/ecdsa-sign/party/1", async (step, message) => {
@@ -602,14 +610,16 @@ export class Pintswap extends PintP2P {
         _event.emit("/event/approve-contract");
         await _event.wait();
         await source.next();
-	self.logger.debug('waiting one block');
-	await new Promise<void>((resolve) => {
-	  const listener = () => {
-	    self.signer.provider.removeListener('block', listener);
-	    resolve();
-	  };
-	  self.signer.provider.on('block', listener);
-	});
+
+	      self.logger.debug('waiting one block');
+        await new Promise<void>((resolve) => {
+          const listener = () => {
+            self.signer.provider.removeListener('block', listener);
+            resolve();
+          };
+          self.signer.provider.on('block', listener);
+        });
+
         self.logger.debug("enter /event/build/tx");
         _event.emit("/event/build/tx");
         self.logger.debug("TAKER: WAITING FOR /event/build/tx");
@@ -631,7 +641,7 @@ export class Pintswap extends PintP2P {
     });
 
     await pipe(messages, lp.encode(), stream.sink);
-
+    this.emit('pintswap/trade/fulfill', 5); // transaction complete
     return true;
   }
 }

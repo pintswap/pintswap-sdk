@@ -10,9 +10,9 @@ This will install all the appropriate dependencies.
 
 ## Scripts
 
-#### `yarn node`
+#### `yarn node:hardhat`
 
-Runs a localhost node environment to run various transactions on.
+Runs a hardhat node environment to run various transactions on.
 
 #### `yarn script:maker`
 

@@ -1,0 +1,127 @@
+export declare const ASSETS: {
+    MATIC: {
+        USDC: string;
+    };
+    ARBITRUM: {
+        USDC: string;
+    };
+    ETHEREUM: {
+        USDC: string;
+    };
+    AVALANCHE: {
+        USDC: string;
+    };
+    OPTIMISM: {
+        USDC: string;
+    };
+};
+export declare function getMessage(request: any): {
+    owner: any;
+    spender: any;
+    nonce: any;
+    deadline: any;
+    value: any;
+    holder?: undefined;
+    expiry?: undefined;
+    allowed?: undefined;
+} | {
+    holder: any;
+    spender: any;
+    nonce: any;
+    expiry: any;
+    allowed: string;
+    owner?: undefined;
+    deadline?: undefined;
+    value?: undefined;
+};
+export declare function getDomainStructure(asset: any): {
+    name: string;
+    type: string;
+}[];
+export declare function fetchData(o: any, provider: any): Promise<any>;
+export declare function isUSDC(asset: any): boolean;
+export declare function getPermitStructure(asset: any): {
+    name: string;
+    type: string;
+}[];
+export declare function toChainId(network: any): 1 | 137 | 43114 | 42161 | 10;
+export declare function toNetwork(asset: any): [string, {
+    USDC: string;
+} | {
+    USDC: string;
+} | {
+    USDC: string;
+} | {
+    USDC: string;
+} | {
+    USDC: string;
+}];
+export declare function getDomain(o: any): {
+    name: string;
+    version: string;
+    verifyingContract: string;
+    salt: string;
+    chainId?: undefined;
+} | {
+    name: any;
+    version: string;
+    chainId: string;
+    verifyingContract: string;
+    salt?: undefined;
+};
+export declare function toEIP712(o: any): {
+    types: {
+        EIP712Domain: {
+            name: string;
+            type: string;
+        }[];
+        Permit: {
+            name: string;
+            type: string;
+        }[];
+    };
+    primaryType: string;
+    domain: {
+        name: string;
+        version: string;
+        verifyingContract: string;
+        salt: string;
+        chainId?: undefined;
+    } | {
+        name: any;
+        version: string;
+        chainId: string;
+        verifyingContract: string;
+        salt?: undefined;
+    };
+    message: {
+        owner: any;
+        spender: any;
+        nonce: any;
+        deadline: any;
+        value: any;
+        holder?: undefined;
+        expiry?: undefined;
+        allowed?: undefined;
+    } | {
+        holder: any;
+        spender: any;
+        nonce: any;
+        expiry: any;
+        allowed: string;
+        owner?: undefined;
+        deadline?: undefined;
+        value?: undefined;
+    };
+};
+export declare function splitSignature(data: any): {
+    v: number;
+    r: string;
+    s: string;
+};
+export declare function joinSignature(data: any): string;
+export declare function sign(o: any, signer: any): Promise<{
+    v: number;
+    r: string;
+    s: string;
+}>;

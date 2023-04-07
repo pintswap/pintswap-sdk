@@ -1,99 +1,270 @@
+import {
+  ZeroAddress,
+  hexlify,
+  Signature,
+  Contract,
+  zeroPadValue,
+  getAddress,
+} from "ethers";
 
-// export function toEIP712 () {
-//     return {
-//         types: {
-//             EIP712Domain: TODO(),
-//             Permit: getPermitSignature() 
-//         },
-//         primaryType: "Permit",
-//         domain: getDomain(offer, signer, chainId, isMaker),
-//         message: TODO()
+export const ASSETS = {
+  MATIC: {
+    USDC: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+  },
+  ARBITRUM: {
+    USDC: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
+  },
+  ETHEREUM: {
+    USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  },
+  AVALANCHE: {
+    USDC: "0xA7D7079b0FEaD91F3e65f86E8915Cb59c1a4C664",
+  },
+  OPTIMISM: {
+    USDC: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+  },
+};
 
-//     }
-// }
+export function getMessage(request) {
+  const address = getAddress(request.asset);
+  const chainId = toChainId(toNetwork(address));
+  if (isUSDC(address) && chainId !== 43114) {
+    return {
+      owner: request.owner,
+      spender: request.spender,
+      nonce: request.nonce,
+      deadline: request.expiry,
+      value: request.amount,
+    };
+  }
+  return {
+    holder: request.owner,
+    spender: request.spender,
+    nonce: request.nonce,
+    expiry: request.expiry,
+    allowed: "true",
+  };
+}
 
-// export function getPermitSignature (chainId, offer) {
-//     switch (todo()) {
-//         case todo(): 
-//             return PERMIT_HOLDER_SYNTAX;
-//             break
-//         case todo():
-//             return PERMIT_OWNER_SYNTAX;
-//             break;
-//         default:
-//             break;
-//     }
-// }
+export function getDomainStructure(asset) {
+  return getAddress(asset) === getAddress(ASSETS.MATIC.USDC)
+    ? [
+        {
+          name: "name",
+          type: "string",
+        },
+        {
+          name: "version",
+          type: "string",
+        },
+        {
+          name: "verifyingContract",
+          type: "address",
+        },
+        {
+          name: "salt",
+          type: "bytes32",
+        },
+      ]
+    : [
+        {
+          name: "name",
+          type: "string",
+        },
+        {
+          name: "version",
+          type: "string",
+        },
+        {
+          name: "chainId",
+          type: "uint256",
+        },
+        {
+          name: "verifyingContract",
+          type: "address",
+        },
+      ];
+}
 
-// export const PERMIT_HOLDER_SYNTAX = [
-//     {
-//         name: "holder",
-//         type: "address",
-//     },
-//     {
-//         name: "spender",
-//         type: "address",
-//     },
-//     {
-//         name: "nonce",
-//         type: "uint256",
-//     },
-//     {
-//         name: "expiry",
-//         type: "uint256",
-//     },
-//     {
-//         name: "allowed",
-//         type: "bool",
-//     },
-// ];
+export async function fetchData(o, provider) {
+  const contract = new Contract(
+    o.asset,
+    [
+      "function nonces(address) view returns (uint256)",
+      "function name() view returns (string)",
+    ],
+    provider
+  );
+  return {
+    ...o,
+    nonce: await contract.nonces(o.spender),
+    name: await contract.name(),
+  };
+}
 
-// export const PERMIT_OWNER_SYNTAX = [
-//     {
-//         name: "owner",
-//         type: "address"
-//     },
-//     { 
-//         name: "spender",
-//         type: "address"
-//     },
-//     {
-//         name: "value",
-//         type: "uint256"
-//     },
-//     {
-//         name: "nonce",
-//         type: "uint256"
-//     },
-//     {
-//         name: "deadline",
-//         type: "uint256"
-//     }
-// ];
+export function isUSDC(asset) {
+  return Object.values(ASSETS)
+    .map((v) => getAddress(v.USDC))
+    .includes(getAddress(asset));
+}
 
-// export function getDomain(offer, chainId, signer, isMaker = true) {
-//     let verifyingContract = isMaker ? offer.givesToken : offer.getsToken;
-//     let contractName = ethers.Contract(verifyingContract, ["function name() public view returns (string)"], signer).name();
+export function getPermitStructure(asset) {
+  if (
+    isUSDC(asset) &&
+    getAddress(asset) !== getAddress(ASSETS.AVALANCHE.USDC)
+  ) {
+    return [
+      {
+        name: "owner",
+        type: "address",
+      },
+      {
+        name: "spender",
+        type: "address",
+      },
+      {
+        name: "value",
+        type: "uint256",
+      },
+      {
+        name: "nonce",
+        type: "uint256",
+      },
+      {
+        name: "deadline",
+        type: "uint256",
+      },
+    ];
+  }
+  return [
+    {
+      name: "holder",
+      type: "address",
+    },
+    {
+      name: "spender",
+      type: "address",
+    },
+    {
+      name: "nonce",
+      type: "uint256",
+    },
+    {
+      name: "expiry",
+      type: "uint256",
+    },
+    {
+      name: "allowed",
+      type: "bool",
+    },
+  ];
+}
 
-//     switch (chainId) {
-//         case 137:
-//             return {
-//                 name: contractName, 
-//                 version: "1"
-//                 verifyingContract: verifyingContract
-//                 salt: hexZeroPad(
-//                     BigNumber.from(String(chainId) || "1").toHexString(),
-//                     32
-//                 )
-//             };
-//         default:
-//             return: {
-//                 name: contractName,
-//                 version: "1",
-//                 chainId: chainId,
-//                 verifyingContract: verifyingContract
-//             }
-//     } 
-// }
+export function toChainId(network) {
+  switch (network) {
+    case "MATIC":
+      return 137;
+    case "ETHEREUM":
+      return 1;
+    case "AVALANCHE":
+      return 43114;
+    case "ARBITRUM":
+      return 42161;
+    case "OPTIMISM":
+      return 10;
+    default:
+      throw Error("No network: " + network);
+  }
+}
 
+export function toNetwork(asset) {
+  const address = getAddress(asset);
+  return (
+    Object.entries(ASSETS).find(([network, assets]) => {
+      if (Object.values(assets).find((asset) => getAddress(asset) === address))
+        return network;
+    }) || null
+  );
+}
 
+export function getDomain(o) {
+  const asset = o.asset;
+  const address = getAddress(asset);
+  const chainId = toChainId(toNetwork(address));
+  if (isUSDC(address)) {
+    if (chainId === 137) {
+      return {
+        name: "USD Coin (PoS)",
+        version: "1",
+        verifyingContract: address,
+        salt: zeroPadValue(hexlify(String(chainId) || "1"), 32),
+      };
+    }
+    if (chainId === 42161) {
+      return {
+        name: "USD Coin (Arb1)",
+        version: "1",
+        chainId: String(chainId),
+        verifyingContract: address,
+      };
+    }
+    return {
+      name: "USD Coin",
+      version: chainId === 43114 ? "1" : "2",
+      chainId: String(chainId),
+      verifyingContract: address,
+    };
+  }
+  return {
+    name: o.name,
+    version: "1",
+    chainId: String(chainId),
+    verifyingContract: ZeroAddress,
+  };
+}
+export function toEIP712(o) {
+  return {
+    types: {
+      EIP712Domain: getDomainStructure(o.asset),
+      Permit: getPermitStructure(o.asset),
+    },
+    primaryType: "Permit",
+    domain: getDomain(o.asset),
+    message: getMessage(o),
+  };
+}
+
+export function splitSignature(data) {
+  const signature = Signature.from(data);
+  return {
+    v: Number(signature.v),
+    r: hexlify(signature.r),
+    s: hexlify(signature.s),
+  };
+}
+
+export function joinSignature(data) {
+  const signature = Signature.from(data);
+  return signature.serialized;
+}
+
+export async function sign(o, signer) {
+  if (!o.nonce || !o.name) o = await fetchData(o, signer);
+  try {
+    const payload = toEIP712(o);
+    delete payload.types.EIP712Domain;
+    const sig = await signer._signTypedData(
+      payload.domain,
+      payload.types,
+      payload.message
+    );
+    return splitSignature(joinSignature(splitSignature(sig)));
+  } catch (e) {
+    return splitSignature(
+      await signer.provider.send("eth_signTypedData_v4", [
+        await signer.getAddress(),
+        toEIP712(o),
+      ])
+    );
+  }
+}

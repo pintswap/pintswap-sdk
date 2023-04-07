@@ -29,6 +29,22 @@ const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
 const logger = createLogger("pintswap");
 
+export class PintswapTrade extends EventEmitter {
+  constructor() {
+    super();
+    this._deferred = defer();
+  }
+  resolve(v) {
+    this._deferred.resolve(v);
+  }
+  reject(err) {
+    this._deferred.reject(err);
+  }
+  async toPromise() {
+    return await this._deferred.promise;
+  }
+}
+
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
@@ -418,17 +434,23 @@ export class Pintswap extends PintP2P {
   }
 
   async createTrade(peer, offer) {
+    const deferred = defer();
+    const ee = new PintswapTrade();
+    (async () => {
     this.logger.debug(`Acting on offer ${offer} with peer ${peer}`);
 
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
     ]);
+    ee.emit('dialed');
 
     let _event = new EventEmitter() as any;
 
     let context1 = await TPC.P1Context.createContext();
+    ee.emit('context.create');
     let signContext = null;
     const message1 = context1.step1();
+    ee.emit('context.step1');
     const messages = pushable();
     let tx = null;
     let sharedAddress = null;
@@ -452,9 +474,11 @@ export class Pintswap extends PintP2P {
             this.logger.debug(
               `TAKER:: /event/ecdsa-keygen/party/1 handling message: ${step}`
             );
+	    const message3 = context1.step2(message);
 
-            messages.push(context1.step2(message));
+            messages.push(message3);
             keyshareJson = context1.exportKeyShare().toJsonObject();
+	    ee.emit('keyshare', keyshareJson)
             sharedAddress = keyshareToAddress(keyshareJson);
             break;
           default:
@@ -479,9 +503,13 @@ export class Pintswap extends PintP2P {
           `TAKER:: /event/approve-contract approving offer: ${offer} of shared Address ${sharedAddress}`
         );
         messages.push(Buffer.from(hashOffer(offer)));
+	const emitApproveConfirmAndPass = (tx) => {
+          ee.emit('approve', tx);
+	  return tx;
+	};
         await this.signer.provider.waitForTransaction(
           (
-            await this.approveTradeAsTaker(offer, sharedAddress as string)
+            emitApproveConfirmAndPass(await this.approveTradeAsTaker(offer, sharedAddress as string))
           ).hash
         );
         this.logger.debug("TAKER APPROVED");
@@ -633,5 +661,6 @@ export class Pintswap extends PintP2P {
     await pipe(messages, lp.encode(), stream.sink);
 
     return true;
-  }
+  })().then((v) => ee.resolve(v)).catch((err) => ee.reject(err));
+  return ee;
 }

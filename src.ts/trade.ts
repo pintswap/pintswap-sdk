@@ -122,6 +122,7 @@ export const createContract = (
   chainId: string | number = 1,
   permitData: any = {}
 ) => {
+  if (!permitData) permitData = {};
   if (permitData.maker || permitData.taker) {
     if (permitData.maker && !permitData.taker) {
       if (offer.getsToken === ethers.ZeroAddress) {

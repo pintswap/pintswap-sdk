@@ -20,7 +20,7 @@ export declare class Pintswap extends PintP2P {
     getTradeAddress(sharedAddress: string): Promise<string>;
     approveTradeAsMaker(offer: IOffer, sharedAddress: string): Promise<any>;
     approveTradeAsTaker(offer: IOffer, sharedAddress: string): Promise<any>;
-    prepareTransaction(offer: IOffer, maker: string, sharedAddress: string): Promise<{
+    prepareTransaction(offer: IOffer, maker: string, sharedAddress: string, permitData: any): Promise<{
         data: any;
         gasPrice: any;
         gasLimit: any;

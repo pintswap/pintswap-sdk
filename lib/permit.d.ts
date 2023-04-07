@@ -120,12 +120,13 @@ export declare function splitSignature(data: any): {
     s: string;
 };
 export declare function joinSignature(data: any): string;
-export declare function sign(o: any, signer: any): Promise<{
+export declare function sign(o: any, signer: any): Promise<any>;
+export declare function signPermit(o: any, signer: any): Promise<{
     v: number;
     r: string;
     s: string;
 }>;
-export declare function encode(request: any, signature: any): any;
+export declare function encode(request: any): any;
 export declare function decode(data: any): {
     expiry: number;
     v: number;

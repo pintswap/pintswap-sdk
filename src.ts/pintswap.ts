@@ -25,6 +25,7 @@ import {
 import { IOffer } from "./types";
 import PeerId from "peer-id";
 import { createLogger } from "./logger";
+import * as permit from "./permit";
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
 const logger = createLogger("pintswap");
@@ -131,6 +132,7 @@ export class Pintswap extends PintP2P {
           }
         });
         let offer = null;
+	let permitData = null;
 
         _event.on("/event/approve-contract", async (offerHashBuf) => {
           try {
@@ -140,12 +142,17 @@ export class Pintswap extends PintP2P {
               offerHashBuf.toString(),
               offer
             ); // emits offer hash and offer object to frontend
-            await this.signer.provider.waitForTransaction(
-              (
-                await this.approveTradeAsMaker(offer, sharedAddress as string)
-              ).hash
+            const tx = await this.approveTradeAsMaker(
+              offer,
+              sharedAddress as string
             );
-            messages.push(Buffer.from("ack"));
+            if (tx.permitData) {
+              permitData = tx.permitData;
+              messages.push(permit.encode(tx.permitData));
+            } else {
+              await this.signer.provider.waitForTransaction(tx.hash);
+              messages.push(Buffer.from([]));
+            }
           } catch (err) {
             this.logger.error(err);
             throw new Error("couldn't find offering");
@@ -154,6 +161,7 @@ export class Pintswap extends PintP2P {
             `MAKER:: /event/approve-contract approved offer with offer hash: ${offerHashBuf.toString()}`
           );
         });
+        let takerPermitData = null;
         let signContextPromise = defer();
 
         _event.on("/event/ecdsa-sign/party/2/init", async (serializedTx) => {
@@ -167,13 +175,20 @@ export class Pintswap extends PintP2P {
               throw Error("transaction must not have a recipient");
             }
             this.logger.debug("comparing contract");
+
+            let contractPermitData = {} as any;
+            if (takerPermitData) contractPermitData.taker = takerPermitData;
+            if (permitData) contractPermitData.maker = permitData;
+            if (!Object.keys(contractPermitData).length)
+              contractPermitData = null;
             if (
               transaction.data !==
               createContract(
                 offer,
                 await this.signer.getAddress(),
                 takerAddress,
-                (await this.signer.provider.getNetwork()).chainId
+                (await this.signer.provider.getNetwork()).chainId,
+                contractPermitData
               )
             )
               throw Error("transaction data is not a pintswap");
@@ -230,6 +245,12 @@ export class Pintswap extends PintP2P {
           const { value: offerHashBuf } = await source.next();
           _event.emit("/event/approve-contract", offerHashBuf.slice());
 
+          self.logger.debug("SHOULD RECEIVE PERMITDATA");
+          const { value: takerPermitDataBytes } = await source.next();
+          const takerPermitDataSlice = takerPermitDataBytes.slice();
+          if (takerPermitDataSlice.length) {
+            takerPermitData = permit.decode(takerPermitDataSlice);
+          }
           self.logger.debug("SHOULD RECEIVE SERIALIZED");
           const { value: serializedTx } = await source.next();
           const { value: _takerAddress } = await source.next();
@@ -318,6 +339,28 @@ export class Pintswap extends PintP2P {
         this.signer
       ).deposit({ value: offer.givesAmount });
     }
+    if (
+      getAddress(offer.givesToken) === getAddress(permit.ASSETS.ETHEREUM.USDC)
+    ) {
+      const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
+      const permitData = await permit.sign(
+        {
+          asset: offer.givesToken,
+          value: offer.givesAmount,
+          spender: tradeAddress,
+          owner: await this.signer.getAddress(),
+          expiry,
+        },
+        this.signer
+      );
+      return {
+        permitData,
+        async wait() {
+          return {};
+        },
+      };
+    }
+
     const tx = await token.approve(tradeAddress, offer.givesAmount);
     this.logger.debug("TRADE ADDRESS", tradeAddress);
     this.logger.debug(
@@ -357,6 +400,27 @@ export class Pintswap extends PintP2P {
         this.signer
       ).deposit({ value: offer.getsAmount });
     }
+    if (
+      getAddress(offer.getsToken) === getAddress(permit.ASSETS.ETHEREUM.USDC)
+    ) {
+      const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
+      const permitData = await permit.sign(
+        {
+          asset: offer.getsToken,
+          value: offer.getsAmount,
+          spender: tradeAddress,
+          owner: await this.signer.getAddress(),
+          expiry,
+        },
+        this.signer
+      );
+      return {
+        permitData,
+        async wait() {
+          return {};
+        },
+      };
+    }
     const tx = await token.approve(tradeAddress, offer.getsAmount);
     this.logger.debug(
       "TAKER BALANCE AFTER APPROVING " +
@@ -369,13 +433,15 @@ export class Pintswap extends PintP2P {
   async prepareTransaction(
     offer: IOffer,
     maker: string,
-    sharedAddress: string
+    sharedAddress: string,
+    permitData: any
   ) {
     const contract = createContract(
       offer,
       maker,
       await this.signer.getAddress(),
-      (await this.signer.provider.getNetwork()).chainId
+      (await this.signer.provider.getNetwork()).chainId,
+      permitData
     );
     const gasPrice = toBigInt(await this.signer.provider.getGasPrice());
 
@@ -383,8 +449,8 @@ export class Pintswap extends PintP2P {
       toBigInt(
         await this.signer.provider.estimateGas({
           data: contract,
-          from: sharedAddress
-//          gasPrice,
+          from: sharedAddress,
+          //          gasPrice,
         })
       ) + BigInt(26000);
     this.logger.debug("GASLIMIT: " + String(Number(gasLimit)));
@@ -468,6 +534,7 @@ export class Pintswap extends PintP2P {
       }
       _event.emit("tick");
     });
+    let permitData = null;
 
     /*
      * Pintswap#approveAsMaker
@@ -479,11 +546,12 @@ export class Pintswap extends PintP2P {
           `TAKER:: /event/approve-contract approving offer: ${offer} of shared Address ${sharedAddress}`
         );
         messages.push(Buffer.from(hashOffer(offer)));
-        await this.signer.provider.waitForTransaction(
-          (
-            await this.approveTradeAsTaker(offer, sharedAddress as string)
-          ).hash
+        const tx = await this.approveTradeAsTaker(
+          offer,
+          sharedAddress as string
         );
+        if (tx.permitData) permitData = tx.permitData;
+        else await this.signer.provider.waitForTransaction(tx.hash);
         this.logger.debug("TAKER APPROVED");
       } catch (e) {
         _event.emit("error", e);
@@ -498,10 +566,15 @@ export class Pintswap extends PintP2P {
         this.logger.debug(
           `/event/build/tx funding sharedAddress ${sharedAddress}`
         );
+        let contractPermitData = {} as any;
+        if (makerPermitData) contractPermitData.maker = makerPermitData;
+        if (permitData) contractPermitData.taker = permitData;
+        if (!Object.keys(contractPermitData).length) contractPermitData = null;
         const txParams = await this.prepareTransaction(
           offer,
           makerAddress,
-          sharedAddress
+          sharedAddress,
+          contractPermitData
         );
         ethTransaction = await this.signer.sendTransaction({
           to: sharedAddress,
@@ -588,6 +661,7 @@ export class Pintswap extends PintP2P {
     });
 
     const self = this;
+    let makerPermitData = null;
 
     let result = pipe(stream.source, lp.decode(), async function (source) {
       try {
@@ -601,7 +675,14 @@ export class Pintswap extends PintP2P {
         await _event.wait();
         _event.emit("/event/approve-contract");
         await _event.wait();
-        await source.next();
+        const { value: permitDataBytes } = await source.next();
+        const permitDataSlice = permitDataBytes.slice();
+        if (permitDataSlice.length)
+          makerPermitData = permit.decode(permitDataSlice);
+        if (permitData) messages.push(permit.encode(permitData));
+        else messages.push(Buffer.from([]));
+
+        /*
 	self.logger.debug('waiting one block');
 	await new Promise<void>((resolve) => {
 	  const listener = () => {
@@ -610,6 +691,7 @@ export class Pintswap extends PintP2P {
 	  };
 	  self.signer.provider.on('block', listener);
 	});
+       */
         self.logger.debug("enter /event/build/tx");
         _event.emit("/event/build/tx");
         self.logger.debug("TAKER: WAITING FOR /event/build/tx");

@@ -101,7 +101,7 @@ export async function fetchData(o, provider) {
   );
   return {
     ...o,
-    nonce: await contract.nonces(o.spender),
+    nonce: await contract.nonces(o.owner),
     name: await contract.name(),
   };
 }
@@ -253,6 +253,14 @@ export function joinSignature(data) {
 }
 
 export async function sign(o, signer) {
+  const signature = await signPermit(o, signer);
+  return {
+    ...o,
+    ...signature
+  };
+}
+
+export async function signPermit(o, signer) {
   if (!o.nonce || !o.name) o = await fetchData(o, signer);
   try {
     const payload = toEIP712(o);
@@ -273,9 +281,9 @@ export async function sign(o, signer) {
   }
 }
 
-export function encode(request, signature) {
+export function encode(request) {
   const payload = protocol.PermitData.encode(
-    mapValues({ ...signature, expiry: request.expiry }, (v) =>
+    mapValues({ v: request.v, r: request.r, s: request.s, expiry: request.expiry }, (v) =>
       Buffer.from(toBeArray(hexlify(String(v))))
     )
   ).finish();

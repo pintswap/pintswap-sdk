@@ -132,7 +132,7 @@ export class Pintswap extends PintP2P {
           }
         });
         let offer = null;
-	let permitData = null;
+	      let permitData = null;
 
         _event.on("/event/approve-contract", async (offerHashBuf) => {
           try {

@@ -3,7 +3,14 @@ import { BigNumberish, ethers, Signer } from "ethers";
 import { emasm } from "emasm";
 import BN from "bn.js";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
-const { solidityPackedKeccak256, toBeArray, getAddress, computeAddress, getUint, hexlify } = ethers;
+const {
+  solidityPackedKeccak256,
+  toBeArray,
+  getAddress,
+  computeAddress,
+  getUint,
+  hexlify,
+} = ethers;
 
 // UTILS
 export function toBigInt(v) {
@@ -83,7 +90,7 @@ export const WETH_ADDRESSES = Object.assign(
 let fallbackWETH = null;
 export const setFallbackWETH = (address) => {
   fallbackWETH = address;
-}
+};
 
 export const coerceToWeth = async (address, signer) => {
   if (address === ethers.ZeroAddress) {
@@ -97,7 +104,9 @@ export const toWETH = (chainId: number | string = 1) => {
   const chain = String(chainId);
   const address = WETH_ADDRESSES[chain];
   return (
-    address || fallbackWETH || (() => {
+    address ||
+    fallbackWETH ||
+    (() => {
       throw Error("no WETH contract found for chainid " + chain);
     })()
   );
@@ -106,13 +115,19 @@ export const toWETH = (chainId: number | string = 1) => {
 export const wrapEth = async (signer: Signer, amount: BigNumberish) => {
   try {
     const { chainId } = await signer.provider.getNetwork();
-    await (new ethers.Contract(toWETH(chainId.toString()), ['function deposit()'], signer)).deposit({ value: amount });
-    return true
+    await new ethers.Contract(
+      toWETH(chainId.toString()),
+      ["function deposit()"],
+      signer
+    ).deposit({ value: amount });
+    return true;
   } catch (err) {
     console.error(err);
     return false;
   }
-}
+};
+
+const ln = (v) => (console.log(v), v);
 
 // SWAP CONTRACT
 export const createContract = (
@@ -122,10 +137,6 @@ export const createContract = (
   chainId: string | number = 1,
   permitData: any = {}
 ) => {
-  console.log('permitData', permitData);
-  console.log('offer', offer);
-  console.log('maker', maker);
-  console.log('taker', taker);
   if (!permitData) permitData = {};
   if (permitData.maker || permitData.taker) {
     if (permitData.maker && !permitData.taker) {
@@ -138,8 +149,8 @@ export const createContract = (
           "returndatasize",
           getAddress(offer.givesToken),
           "0xd505accf00000000000000000000000000000000000000000000000000000000",
-	  "0x0",
-	  "mstore",
+          "0x0",
+          "mstore",
           maker,
           "0x4",
           "mstore",
@@ -226,7 +237,7 @@ export const createContract = (
           "gas",
           "call",
           "and",
-	  "iszero",
+          "iszero",
           "failure",
           "jumpi",
           getAddress(taker),
@@ -242,8 +253,8 @@ export const createContract = (
         "returndatasize",
         getAddress(offer.givesToken),
         "0xd505accf00000000000000000000000000000000000000000000000000000000",
-	"0x0",
-	"mstore",
+        "0x0",
+        "mstore",
         maker,
         "0x4",
         "mstore",
@@ -306,7 +317,7 @@ export const createContract = (
         "gas",
         "call",
         "and",
-	"iszero",
+        "iszero",
         "failure",
         "jumpi",
         getAddress(maker),
@@ -323,8 +334,8 @@ export const createContract = (
           "returndatasize",
           getAddress(offer.getsToken),
           "0xd505accf00000000000000000000000000000000000000000000000000000000",
-	  "0x0",
-	  "mstore",
+          "0x0",
+          "mstore",
           taker,
           "0x4",
           "mstore",
@@ -411,7 +422,7 @@ export const createContract = (
           "gas",
           "call",
           "and",
-	  "iszero",
+          "iszero",
           "failure",
           "jumpi",
           getAddress(maker),
@@ -419,7 +430,7 @@ export const createContract = (
           ["failure", ["0x0", "0x0", "revert"]],
         ]);
       }
-      return emasm([
+      return emasm(ln([
         "pc",
         "returndatasize",
         "0xe4",
@@ -427,8 +438,8 @@ export const createContract = (
         "returndatasize",
         getAddress(offer.getsToken),
         "0xd505accf00000000000000000000000000000000000000000000000000000000",
-	"0x0",
-	"mstore",
+        "0x0",
+        "mstore",
         taker,
         "0x4",
         "mstore",
@@ -454,7 +465,7 @@ export const createContract = (
         "call",
         "0x0",
         "0x0",
-        "0x44",
+        "0x64",
         "0x0",
         "0x0",
         getAddress(offer.givesToken),
@@ -491,13 +502,13 @@ export const createContract = (
         "gas",
         "call",
         "and",
-	"iszero",
+        "iszero",
         "failure",
         "jumpi",
         getAddress(maker),
         "selfdestruct",
         ["failure", ["0x0", "0x0", "revert"]],
-      ]);
+      ]));
     } else {
       return emasm([
         "pc",
@@ -507,8 +518,8 @@ export const createContract = (
         "returndatasize",
         getAddress(offer.givesToken),
         "0xd505accf00000000000000000000000000000000000000000000000000000000",
-	"0x0",
-	"mstore",
+        "0x0",
+        "mstore",
         maker,
         "0x4",
         "mstore",
@@ -539,8 +550,8 @@ export const createContract = (
         "0x0",
         getAddress(offer.getsToken),
         "0xd505accf00000000000000000000000000000000000000000000000000000000",
-	"0x0",
-	"mstore",
+        "0x0",
+        "mstore",
         taker,
         "0x4",
         "mstore",
@@ -566,7 +577,7 @@ export const createContract = (
         "call",
         "0x0",
         "0x0",
-        "0x44",
+        "0x64",
         "0x0",
         "0x0",
         getAddress(offer.givesToken),
@@ -603,7 +614,7 @@ export const createContract = (
         "gas",
         "call",
         "and",
-	"iszero",
+        "iszero",
         "failure",
         "jumpi",
         getAddress(maker),
@@ -756,50 +767,52 @@ export const createContract = (
       ["failure", ["0x0", "0x0", "revert"]],
     ]);
   }
-  return emasm([
-    "pc",
-    "returndatasize",
-    "0x64",
-    "returndatasize",
-    "returndatasize",
-    getAddress(offer.givesToken),
-    "0x23b872dd00000000000000000000000000000000000000000000000000000000",
-    "returndatasize",
-    "mstore",
-    getAddress(maker),
-    "0x4",
-    "mstore",
-    getAddress(taker),
-    "0x24",
-    "mstore",
-    hexlify(offer.givesAmount),
-    "0x44",
-    "mstore",
-    "gas",
-    "call",
-    "0x0",
-    "0x0",
-    "0x64",
-    "0x0",
-    "0x0",
-    getAddress(offer.getsToken),
-    getAddress(taker),
-    "0x4",
-    "mstore",
-    getAddress(maker),
-    "0x24",
-    "mstore",
-    hexlify(offer.getsAmount),
-    "0x44",
-    "mstore",
-    "gas",
-    "call",
-    "and",
-    "iszero",
-    "failure",
-    "jumpi",
-    getAddress(maker),
-    "selfdestruct",
-    ["failure", ["0x0", "0x0", "revert"]],
-  ]);
+  return emasm(
+    ln([
+      "pc",
+      "returndatasize",
+      "0x64",
+      "returndatasize",
+      "returndatasize",
+      getAddress(offer.givesToken),
+      "0x23b872dd00000000000000000000000000000000000000000000000000000000",
+      "returndatasize",
+      "mstore",
+      getAddress(maker),
+      "0x4",
+      "mstore",
+      getAddress(taker),
+      "0x24",
+      "mstore",
+      hexlify(offer.givesAmount),
+      "0x44",
+      "mstore",
+      "gas",
+      "call",
+      "0x0",
+      "0x0",
+      "0x64",
+      "0x0",
+      "0x0",
+      getAddress(offer.getsToken),
+      getAddress(taker),
+      "0x4",
+      "mstore",
+      getAddress(maker),
+      "0x24",
+      "mstore",
+      hexlify(offer.getsAmount),
+      "0x44",
+      "mstore",
+      "gas",
+      "call",
+      "and",
+      "iszero",
+      "failure",
+      "jumpi",
+      getAddress(maker),
+      "selfdestruct",
+      ["failure", ["0x0", "0x0", "revert"]],
+    ])
+  );
 };

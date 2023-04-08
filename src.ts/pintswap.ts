@@ -96,7 +96,9 @@ export class Pintswap extends PintP2P {
         this.emit(`/pintswap/request/create-trade`);
         let context2 = await TPC.P2Context.createContext();
         let messages = pushable();
-        let _event = new EventEmitter();
+        let _event = new EventEmitter() as any;
+	let approveDeferred = defer();
+    _event.on("error", (e) => _event._deferred.reject(e));
         let sharedAddress = null;
         let takerAddress = null;
         let keyshareJson = null;
@@ -160,6 +162,7 @@ export class Pintswap extends PintP2P {
           this.logger.debug(
             `MAKER:: /event/approve-contract approved offer with offer hash: ${offerHashBuf.toString()}`
           );
+	  approveDeferred.resolve();
         });
         let takerPermitData = null;
         let signContextPromise = defer();
@@ -253,6 +256,8 @@ export class Pintswap extends PintP2P {
 
             const { value: offerHashBuf } = await source.next();
             _event.emit("/event/approve-contract", offerHashBuf.slice());
+	    self.logger.debug('MAKER: WAITING FOR APPROVE');
+	    self.logger.debug('MAKER: GOT APPROVE');
 
             self.logger.debug("SHOULD RECEIVE PERMITDATA");
             const { value: takerPermitDataBytes } = await source.next();
@@ -260,13 +265,18 @@ export class Pintswap extends PintP2P {
             if (takerPermitDataSlice.length) {
               takerPermitData = permit.decode(takerPermitDataSlice);
             }
+	    console.log('TAKERPERMITDATA', takerPermitDataSlice);
+	    console.log(takerPermitData);
+	    await approveDeferred.promise;
             self.logger.debug("SHOULD RECEIVE SERIALIZED");
             const { value: serializedTx } = await source.next();
+	    self.logger.debug('RECEIVED SERIALIZED');
+	    self.logger.debug(ethers.hexlify(serializedTx.slice()));
             const { value: _takerAddress } = await source.next();
             takerAddress = ethers.getAddress(
               ethers.hexlify(_takerAddress.slice())
             );
-            self.logger.debug("RECEIVED SERIALIZED", serializedTx.slice());
+            self.logger.debug("RECEIVED TAKERADDRESS", takerAddress);
             _event.emit("/event/ecdsa-sign/party/2/init", serializedTx.slice());
             await signContextPromise.promise;
 
@@ -484,6 +494,7 @@ export class Pintswap extends PintP2P {
             ) + BigInt(26000)
           );
         } catch (e) {
+          console.error(e);
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       } while (true);
@@ -574,6 +585,7 @@ export class Pintswap extends PintP2P {
     /*
      * Pintswap#approveAsMaker
      */
+    let permitDataDeferred = defer();
     _event.on("/event/approve-contract", async () => {
       this.emit("pintswap/trade/taker", 1); // taker approving token swap
       try {
@@ -586,8 +598,9 @@ export class Pintswap extends PintP2P {
           offer,
           sharedAddress as string
         );
-        if (tx.permitData) permitData = tx.permitData;
-        else await this.signer.provider.waitForTransaction(tx.hash);
+        permitData = tx.permitData;
+	permitDataDeferred.resolve();
+        if (!permitData) await this.signer.provider.waitForTransaction(tx.hash);
         this.logger.debug("TAKER APPROVED");
       } catch (e) {
         _event.emit("error", e);
@@ -714,6 +727,7 @@ export class Pintswap extends PintP2P {
         await _event.wait();
         _event.emit("/event/approve-contract");
         await _event.wait();
+	await permitDataDeferred.promise;
 	console.log('PUSHING PERMITDATA');
         if (permitData) messages.push(permit.encode(permitData));
         else messages.push(Buffer.from([]));

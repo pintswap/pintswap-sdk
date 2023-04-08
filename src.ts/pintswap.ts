@@ -286,7 +286,7 @@ export class Pintswap extends PintP2P {
             _event.emit("/event/ecdsa-sign/party/2", 1, signMessage1.slice());
             const { value: signMessage3 } = await source.next();
             _event.emit("/event/ecdsa-sign/party/2", 3, signMessage3.slice());
-            this.emit('pintswap/trade/maker', 2);
+            this.emit('pintswap/trade/maker', 2); // maker sees when the trade completes
           } catch (e) {
             console.error(e);
           }

@@ -78,13 +78,13 @@ export class Pintswap extends PintP2P {
           ),
         }).finish();
         this.logger.debug("_offerList encoded:");
-        console.debug(_offerList);
         const messages = pushable();
         pipe(messages, lp.encode(), stream.sink);
         messages.push(_offerList);
         messages.end();
         this.logger.debug("piped");
       } catch (e) {
+        console.error(e);
         this.logger.error(e);
       }
     });

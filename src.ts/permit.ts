@@ -1,5 +1,6 @@
 import {
   ZeroAddress,
+  getUint,
   hexlify,
   Signature,
   Contract,
@@ -38,7 +39,7 @@ export function getMessage(request) {
       spender: request.spender,
       nonce: request.nonce,
       deadline: request.expiry,
-      value: request.amount,
+      value: request.value,
     };
   }
   return {
@@ -184,10 +185,10 @@ export function toChainId(network) {
 export function toNetwork(asset) {
   const address = getAddress(asset);
   return (
-    Object.entries(ASSETS).find(([network, assets]) => {
+    (Object.entries(ASSETS).find(([network, assets]) => {
       if (Object.values(assets).find((asset) => getAddress(asset) === address))
         return network;
-    }) || null
+    }) || [null])[0]
   );
 }
 
@@ -233,7 +234,7 @@ export function toEIP712(o) {
       Permit: getPermitStructure(o.asset),
     },
     primaryType: "Permit",
-    domain: getDomain(o.asset),
+    domain: getDomain(o),
     message: getMessage(o),
   };
 }
@@ -284,7 +285,7 @@ export async function signPermit(o, signer) {
 export function encode(request) {
   const payload = protocol.PermitData.encode(
     mapValues({ v: request.v, r: request.r, s: request.s, expiry: request.expiry }, (v) =>
-      Buffer.from(toBeArray(hexlify(String(v))))
+      typeof v === 'number' ? Buffer.from(toBeArray(getUint(v))) : Buffer.from(toBeArray(hexlify(String(v))))
     )
   ).finish();
   return payload;

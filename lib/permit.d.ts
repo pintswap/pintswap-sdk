@@ -45,17 +45,7 @@ export declare function getPermitStructure(asset: any): {
     type: string;
 }[];
 export declare function toChainId(network: any): 1 | 137 | 43114 | 42161 | 10;
-export declare function toNetwork(asset: any): [string, {
-    USDC: string;
-} | {
-    USDC: string;
-} | {
-    USDC: string;
-} | {
-    USDC: string;
-} | {
-    USDC: string;
-}];
+export declare function toNetwork(asset: any): string;
 export declare function getDomain(o: any): {
     name: string;
     version: string;

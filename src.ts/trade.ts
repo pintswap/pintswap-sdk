@@ -3,7 +3,7 @@ import { BigNumberish, ethers, Signer } from "ethers";
 import { emasm } from "emasm";
 import BN from "bn.js";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
-const { solidityPackedKeccak256, getAddress, computeAddress, hexlify } = ethers;
+const { solidityPackedKeccak256, toBeArray, getAddress, computeAddress, getUint, hexlify } = ethers;
 
 // UTILS
 export function toBigInt(v) {
@@ -122,6 +122,10 @@ export const createContract = (
   chainId: string | number = 1,
   permitData: any = {}
 ) => {
+  console.log('permitData', permitData);
+  console.log('offer', offer);
+  console.log('maker', maker);
+  console.log('taker', taker);
   if (!permitData) permitData = {};
   if (permitData.maker || permitData.taker) {
     if (permitData.maker && !permitData.taker) {
@@ -134,6 +138,8 @@ export const createContract = (
           "returndatasize",
           getAddress(offer.givesToken),
           "0xd505accf00000000000000000000000000000000000000000000000000000000",
+	  "0x0",
+	  "mstore",
           maker,
           "0x4",
           "mstore",
@@ -143,10 +149,10 @@ export const createContract = (
           hexlify(offer.givesAmount),
           "0x44",
           "mstore",
-          hexlify(permitData.maker.expiry),
+          hexlify(toBeArray(getUint(permitData.maker.expiry))),
           "0x64",
           "mstore",
-          hexlify(permitData.maker.v),
+          hexlify(toBeArray(getUint(permitData.maker.v))),
           "0x84",
           "mstore",
           hexlify(permitData.maker.r),
@@ -236,6 +242,8 @@ export const createContract = (
         "returndatasize",
         getAddress(offer.givesToken),
         "0xd505accf00000000000000000000000000000000000000000000000000000000",
+	"0x0",
+	"mstore",
         maker,
         "0x4",
         "mstore",
@@ -245,10 +253,10 @@ export const createContract = (
         hexlify(offer.givesAmount),
         "0x44",
         "mstore",
-        hexlify(permitData.maker.expiry),
+        hexlify(toBeArray(getUint(permitData.maker.expiry))),
         "0x64",
         "mstore",
-        hexlify(permitData.maker.v),
+        hexlify(toBeArray(getUint(permitData.maker.v))),
         "0x84",
         "mstore",
         hexlify(permitData.maker.r),
@@ -315,6 +323,8 @@ export const createContract = (
           "returndatasize",
           getAddress(offer.getsToken),
           "0xd505accf00000000000000000000000000000000000000000000000000000000",
+	  "0x0",
+	  "mstore",
           taker,
           "0x4",
           "mstore",
@@ -324,10 +334,10 @@ export const createContract = (
           hexlify(offer.getsAmount),
           "0x44",
           "mstore",
-          hexlify(permitData.taker.expiry),
+          hexlify(toBeArray(getUint(permitData.taker.expiry))),
           "0x64",
           "mstore",
-          hexlify(permitData.taker.v),
+          hexlify(toBeArray(getUint(permitData.taker.v))),
           "0x84",
           "mstore",
           hexlify(permitData.taker.r),
@@ -417,6 +427,8 @@ export const createContract = (
         "returndatasize",
         getAddress(offer.getsToken),
         "0xd505accf00000000000000000000000000000000000000000000000000000000",
+	"0x0",
+	"mstore",
         taker,
         "0x4",
         "mstore",
@@ -426,10 +438,10 @@ export const createContract = (
         hexlify(offer.getsAmount),
         "0x44",
         "mstore",
-        hexlify(permitData.taker.expiry),
+        hexlify(toBeArray(getUint(permitData.taker.expiry))),
         "0x64",
         "mstore",
-        hexlify(permitData.taker.v),
+        hexlify(toBeArray(getUint(permitData.taker.v))),
         "0x84",
         "mstore",
         hexlify(permitData.taker.r),
@@ -495,6 +507,8 @@ export const createContract = (
         "returndatasize",
         getAddress(offer.givesToken),
         "0xd505accf00000000000000000000000000000000000000000000000000000000",
+	"0x0",
+	"mstore",
         maker,
         "0x4",
         "mstore",
@@ -504,10 +518,10 @@ export const createContract = (
         hexlify(offer.givesAmount),
         "0x44",
         "mstore",
-        hexlify(permitData.maker.expiry),
+        hexlify(toBeArray(getUint(permitData.maker.expiry))),
         "0x64",
         "mstore",
-        hexlify(permitData.maker.v),
+        hexlify(toBeArray(getUint(permitData.maker.v))),
         "0x84",
         "mstore",
         hexlify(permitData.maker.r),
@@ -525,6 +539,8 @@ export const createContract = (
         "0x0",
         getAddress(offer.getsToken),
         "0xd505accf00000000000000000000000000000000000000000000000000000000",
+	"0x0",
+	"mstore",
         taker,
         "0x4",
         "mstore",
@@ -534,10 +550,10 @@ export const createContract = (
         hexlify(offer.getsAmount),
         "0x44",
         "mstore",
-        hexlify(permitData.taker.expiry),
+        hexlify(toBeArray(getUint(permitData.taker.expiry))),
         "0x64",
         "mstore",
-        hexlify(permitData.taker.v),
+        hexlify(toBeArray(getUint(permitData.taker.v))),
         "0x84",
         "mstore",
         hexlify(permitData.taker.r),

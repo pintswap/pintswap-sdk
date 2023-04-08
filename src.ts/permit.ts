@@ -275,6 +275,7 @@ export async function signPermit(o, signer) {
     );
     return splitSignature(joinSignature(splitSignature(sig)));
   } catch (e) {
+    console.error(e);
     return splitSignature(
       await signer.provider.send("eth_signTypedData_v4", [
         await signer.getAddress(),

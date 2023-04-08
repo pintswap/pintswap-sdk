@@ -427,14 +427,18 @@ export class Pintswap extends PintP2P {
           await token.balanceOf(await this.signer.getAddress())
         )
     );
+    console.log(offer);
     if (offer.getsToken === ethers.ZeroAddress) {
       const { chainId } = await this.signer.provider.getNetwork();
       console.log(offer);
+      console.log(chainId);
+      console.log(toWETH(chainId));
       await new ethers.Contract(
         toWETH(chainId),
         ["function deposit()"],
         this.signer
       ).deposit({ value: offer.getsAmount });
+      console.log('sent deposit()');
     }
     if (
       getAddress(offer.getsToken) === getAddress(permit.ASSETS.ETHEREUM.USDC)
@@ -736,8 +740,10 @@ export class Pintswap extends PintP2P {
         const { value: permitDataBytes } = await source.next();
 	console.log('RECEIVED RECEIVE PERMITDATABYTES');
         const permitDataSlice = permitDataBytes.slice();
+	console.log('permitDataSlice', permitDataSlice);
         if (permitDataSlice.length)
           makerPermitData = permit.decode(permitDataSlice);
+        console.log('makerPermitData', makerPermitData);
 
         /*
 	self.logger.debug('waiting one block');

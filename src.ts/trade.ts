@@ -280,7 +280,7 @@ export const createContract = (
         "call",
         "0x0",
         "0x0",
-        "0x44",
+        "0x64",
         "0x0",
         "0x0",
         getAddress(offer.givesToken),

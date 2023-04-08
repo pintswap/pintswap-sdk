@@ -254,6 +254,7 @@ export function joinSignature(data) {
 }
 
 export async function sign(o, signer) {
+  console.log(o);
   const signature = await signPermit(o, signer);
   return {
     ...o,
@@ -263,6 +264,7 @@ export async function sign(o, signer) {
 
 export async function signPermit(o, signer) {
   if (!o.nonce || !o.name) o = await fetchData(o, signer);
+  console.log(o);
   try {
     const payload = toEIP712(o);
     delete payload.types.EIP712Domain;

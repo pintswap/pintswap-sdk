@@ -72,6 +72,7 @@ export class Pintswap extends PintP2P {
     await this.handle("/pintswap/0.1.0/orders", ({ stream }) => {
       try {
         this.logger.debug("handling order request from peer");
+        this.emit('pintswap/trade/peer', 2); // maker sees that taker is connected
         let _offerList = protocol.OfferList.encode({
           offers: [...this.offers.values()].map((v) =>
             mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))
@@ -104,6 +105,7 @@ export class Pintswap extends PintP2P {
         _event.on("/event/ecdsa-keygen/party/2", (step, message) => {
           switch (step) {
             case 1:
+              this.emit('pintswap/trade/maker', 0); // maker sees that taker clicked "fulfill trade"
               this.logger.debug(
                 `MAKER:: /event/ecdsa-keygen/party/2 handling message: ${step}`
               );
@@ -130,7 +132,7 @@ export class Pintswap extends PintP2P {
           }
         });
         let offer = null;
-	let permitData = null;
+	      let permitData = null;
 
         _event.on("/event/approve-contract", async (offerHashBuf) => {
           try {
@@ -489,7 +491,7 @@ export class Pintswap extends PintP2P {
 
   async createTrade(peer, offer) {
     this.logger.debug(`Acting on offer ${offer} with peer ${peer}`);
-    this.emit('pintswap/trade/fulfill', 0); // start fulfilling trade
+    this.emit('pintswap/trade/taker', 0); // start fulfilling trade
     let { stream } = await this.dialProtocol(peer, [
       "/pintswap/0.1.0/create-trade",
     ]);
@@ -544,7 +546,7 @@ export class Pintswap extends PintP2P {
      * Pintswap#approveAsMaker
      */
     _event.on("/event/approve-contract", async () => {
-      this.emit('pintswap/trade/fulfill', 1); // taker approving token swap
+      this.emit('pintswap/trade/taker', 1); // taker approving token swap
       try {
         // approve as maker
         this.logger.debug(
@@ -562,13 +564,13 @@ export class Pintswap extends PintP2P {
         _event.emit("error", e);
       }
       _event.emit("tick");
-      this.emit('pintswap/trade/fulfill', 2); // taker approved token swap
+      this.emit('pintswap/trade/taker', 2); // taker approved token swap
     });
 
     let ethTransaction = null;
 
     _event.on("/event/build/tx", async () => {
-      this.emit('pintswap/trade/fulfill', 3); // building transaction
+      this.emit('pintswap/trade/taker', 3); // building transaction
       try {
         this.logger.debug(
           `/event/build/tx funding sharedAddress ${sharedAddress}`
@@ -617,7 +619,7 @@ export class Pintswap extends PintP2P {
         _event.emit("error", e);
       }
       _event.emit("tick");
-      this.emit('pintswap/trade/fulfill', 4); // transaction built
+      this.emit('pintswap/trade/taker', 4); // transaction built
     });
 
     _event.on("/event/ecdsa-sign/party/1", async (step, message) => {
@@ -721,7 +723,7 @@ export class Pintswap extends PintP2P {
     });
 
     await pipe(messages, lp.encode(), stream.sink);
-    this.emit('pintswap/trade/fulfill', 5); // transaction complete
+    this.emit('pintswap/trade/taker', 5); // transaction complete
     return true;
   }
 }

@@ -159,6 +159,7 @@ export class Pintswap extends PintP2P {
             this.logger.error(err);
             throw new Error("couldn't find offering");
           }
+          this.emit("pintswap/trade/maker", 1); // maker sees the taker signed tx
           this.logger.debug(
             `MAKER:: /event/approve-contract approved offer with offer hash: ${offerHashBuf.toString()}`
           );
@@ -285,6 +286,7 @@ export class Pintswap extends PintP2P {
             _event.emit("/event/ecdsa-sign/party/2", 1, signMessage1.slice());
             const { value: signMessage3 } = await source.next();
             _event.emit("/event/ecdsa-sign/party/2", 3, signMessage3.slice());
+            this.emit('pintswap/trade/maker', 2);
           } catch (e) {
             console.error(e);
           }

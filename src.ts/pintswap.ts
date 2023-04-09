@@ -472,7 +472,7 @@ export class Pintswap extends PintP2P {
     const trade = new PintswapTrade();
     this.emit("trade:taker", trade);
     (async () => {
-      this.logger.debug(`Acting on offer ${offer} with peer ${peer}`);
+      this.logger.debug(`Acting on offer ${hashOffer(offer)} with peer ${peer}`);
       this.emit("pintswap/trade/taker", 0); // start fulfilling trade
       const { stream } = await this.dialProtocol(peer, [
         "/pintswap/0.1.0/create-trade",

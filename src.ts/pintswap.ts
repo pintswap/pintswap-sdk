@@ -257,8 +257,8 @@ export class Pintswap extends PintP2P {
 
             const { value: offerHashBuf } = await source.next();
             _event.emit("/event/approve-contract", offerHashBuf.slice());
-	    self.logger.debug('MAKER: WAITING FOR APPROVE');
-	    self.logger.debug('MAKER: GOT APPROVE');
+	          self.logger.debug('MAKER: WAITING FOR APPROVE');
+	          self.logger.debug('MAKER: GOT APPROVE');
 
             self.logger.debug("SHOULD RECEIVE PERMITDATA");
             const { value: takerPermitDataBytes } = await source.next();
@@ -266,13 +266,13 @@ export class Pintswap extends PintP2P {
             if (takerPermitDataSlice.length) {
               takerPermitData = permit.decode(takerPermitDataSlice);
             }
-	    console.log('TAKERPERMITDATA', takerPermitDataSlice);
-	    console.log(takerPermitData);
-	    await approveDeferred.promise;
+	          console.log('TAKERPERMITDATA', takerPermitDataSlice);
+	          console.log(takerPermitData);
+	          await approveDeferred.promise;
             self.logger.debug("SHOULD RECEIVE SERIALIZED");
             const { value: serializedTx } = await source.next();
-	    self.logger.debug('RECEIVED SERIALIZED');
-	    self.logger.debug(ethers.hexlify(serializedTx.slice()));
+	          self.logger.debug('RECEIVED SERIALIZED');
+	          self.logger.debug(ethers.hexlify(serializedTx.slice()));
             const { value: _takerAddress } = await source.next();
             takerAddress = ethers.getAddress(
               ethers.hexlify(_takerAddress.slice())
@@ -286,12 +286,11 @@ export class Pintswap extends PintP2P {
             _event.emit("/event/ecdsa-sign/party/2", 1, signMessage1.slice());
             const { value: signMessage3 } = await source.next();
             _event.emit("/event/ecdsa-sign/party/2", 3, signMessage3.slice());
-            this.emit('pintswap/trade/maker', 2); // maker sees when the trade completes
           } catch (e) {
             console.error(e);
           }
         });
-
+        this.emit('pintswap/trade/maker', 2); // maker sees when the trade completes
         await pipe(messages, lp.encode(), stream.sink);
       }
     );

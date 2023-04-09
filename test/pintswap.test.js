@@ -74,7 +74,7 @@ describe("Pintswap - Integration Tests", function () {
   });
 
   it("`Maker` should dialProtocol `Taker` to create a trade", async function () {
-    let val = await taker.createTrade(maker.peerId, offer);
-    expect(val).to.be.equal(true);
+    let val = await (await taker.createTrade(maker.peerId, offer).toPromise()).wait();
+    expect(Number(val.status)).to.eql(1);
   })
 });

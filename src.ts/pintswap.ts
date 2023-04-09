@@ -623,7 +623,7 @@ export class Pintswap extends PintP2P {
           );
           messages.end();
           stream.close();
-          this.emit("pintswap/trade/taker", 5); // transaction complete
+          self.emit("pintswap/trade/taker", 5); // transaction complete
           trade.resolve(txReceipt);
         } catch (e) {
           messages.end();

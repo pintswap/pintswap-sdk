@@ -1,13 +1,23 @@
+/// <reference types="node" />
 import { PintP2P } from "./p2p";
+import { EventEmitter } from "events";
+import { defer } from "./trade";
 import { IOffer } from "./types";
 import { createLogger } from "./logger";
+export declare class PintswapTrade extends EventEmitter {
+    _deferred: ReturnType<typeof defer>;
+    constructor();
+    toPromise(): Promise<unknown>;
+    resolve(v?: any): void;
+    reject(err: any): void;
+}
 export declare class Pintswap extends PintP2P {
     signer: any;
     offers: Map<string, IOffer>;
     logger: ReturnType<typeof createLogger>;
     static initialize({ signer }: {
         signer: any;
-    }): Promise<unknown>;
+    }): Promise<Pintswap>;
     constructor({ signer, peerId }: {
         signer: any;
         peerId: any;
@@ -26,5 +36,5 @@ export declare class Pintswap extends PintP2P {
         gasLimit: any;
     }>;
     createTransaction(txParams: any, sharedAddress: string): Promise<any>;
-    createTrade(peer: any, offer: any): Promise<boolean>;
+    createTrade(peer: any, offer: any): PintswapTrade;
 }

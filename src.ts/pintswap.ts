@@ -30,20 +30,33 @@ const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
 const logger = createLogger("pintswap");
 
+export class PintswapTrade extends EventEmitter {
+  public _deferred: ReturnType<typeof defer>;
+  constructor() {
+    super();
+    this._deferred = defer();
+  }
+  async toPromise() {
+    return await this._deferred.promise;
+  }
+  resolve(v?: any) {
+    this.emit("complete", v);
+    this._deferred.resolve(v);
+  }
+  reject(err) {
+    this.emit("error", err);
+    this._deferred.reject(err);
+  }
+}
+
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
   public logger: ReturnType<typeof createLogger>;
 
   static async initialize({ signer }) {
-    return await new Promise(async (resolve, reject) => {
-      try {
-        let peerId = await PeerId.create();
-        resolve(new Pintswap({ signer, peerId }));
-      } catch (error) {
-        reject(error);
-      }
-    });
+    const peerId = await PeerId.create();
+    return new Pintswap({ signer, peerId });
   }
 
   constructor({ signer, peerId }) {
@@ -90,6 +103,8 @@ export class Pintswap extends PintP2P {
     await this.handle(
       "/pintswap/0.1.0/create-trade",
       async ({ stream, connection, protocol }) => {
+        const trade = new PintswapTrade();
+        trade.emit("trade:maker", trade);
         this.emit(`/pintswap/request/create-trade`);
         const context2 = await TPC.P2Context.createContext();
         const messages = pushable();
@@ -99,6 +114,7 @@ export class Pintswap extends PintP2P {
           try {
             const { value: keygenMessage1 } = await source.next();
             self.emit("pintswap/trade/maker", 0); // maker sees that taker clicked "fulfill trade"
+            trade.emit("progress", 0);
             self.logger.debug(
               `MAKER:: /event/ecdsa-keygen/party/2 handling message: 1`
             );
@@ -123,6 +139,10 @@ export class Pintswap extends PintP2P {
               offerHashBuf.toString(),
               offer
             ); // emits offer hash and offer object to frontend
+            trade.emit("fulfilling", {
+              hash: offerHashBuf,
+              offer,
+            });
             const tx = await self.approveTradeAsMaker(
               offer,
               sharedAddress as string
@@ -134,6 +154,7 @@ export class Pintswap extends PintP2P {
               messages.push(Buffer.from([]));
             }
             self.emit("pintswap/trade/maker", 1); // maker sees the taker signed tx
+            trade.emit("progress", 1);
             self.logger.debug(
               `MAKER:: /event/approve-contract approved offer with offer hash: ${offerHashBuf.toString()}`
             );
@@ -207,11 +228,17 @@ export class Pintswap extends PintP2P {
             self.emit("pintswap/trade/maker", 2); // maker: swap is complete
             messages.push(signContext.step2(signMessage3));
             messages.end();
+            trade.resolve();
           } catch (e) {
             self.logger.error(e);
+            trade.reject(e);
           }
         });
-        await pipe(messages, lp.encode(), stream.sink);
+        try {
+          await pipe(messages, lp.encode(), stream.sink);
+        } catch (e) {
+          trade.reject(e);
+        }
       }
     );
   }
@@ -441,160 +468,173 @@ export class Pintswap extends PintP2P {
     });
   }
 
-  async createTrade(peer, offer) {
-    this.logger.debug(`Acting on offer ${offer} with peer ${peer}`);
-    this.emit("pintswap/trade/taker", 0); // start fulfilling trade
-    const { stream } = await this.dialProtocol(peer, [
-      "/pintswap/0.1.0/create-trade",
-    ]);
+  createTrade(peer, offer) {
+    const trade = new PintswapTrade();
+    this.emit("trade:taker", trade);
+    (async () => {
+      this.logger.debug(`Acting on offer ${offer} with peer ${peer}`);
+      this.emit("pintswap/trade/taker", 0); // start fulfilling trade
+      const { stream } = await this.dialProtocol(peer, [
+        "/pintswap/0.1.0/create-trade",
+      ]);
 
-    const context1 = await TPC.P1Context.createContext();
-    const message1 = context1.step1();
-    const messages = pushable();
+      const context1 = await TPC.P1Context.createContext();
+      const message1 = context1.step1();
+      const messages = pushable();
 
-    /*
-     * Pintswap#approveAsMaker
-     */
-    const self = this;
+      /*
+       * Pintswap#approveAsMaker
+       */
+      const self = this;
 
-    pipe(stream.source, lp.decode(), async function (source) {
-      try {
-        messages.push(message1); // message 1
-        const { value: keygenMessage2BufList } = await source.next(); // message 2
-        const keygenMessage2 = keygenMessage2BufList.slice();
-        self.logger.debug(keygenMessage2);
-        const { value: makerAddressBufList } = await source.next(); // message 2
-        const makerAddress = ethers.getAddress(
-          ethers.hexlify(makerAddressBufList.slice())
-        );
-        self.logger.debug(makerAddress);
-        self.logger.debug(
-          `TAKER:: /event/ecdsa-keygen/party/1 handling message: 1`
-        );
-        messages.push(context1.step2(keygenMessage2));
-        const keyshareJson = context1.exportKeyShare().toJsonObject();
-        const sharedAddress = keyshareToAddress(keyshareJson);
-        self.emit("pintswap/trade/taker", 1); // taker approving token swap
-        // approve as maker
-        self.logger.debug(
-          `TAKER:: /event/approve-contract approving offer: ${offer} of shared Address ${sharedAddress}`
-        );
-        messages.push(Buffer.from(hashOffer(offer)));
-        const approveTx = await self.approveTradeAsTaker(
-          offer,
-          sharedAddress as string
-        );
-        if (!approveTx.permitData)
-          await self.signer.provider.waitForTransaction(approveTx.hash);
-        self.logger.debug("TAKER APPROVED");
-        self.emit("pintswap/trade/taker", 2); // taker approved token swap
-        self.logger.debug("PUSHING PERMITDATA");
-        if (approveTx.permitData)
-          messages.push(permit.encode(approveTx.permitData));
-        else messages.push(Buffer.from([]));
-        self.logger.debug("PUSHED PERMITDATA");
-        self.logger.debug("SHOULD RECEIVE PERMITDATABYTES");
-        const { value: permitDataBytes } = await source.next();
-        self.logger.debug("RECEIVED RECEIVE PERMITDATABYTES");
-        const permitDataSlice = permitDataBytes.slice();
-        const makerPermitData =
-          permitDataSlice.length && permit.decode(permitDataSlice);
+      pipe(stream.source, lp.decode(), async function (source) {
+        try {
+          messages.push(message1); // message 1
+          const { value: keygenMessage2BufList } = await source.next(); // message 2
+          const keygenMessage2 = keygenMessage2BufList.slice();
+          self.logger.debug(keygenMessage2);
+          const { value: makerAddressBufList } = await source.next(); // message 2
+          const makerAddress = ethers.getAddress(
+            ethers.hexlify(makerAddressBufList.slice())
+          );
+          self.logger.debug(makerAddress);
+          self.logger.debug(
+            `TAKER:: /event/ecdsa-keygen/party/1 handling message: 1`
+          );
+          messages.push(context1.step2(keygenMessage2));
+          const keyshareJson = context1.exportKeyShare().toJsonObject();
+          const sharedAddress = keyshareToAddress(keyshareJson);
+          trade.emit("progress", 1);
+          self.emit("pintswap/trade/taker", 1); // taker approving token swap
+          // approve as maker
+          self.logger.debug(
+            `TAKER:: /event/approve-contract approving offer: ${offer} of shared Address ${sharedAddress}`
+          );
+          messages.push(Buffer.from(hashOffer(offer)));
+          const approveTx = await self.approveTradeAsTaker(
+            offer,
+            sharedAddress as string
+          );
+          if (!approveTx.permitData)
+            await self.signer.provider.waitForTransaction(approveTx.hash);
+          self.logger.debug("TAKER APPROVED");
+          self.emit("pintswap/trade/taker", 2); // taker approved token swap
+          trade.emit("progress", 2);
+          self.logger.debug("PUSHING PERMITDATA");
+          if (approveTx.permitData)
+            messages.push(permit.encode(approveTx.permitData));
+          else messages.push(Buffer.from([]));
+          self.logger.debug("PUSHED PERMITDATA");
+          self.logger.debug("SHOULD RECEIVE PERMITDATABYTES");
+          const { value: permitDataBytes } = await source.next();
+          self.logger.debug("RECEIVED RECEIVE PERMITDATABYTES");
+          const permitDataSlice = permitDataBytes.slice();
+          const makerPermitData =
+            permitDataSlice.length && permit.decode(permitDataSlice);
 
-        self.logger.debug("enter /event/build/tx");
-        self.emit("pintswap/trade/taker", 3); // building transaction
-        self.logger.debug(
-          `/event/build/tx funding sharedAddress ${sharedAddress}`
-        );
-        let contractPermitData = {} as any;
-        if (makerPermitData) contractPermitData.maker = makerPermitData;
-        if (approveTx.permitData)
-          contractPermitData.taker = approveTx.permitData;
-        if (!Object.keys(contractPermitData).length) contractPermitData = null;
-        const txParams = await self.prepareTransaction(
-          offer,
-          makerAddress,
-          sharedAddress,
-          contractPermitData
-        );
-        const ethTransaction = await self.signer.sendTransaction({
-          to: sharedAddress,
-          value: txParams.gasPrice * txParams.gasLimit, // change to gasPrice * gasLimit
-        });
-        await self.signer.provider.waitForTransaction(ethTransaction.hash);
+          self.logger.debug("enter /event/build/tx");
+          self.emit("pintswap/trade/taker", 3); // building transaction
+          trade.emit("progress", 3);
+          self.logger.debug(
+            `/event/build/tx funding sharedAddress ${sharedAddress}`
+          );
+          let contractPermitData = {} as any;
+          if (makerPermitData) contractPermitData.maker = makerPermitData;
+          if (approveTx.permitData)
+            contractPermitData.taker = approveTx.permitData;
+          if (!Object.keys(contractPermitData).length)
+            contractPermitData = null;
+          const txParams = await self.prepareTransaction(
+            offer,
+            makerAddress,
+            sharedAddress,
+            contractPermitData
+          );
+          const ethTransaction = await self.signer.sendTransaction({
+            to: sharedAddress,
+            value: txParams.gasPrice * txParams.gasLimit, // change to gasPrice * gasLimit
+          });
+          await self.signer.provider.waitForTransaction(ethTransaction.hash);
 
-        self.logger.debug(
-          `TAKER:: /event/build/tx building transaction with params: ${offer}, ${await self.signer.getAddress()}, ${sharedAddress}`
-        );
-        const tx = await self.createTransaction(
-          txParams,
-          sharedAddress as string
-        );
-        self.logger.debug(`TAKER:: /event/build/tx built transaction`);
+          self.logger.debug(
+            `TAKER:: /event/build/tx building transaction with params: ${offer}, ${await self.signer.getAddress()}, ${sharedAddress}`
+          );
+          const tx = await self.createTransaction(
+            txParams,
+            sharedAddress as string
+          );
+          self.logger.debug(`TAKER:: /event/build/tx built transaction`);
 
-        const _uhash = (tx.unsignedHash as string).slice(2);
-        const serialized = Buffer.from(ethers.toBeArray(tx.unsignedSerialized));
-        const signContext = await TPCsign.P1Context.createContext(
-          JSON.stringify(keyshareJson, null, 4),
-          new BN(_uhash, 16)
-        );
+          const _uhash = (tx.unsignedHash as string).slice(2);
+          const serialized = Buffer.from(
+            ethers.toBeArray(tx.unsignedSerialized)
+          );
+          const signContext = await TPCsign.P1Context.createContext(
+            JSON.stringify(keyshareJson, null, 4),
+            new BN(_uhash, 16)
+          );
 
-        self.logger.debug(
-          `TAKER:: /event/build/tx sending unsigned transaction hash & signing step 1`
-        );
+          self.logger.debug(
+            `TAKER:: /event/build/tx sending unsigned transaction hash & signing step 1`
+          );
 
-        messages.push(serialized);
-        messages.push(
-          Buffer.from(ethers.toBeArray(await self.signer.getAddress()))
-        );
-        messages.push(signContext.step1());
-        self.logger.debug("TAKER: pushed signContext.step1()");
-        self.emit("pintswap/trade/taker", 4); // transaction built
-        self.logger.debug("TAKER: WAITING FOR /event/build/tx");
-        self.logger.debug("TAKER: COMPLETED");
-        const { value: signMessage_2 } = await source.next();
-        self.logger.debug("TAKER: GOT signMessage_2");
-        self.logger.debug(
-          `TAKER:: /event/ecdsa-sign/party/1 handling message 2`
-        );
-        messages.push(signContext.step2(signMessage_2.slice()));
-        self.logger.debug("TAKER: WAITING FOR /event/ecdsa-sign/party/1");
-        self.logger.debug("TAKER: COMPLETED");
-        const { value: signMessage_4 } = await source.next();
-        self.logger.debug("TAKER: GOT signMessage_4");
-        self.logger.debug(
-          `TAKER:: /event/ecdsa-sign/party/1 handling message 4`
-        );
-        signContext.step3(signMessage_4.slice());
-        const [r, s, v] = signContext.exportSig();
-        tx.signature = ethers.Signature.from({
-          r: "0x" + leftZeroPad(r.toString(16), 64),
-          s: "0x" + leftZeroPad(s.toString(16), 64),
-          v: v + 27,
-        });
-        const txReceipt =
-          typeof self.signer.provider.sendTransaction == "function"
-            ? await self.signer.provider.sendTransaction(tx.serialized)
-            : await self.signer.provider.broadcastTransaction(tx.serialized);
-        self.logger.debug(
-          require("util").inspect(
-            await self.signer.provider.waitForTransaction(txReceipt.hash),
-            {
-              colors: true,
-              depth: 15,
-            }
-          )
-        );
-        messages.end();
-        stream.close();
-      } catch (e) {
-        messages.end();
-        stream.close();
-        self.logger.error(e);
-      }
-    });
+          messages.push(serialized);
+          messages.push(
+            Buffer.from(ethers.toBeArray(await self.signer.getAddress()))
+          );
+          messages.push(signContext.step1());
+          self.logger.debug("TAKER: pushed signContext.step1()");
+          self.emit("pintswap/trade/taker", 4); // transaction built
+          trade.emit("progress", 4);
+          self.logger.debug("TAKER: WAITING FOR /event/build/tx");
+          self.logger.debug("TAKER: COMPLETED");
+          const { value: signMessage_2 } = await source.next();
+          self.logger.debug("TAKER: GOT signMessage_2");
+          self.logger.debug(
+            `TAKER:: /event/ecdsa-sign/party/1 handling message 2`
+          );
+          messages.push(signContext.step2(signMessage_2.slice()));
+          self.logger.debug("TAKER: WAITING FOR /event/ecdsa-sign/party/1");
+          self.logger.debug("TAKER: COMPLETED");
+          const { value: signMessage_4 } = await source.next();
+          self.logger.debug("TAKER: GOT signMessage_4");
+          self.logger.debug(
+            `TAKER:: /event/ecdsa-sign/party/1 handling message 4`
+          );
+          signContext.step3(signMessage_4.slice());
+          const [r, s, v] = signContext.exportSig();
+          tx.signature = ethers.Signature.from({
+            r: "0x" + leftZeroPad(r.toString(16), 64),
+            s: "0x" + leftZeroPad(s.toString(16), 64),
+            v: v + 27,
+          });
+          const txReceipt =
+            typeof self.signer.provider.sendTransaction == "function"
+              ? await self.signer.provider.sendTransaction(tx.serialized)
+              : await self.signer.provider.broadcastTransaction(tx.serialized);
+          self.logger.debug(
+            require("util").inspect(
+              await self.signer.provider.waitForTransaction(txReceipt.hash),
+              {
+                colors: true,
+                depth: 15,
+              }
+            )
+          );
+          messages.end();
+          stream.close();
+          this.emit("pintswap/trade/taker", 5); // transaction complete
+          trade.resolve(txReceipt);
+        } catch (e) {
+          messages.end();
+          stream.close();
+          self.logger.error(e);
+          trade.reject(e);
+        }
+      });
 
-    await pipe(messages, lp.encode(), stream.sink);
-    this.emit("pintswap/trade/taker", 5); // transaction complete
-    return true;
+      await pipe(messages, lp.encode(), stream.sink);
+    })().catch((err) => trade.reject(err));
+    return trade;
   }
 }

@@ -104,7 +104,7 @@ export class Pintswap extends PintP2P {
       "/pintswap/0.1.0/create-trade",
       async ({ stream, connection, protocol }) => {
         const trade = new PintswapTrade();
-        trade.emit("trade:maker", trade);
+        this.emit("trade:maker", trade);
         this.emit(`/pintswap/request/create-trade`);
         const context2 = await TPC.P2Context.createContext();
         const messages = pushable();

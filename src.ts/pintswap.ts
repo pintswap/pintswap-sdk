@@ -223,6 +223,7 @@ export class Pintswap extends PintP2P {
                 this.logger.debug(
                   `MAKER:: /event/ecdsa-sign/party/2 handling message ${step}`
                 );
+                this.emit('pintswap/trade/maker', 2) // maker: swap is complete
                 messages.push(signContext.step2(message));
                 messages.end();
                 break;
@@ -290,7 +291,6 @@ export class Pintswap extends PintP2P {
             console.error(e);
           }
         });
-        this.emit('pintswap/trade/maker', 2); // maker sees when the trade completes
         await pipe(messages, lp.encode(), stream.sink);
       }
     );

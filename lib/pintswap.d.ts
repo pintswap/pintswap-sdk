@@ -15,10 +15,13 @@ export declare class Pintswap extends PintP2P {
     signer: any;
     offers: Map<string, IOffer>;
     logger: ReturnType<typeof createLogger>;
-    static initialize({ signer }: {
+    _awaitReceipts: boolean;
+    static initialize({ awaitReceipts, signer }: {
+        awaitReceipts: any;
         signer: any;
     }): Promise<Pintswap>;
-    constructor({ signer, peerId }: {
+    constructor({ awaitReceipts, signer, peerId }: {
+        awaitReceipts: any;
         signer: any;
         peerId: any;
     });

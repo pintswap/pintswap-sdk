@@ -53,16 +53,18 @@ export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
   public logger: ReturnType<typeof createLogger>;
+  public _awaitReceipts: boolean;
 
-  static async initialize({ signer }) {
+  static async initialize({ awaitReceipts, signer }) {
     const peerId = await PeerId.create();
-    return new Pintswap({ signer, peerId });
+    return new Pintswap({ signer, awaitReceipts, peerId });
   }
 
-  constructor({ signer, peerId }) {
+  constructor({ awaitReceipts, signer, peerId }) {
     super({ signer, peerId });
     this.signer = signer;
     this.logger = logger;
+    this._awaitReceipts = awaitReceipts || false;
   }
 
   async startNode() {
@@ -309,11 +311,12 @@ export class Pintswap extends PintP2P {
     );
     if (offer.givesToken === ethers.ZeroAddress) {
       const { chainId } = await this.signer.provider.getNetwork();
-      await new ethers.Contract(
+      const depositTx = await new ethers.Contract(
         toWETH(chainId),
         ["function deposit()"],
         this.signer
       ).deposit({ value: offer.givesAmount });
+      if (this._awaitReceipts) await this.signer.provider.waitForTransaction(depositTx.hash);
     }
     if (
       getAddress(offer.givesToken) === getAddress(permit.ASSETS.ETHEREUM.USDC)
@@ -370,11 +373,12 @@ export class Pintswap extends PintP2P {
     );
     if (offer.getsToken === ethers.ZeroAddress) {
       const { chainId } = await this.signer.provider.getNetwork();
-      await new ethers.Contract(
+      const depositTx = await new ethers.Contract(
         toWETH(chainId),
         ["function deposit()"],
         this.signer
       ).deposit({ value: offer.getsAmount });
+      if (this._awaitReceipts) await this.signer.provider.waitForTransaction(depositTx.hash);
     }
     if (
       getAddress(offer.getsToken) === getAddress(permit.ASSETS.ETHEREUM.USDC)

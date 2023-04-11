@@ -348,7 +348,7 @@ export class Pintswap extends PintP2P {
           return {};
         },
       };
-    } else if ((await this.signer.getNetwork()).chainId === 1) {
+    } else if ((await this.signer.provider.getNetwork()).chainId === 1) {
       const tx = await this.approvePermit2(offer.givesToken);
       if (tx && this._awaitReceipts) await tx.wait();
       const signatureTransfer = {
@@ -445,7 +445,7 @@ export class Pintswap extends PintP2P {
           return {};
         },
       };
-    } else if ((await this.signer.getNetwork()).chainId === 1) {
+    } else if ((await this.signer.provider.getNetwork()).chainId === 1) {
       const tx = await this.approvePermit2(offer.getsToken);
       if (tx && this._awaitReceipts) await tx.wait();
       const signatureTransfer = {

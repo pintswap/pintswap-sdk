@@ -10,7 +10,6 @@ export declare class PintP2P extends Libp2p {
     addressPromise: Promise<string>;
     static PRESETS: {
         MAINNET: string;
-        'DEV-MAINNET': string;
     };
     static fromPresetOrMultiAddr(multiaddr: any): any;
     static toMessage(password: any): string;

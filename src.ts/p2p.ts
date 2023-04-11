@@ -85,8 +85,7 @@ export class PintP2P extends Libp2p {
   public signer: VoidSigner;
   public addressPromise: Promise<string>;
   static PRESETS = {
-    MAINNET: '/dns4/p2p.zerodao.com/tcp/443/wss/p2p-webrtc-star/',
-    'DEV-MAINNET': '/dns4/devp2p.zerodao.com/tcp/443/wss/p2p-webrtc-star/'
+    MAINNET: '/dns4/p2p.doublecup.dev/tcp/443/wss/p2p-webrtc-star/'
   };
   static fromPresetOrMultiAddr(multiaddr) {
     return this.PRESETS[(multiaddr || '').toUpperCase() || 'MAINNET'] || multiaddr;

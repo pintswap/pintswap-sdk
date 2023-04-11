@@ -31,4 +31,5 @@ export declare const setFallbackWETH: (address: any) => void;
 export declare const coerceToWeth: (address: any, signer: any) => Promise<any>;
 export declare const toWETH: (chainId?: number | string) => any;
 export declare const wrapEth: (signer: Signer, amount: BigNumberish) => Promise<boolean>;
+export declare const replaceForAddressOpcode: (calldata: any) => any;
 export declare const createContract: (offer: IOffer, maker: string, taker: string, chainId?: string | number, permitData?: any) => any;

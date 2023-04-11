@@ -447,6 +447,7 @@ export class Pintswap extends PintP2P {
             ) + BigInt(26000)
           );
         } catch (e) {
+          this.logger.error(e);
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       } while (true);

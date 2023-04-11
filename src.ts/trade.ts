@@ -122,12 +122,10 @@ export const wrapEth = async (signer: Signer, amount: BigNumberish) => {
     ).deposit({ value: amount });
     return true;
   } catch (err) {
-    console.error(err);
     return false;
   }
 };
 
-const ln = (v) => (console.log(v), v);
 
 const addHexPrefix = (s) => (s.substr(0, 2) === "0x" ? s : "0x" + s);
 const stripHexPrefix = (s) => (s.substr(0, 2) === "0x" ? s.substr(2) : s);
@@ -169,7 +167,7 @@ export const createContract = (
   };
   const makeMstoreInstructions = (words, offset = "0x0") => {
     return words.reduce((r, v) => {
-      r.push(addHexPrefix(v));
+      r.push(ethers.stripZerosLeft(addHexPrefix(v)));
       r.push(offset);
       r.push("mstore");
       offset = numberToHex(Number(offset) + 0x20);
@@ -187,22 +185,32 @@ export const createContract = (
         0
       )
     );
-    console.log('stripped', stripped);
-    console.log('inputLength', inputLength);
+    const first = stripped[0];
+    const initial = [];
     let offset = "0x0";
-    const mstoreInstructions = stripped.map((v) => {
+    let wordSize = '0x20';
+    if (!Array.isArray(first)) {
+      if (first) {
+        initial.push(ethers.zeroPadBytes(addHexPrefix(first.substr(0, 8)), 0x20));
+	initial.push('0x0');
+	initial.push('mstore');
+	offset = '0x4';
+      }
+    }
+    stripped[0] = stripped[0].substr(8);
+    const mstoreInstructions = initial.concat(stripped.map((v) => {
       if (!v.length) return [];
       if (Array.isArray(v)) {
+        wordSize = '0x20';
         const list = [v, offset, "mstore"];
         offset = numberToHex(Number(offset) + 0x20);
         return list;
       }
       const words = v.match(/.{1,64}/g);
-      console.log('words', words);
       const list = makeMstoreInstructions(words, offset);
       offset = numberToHex(Number(offset) + v.length / 2);
       return list;
-    });
+    }));
     const instructions = [
       zero(),
       zero(),

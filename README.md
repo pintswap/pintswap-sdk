@@ -1,12 +1,14 @@
 # PintSwap SDK
 
-This is the software development kit for PintSwap, an ERC20 peer-to-peer swap.
+This is the software development kit for PintSwap, a peer-to-peer ERC20 token swap using [LibP2P](https://libp2p.io/).
+
 
 ## Installation
 
 #### `yarn`
 
 This will install all the appropriate dependencies.
+
 
 ## Scripts
 
@@ -37,6 +39,7 @@ Available environment variables for `script/client-test.js`
 
 Example: `WALLET=<wallet-address> yarn node:client scripts/client-test.js --mockMaker true`
 
+
 ## Testing
 
 #### `yarn test`
@@ -60,3 +63,36 @@ Runs the test files against a local hardhat node. **Note: run `yarn node` first.
 
 Available environment variables:
 - `ETH=1` (Tests swapping of ETH which requires first wrapping ETH before making the swap)
+
+## How to Use
+
+#### Initialize Pintswap class
+```
+const pintswap = await Pintswap.initialize({ awaitReceipts, signer })
+```
+```
+await pintswap.startNode()
+```
+
+#### Broadcast trade
+```
+pintswap.broadcastOffer({
+    getsAmount: string,
+    getsToken: string,
+    givesAmount: string,
+    givesToken: string,
+});
+```
+
+#### Fulfill trade
+```
+pintswap.createTrade(
+  peer's ID as B58 String, 
+  {
+    getsAmount: string,
+    getsToken: string,
+    givesAmount: string,
+    givesToken: string,
+  }
+);
+```

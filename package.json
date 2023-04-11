@@ -1,7 +1,7 @@
 {
-  "name": "pintswap-sdk",
-  "version": "0.1.1",
-  "description": "pintswap SDK",
+  "name": "@pintswap/sdk",
+  "version": "1.0.0-beta",
+  "description": "Pintswap's software development kit. This SDK is the first to enable peer-to-peer ERC20 token swaps using libp2p.",
   "main": "lib/index.js",
   "type": "commonjs",
   "scripts": {

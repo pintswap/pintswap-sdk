@@ -256,6 +256,15 @@ export class Pintswap extends PintP2P {
   // Takes in a peerId and returns a list of exisiting trades
   async getTradesByPeerId(peerId: string) {
     let pid = PeerId.createFromB58String(peerId);
+    while (true) {
+      try {
+        await this.peerRouting.findPeer(pid);
+	break;
+      } catch (e) {
+	this.logger.error(e);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
     this.emit("pintswap/trade/peer", 0); // start finding peer's orders
     const { stream } = await this.dialProtocol(pid, "/pintswap/0.1.0/orders");
     this.emit("pintswap/trade/peer", 1); // peer found

@@ -16,9 +16,23 @@ message Transmission {
   bytes data = 1;
 }
 
-message PermitData {
+message Permit1Data {
   bytes v = 1;
   bytes r = 2;
   bytes s = 3;
   bytes expiry = 4;
 }
+
+message Permit2Data {
+  bytes nonce = 1;
+  bytes deadline = 2;
+  bytes signature = 3;
+}
+
+message PermitData {
+  oneof data {
+    Permit1Data permit1_data = 1;
+    Permit2Data permit2_data = 2;
+  }
+}
+

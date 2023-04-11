@@ -39,7 +39,7 @@
                         }
                     }
                 },
-                "PermitData": {
+                "Permit1Data": {
                     "fields": {
                         "v": {
                             "type": "bytes",
@@ -56,6 +56,42 @@
                         "expiry": {
                             "type": "bytes",
                             "id": 4
+                        }
+                    }
+                },
+                "Permit2Data": {
+                    "fields": {
+                        "nonce": {
+                            "type": "bytes",
+                            "id": 1
+                        },
+                        "deadline": {
+                            "type": "bytes",
+                            "id": 2
+                        },
+                        "signature": {
+                            "type": "bytes",
+                            "id": 3
+                        }
+                    }
+                },
+                "PermitData": {
+                    "oneofs": {
+                        "data": {
+                            "oneof": [
+                                "permit1Data",
+                                "permit2Data"
+                            ]
+                        }
+                    },
+                    "fields": {
+                        "permit1Data": {
+                            "type": "Permit1Data",
+                            "id": 1
+                        },
+                        "permit2Data": {
+                            "type": "Permit2Data",
+                            "id": 2
                         }
                     }
                 }

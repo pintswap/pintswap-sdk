@@ -9,17 +9,14 @@
     "build:ts": "tsc",
     "build": "npm-run-all build:proto build:ts",
     "run-script": "node",
-
     "test": "yarn hardhat test",
     "test:eth": "ETH=1 yarn hardhat test",
     "test:localhost": "yarn hardhat test --network localhost",
     "test:localhost:eth": "ETH=1 yarn hardhat test --network localhost",
     "test:unit": "yarn test ./test/utils.test.js",
     "test:integration": "yarn test ./test/pintswap.test.js",
-
     "node:client": "HARDHAT_NETWORK=localhost node",
     "node:hardhat": "yarn hardhat node",
-
     "script:maker": "yarn node:client scripts/client-test.js --mockMaker true",
     "script:maker:eth": "ETH=1 yarn node:client scripts/client-test.js --mockMaker true"
   },
@@ -31,6 +28,7 @@
     "@multiformats/multiaddr": "^12.1.0",
     "@noble/ed25519": "^1.6.0",
     "@safeheron/two-party-ecdsa-js": "^1.0.1",
+    "@uniswap/permit2-sdk": "^1.2.0",
     "aes-js": "^3.1.2",
     "assert": "^2.0.0",
     "base64url": "^3.0.1",

@@ -3,6 +3,7 @@ import { PintP2P } from "./p2p";
 import { ethers } from "ethers";
 import { pipe } from "it-pipe";
 import * as lp from "it-length-prefixed";
+import { SignatureTransfer, PERMIT2_ADDRESS } from "@uniswap/permit2-sdk";
 import {
   TPCEcdsaKeyGen as TPC,
   TPCEcdsaSign as TPCsign,
@@ -114,6 +115,9 @@ export class Pintswap extends PintP2P {
 
         pipe(stream.source, lp.decode(), async function (source) {
           try {
+            const { value: offerHashBufList } = await source.next();
+            const offerHashBuf = offerHashBufList.slice();
+            const offer = self.offers.get(offerHashBuf.toString());
             const { value: keygenMessage1 } = await source.next();
             self.emit("pintswap/trade/maker", 0); // maker sees that taker clicked "fulfill trade"
             trade.emit("progress", 0);
@@ -133,9 +137,6 @@ export class Pintswap extends PintP2P {
             // set keyshare and shared address
             const keyshareJson = context2.exportKeyShare().toJsonObject();
             const sharedAddress = keyshareToAddress(keyshareJson);
-            const { value: offerHashBufList } = await source.next();
-            const offerHashBuf = offerHashBufList.slice();
-            const offer = self.offers.get(offerHashBuf.toString());
             self.emit(
               `pintswap/request/create-trade/fulfilling`,
               offerHashBuf.toString(),
@@ -347,29 +348,64 @@ export class Pintswap extends PintP2P {
           return {};
         },
       };
+    } else if ((await this.signer.getNetwork()).chainId === 1) {
+      const tx = await this.approvePermit2(offer.givesToken);
+      if (tx && this._awaitReceipts) await tx.wait();
+      const signatureTransfer = {
+        permit: {
+          permitted: {
+            token: offer.givesToken,
+	    amount: offer.givesAmount
+	  },
+	  spender: tradeAddress,
+	  nonce: ethers.solidityPackedKeccak256(['uint256'], [ Date.now() ]),
+	  deadline: ethers.hexlify(ethers.toBeArray(ethers.getUint(Math.floor(Date.now() / 1000)) + BigInt(60*60*24)))
+	},
+	permit2Address: PERMIT2_ADDRESS,
+	chainId: 1
+      };
+      const signature = await this.signer._signTypedData(SignatureTransfer.getPermitData(signatureTransfer.permit, signatureTransfer.permit2Address, signatureTransfer.chainId));
+      return {
+        permitData: {
+          signatureTransfer,
+	  signature
+	},
+        async wait() {
+          return {};
+        },
+      };
+    } else {
+      const tx = await token.approve(tradeAddress, offer.givesAmount);
+      this.logger.debug("TRADE ADDRESS", tradeAddress);
+      this.logger.debug(
+        "MAKER BALANCE AFTER APPROVING " +
+          ethers.formatEther(
+            await token.balanceOf(await this.signer.getAddress())
+          )
+      );
+      this.logger.debug(
+        "MAKER ALLOWANCE AFTER APPROVING " +
+          ethers.formatEther(
+            await token.allowance(await this.signer.getAddress(), tradeAddress)
+          )
+      );
+      return tx;
     }
-
-    const tx = await token.approve(tradeAddress, offer.givesAmount);
-    this.logger.debug("TRADE ADDRESS", tradeAddress);
-    this.logger.debug(
-      "MAKER BALANCE AFTER APPROVING " +
-        ethers.formatEther(
-          await token.balanceOf(await this.signer.getAddress())
-        )
-    );
-    this.logger.debug(
-      "MAKER ALLOWANCE AFTER APPROVING " +
-        ethers.formatEther(
-          await token.allowance(await this.signer.getAddress(), tradeAddress)
-        )
-    );
-    return tx;
+  }
+  async approvePermit2(asset: string) {
+    const token = new Contract(asset, genericAbi, this.signer);
+    const allowance = await token.allowance(await this.signer.getAddress(), PERMIT2_ADDRESS);
+    if (ethers.getUint(allowance) < ethers.getUint('0x0' + 'f'.repeat(63))) {
+      return await token.approve(PERMIT2_ADDRESS, ethers.MaxUint256);
+    }
+    return null;
   }
 
   async approveTradeAsTaker(offer: IOffer, sharedAddress: string) {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
+    const address = await coerceToWeth(getAddress(offer.getsToken), this.signer);
     const token = new Contract(
-      await coerceToWeth(getAddress(offer.getsToken), this.signer),
+      address,
       genericAbi,
       this.signer
     );
@@ -409,15 +445,43 @@ export class Pintswap extends PintP2P {
           return {};
         },
       };
+    } else if ((await this.signer.getNetwork()).chainId === 1) {
+      const tx = await this.approvePermit2(offer.getsToken);
+      if (tx && this._awaitReceipts) await tx.wait();
+      const signatureTransfer = {
+        permit: {
+          permitted: {
+            token: offer.getsToken,
+	    amount: offer.getsAmount
+	  },
+	  spender: tradeAddress,
+	  nonce: ethers.solidityPackedKeccak256(['uint256'], [ Date.now() ]),
+	  deadline: ethers.hexlify(ethers.toBeArray(ethers.getUint(Math.floor(Date.now() / 1000)) + BigInt(60*60*24)))
+	},
+	permit2Address: PERMIT2_ADDRESS,
+	chainId: 1
+      };
+      const signature = await this.signer._signTypedData(SignatureTransfer.getPermitData(signatureTransfer.permit, signatureTransfer.permit2Address, signatureTransfer.chainId));
+      return {
+        permitData: {
+          signatureTransfer,
+	  signature
+	},
+        async wait() {
+          return {};
+        },
+      };
+
+    } else {
+      const tx = await token.approve(tradeAddress, offer.getsAmount);
+      this.logger.debug(
+        "TAKER BALANCE AFTER APPROVING " +
+          ethers.formatEther(
+            await token.balanceOf(await this.signer.getAddress())
+          )
+      );
+      return tx;
     }
-    const tx = await token.approve(tradeAddress, offer.getsAmount);
-    this.logger.debug(
-      "TAKER BALANCE AFTER APPROVING " +
-        ethers.formatEther(
-          await token.balanceOf(await this.signer.getAddress())
-        )
-    );
-    return tx;
   }
   async prepareTransaction(
     offer: IOffer,
@@ -503,6 +567,7 @@ export class Pintswap extends PintP2P {
 
       pipe(stream.source, lp.decode(), async function (source) {
         try {
+          messages.push(Buffer.from(hashOffer(offer)));
           messages.push(message1); // message 1
           const { value: keygenMessage2BufList } = await source.next(); // message 2
           const keygenMessage2 = keygenMessage2BufList.slice();
@@ -524,7 +589,6 @@ export class Pintswap extends PintP2P {
           self.logger.debug(
             `TAKER:: /event/approve-contract approving offer: ${offer} of shared Address ${sharedAddress}`
           );
-          messages.push(Buffer.from(hashOffer(offer)));
           const approveTx = await self.approveTradeAsTaker(
             offer,
             sharedAddress as string

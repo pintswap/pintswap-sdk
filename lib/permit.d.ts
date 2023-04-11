@@ -122,4 +122,16 @@ export declare function decode(data: any): {
     v: number;
     r: string;
     s: string;
+    signatureTransfer?: undefined;
+    signature?: undefined;
+} | {
+    signatureTransfer: {
+        nonce: any;
+        deadline: number;
+    };
+    signature: any;
+    expiry?: undefined;
+    v?: undefined;
+    r?: undefined;
+    s?: undefined;
 };

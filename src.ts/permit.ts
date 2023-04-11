@@ -184,12 +184,10 @@ export function toChainId(network) {
 
 export function toNetwork(asset) {
   const address = getAddress(asset);
-  return (
-    (Object.entries(ASSETS).find(([network, assets]) => {
-      if (Object.values(assets).find((asset) => getAddress(asset) === address))
-        return network;
-    }) || [null])[0]
-  );
+  return (Object.entries(ASSETS).find(([network, assets]) => {
+    if (Object.values(assets).find((asset) => getAddress(asset) === address))
+      return network;
+  }) || [null])[0];
 }
 
 export function getDomain(o) {
@@ -258,7 +256,7 @@ export async function sign(o, signer) {
   const signature = await signPermit(o, signer);
   return {
     ...o,
-    ...signature
+    ...signature,
   };
 }
 
@@ -285,18 +283,41 @@ export async function signPermit(o, signer) {
   }
 }
 
+const coercePredicate = (v) =>
+  typeof v === "number"
+    ? Buffer.from(toBeArray(getUint(v)))
+    : Buffer.from(toBeArray(hexlify(String(v))));
+
 export function encode(request) {
-  const payload = protocol.PermitData.encode(
-    mapValues({ v: request.v, r: request.r, s: request.s, expiry: request.expiry }, (v) =>
-      typeof v === 'number' ? Buffer.from(toBeArray(getUint(v))) : Buffer.from(toBeArray(hexlify(String(v))))
-    )
-  ).finish();
-  return payload;
+  if (request.v) {
+    return protocol.PermitData.encode({
+      data: {
+        permit1Data: mapValues(
+          { v: request.v, r: request.r, s: request.s, expiry: request.expiry },
+          coercePredicate
+        ),
+      },
+    }).finish();
+  } else {
+    return protocol.PermitData.encode({
+      data: {
+        permit2Data: mapValues(
+          {
+            deadline: request.signatureTransfer.deadline,
+            nonce: request.signatureTransfer.nonce,
+            signature: request.signature,
+          },
+          coercePredicate
+        ),
+      },
+    }).finish();
+  }
 }
 
 export function decode(data) {
-  const permitData = mapValues(
-    protocol.PermitData.toObject(protocol.PermitData.decode(data), {
+  const decoded = protocol.PermitData.toObject(
+    protocol.PermitData.decode(data),
+    {
       enums: String,
       longs: String,
       bytes: String,
@@ -304,13 +325,26 @@ export function decode(data) {
       arrays: true,
       objects: true,
       oneofs: true,
-    }),
+    }
+  );
+  const permitData = mapValues(
+    decoded[decoded.data.permit1Data || decoded.data.permit2Data],
     (v) => hexlify(decodeBase64(v))
   );
-  return {
-    expiry: Number(permitData.expiry),
-    v: Number(permitData.v),
-    r: zeroPadValue(permitData.r, 32),
-    s: zeroPadValue(permitData.s, 32),
-  };
+  if (permitData.v) {
+    return {
+      expiry: Number(permitData.expiry),
+      v: Number(permitData.v),
+      r: zeroPadValue(permitData.r, 32),
+      s: zeroPadValue(permitData.s, 32),
+    };
+  } else {
+    return {
+      signatureTransfer: {
+        nonce: permitData.nonce,
+        deadline: Number(permitData.deadline),
+      },
+      signature: permitData.signature,
+    };
+  }
 }

@@ -3,6 +3,8 @@ import { BigNumberish, ethers, Signer } from "ethers";
 import { emasm } from "emasm";
 import BN from "bn.js";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
+import { PERMIT2_ADDRESS } from "@uniswap/permit2-sdk";
+import Permit2ABI from "./Permit2.json";
 const {
   solidityPackedKeccak256,
   toBeArray,
@@ -11,6 +13,8 @@ const {
   getUint,
   hexlify,
 } = ethers;
+
+const permit2Interface = new ethers.Interface(Permit2ABI);
 
 // UTILS
 export function toBigInt(v) {
@@ -126,7 +130,6 @@ export const wrapEth = async (signer: Signer, amount: BigNumberish) => {
   }
 };
 
-
 const addHexPrefix = (s) => (s.substr(0, 2) === "0x" ? s : "0x" + s);
 const stripHexPrefix = (s) => (s.substr(0, 2) === "0x" ? s.substr(2) : s);
 
@@ -188,29 +191,33 @@ export const createContract = (
     const first = stripped[0];
     const initial = [];
     let offset = "0x0";
-    let wordSize = '0x20';
+    let wordSize = "0x20";
     if (!Array.isArray(first)) {
       if (first) {
-        initial.push(ethers.zeroPadBytes(addHexPrefix(first.substr(0, 8)), 0x20));
-	initial.push('0x0');
-	initial.push('mstore');
-	offset = '0x4';
+        initial.push(
+          ethers.zeroPadBytes(addHexPrefix(first.substr(0, 8)), 0x20)
+        );
+        initial.push("0x0");
+        initial.push("mstore");
+        offset = "0x4";
       }
     }
-    stripped[0] = stripped[0].substr(8);
-    const mstoreInstructions = initial.concat(stripped.map((v) => {
-      if (!v.length) return [];
-      if (Array.isArray(v)) {
-        wordSize = '0x20';
-        const list = [v, offset, "mstore"];
-        offset = numberToHex(Number(offset) + 0x20);
+    if (stripped[0]) stripped[0] = stripped[0].substr(8);
+    const mstoreInstructions = initial.concat(
+      stripped.map((v) => {
+        if (!v.length) return [];
+        if (Array.isArray(v)) {
+          wordSize = "0x20";
+          const list = [v, offset, "mstore"];
+          offset = numberToHex(Number(offset) + 0x20);
+          return list;
+        }
+        const words = v.match(/.{1,64}/g);
+        const list = makeMstoreInstructions(words, offset);
+        offset = numberToHex(Number(offset) + v.length / 2);
         return list;
-      }
-      const words = v.match(/.{1,64}/g);
-      const list = makeMstoreInstructions(words, offset);
-      offset = numberToHex(Number(offset) + v.length / 2);
-      return list;
-    }));
+      })
+    );
     const instructions = [
       zero(),
       zero(),
@@ -227,8 +234,63 @@ export const createContract = (
     return instructions;
   };
   permitData = permitData || {};
+  const transferFrom = (token, from, to, amount, permitData) => {
+    if (permitData && permitData.signatureTransfer) {
+      if (token === ethers.ZeroAddress) {
+        return [
+          call(
+            PERMIT2_ADDRESS,
+            permit2Interface.encodeFunctionData("permitTransferFrom", [
+              {
+                permitted: {
+                  token: toWETH(chainId),
+                  amount,
+                },
+                nonce: permitData.signatureTransfer.nonce,
+                deadline: permitData.signatureTransfer.deadline,
+              },
+              [{ to: "0x" + "1".repeat(40), requestedAmount: amount }],
+              from,
+              permitData.signature,
+            ])
+          ),
+          call(to, "0x", amount),
+        ];
+      }
+      return call(
+        PERMIT2_ADDRESS,
+        permit2Interface.encodeFunctionData("permitTransferFrom", [
+          {
+            permitted: { token, amount },
+            nonce: permitData.signatureTransfer.nonce,
+            deadline: permitData.signatureTransfer.deadline,
+          },
+          [{ to, requestedAmount: amount }],
+          from,
+          permitData.signature,
+        ])
+      );
+    }
+    if (token === ethers.ZeroAddress) {
+      return [
+        call(
+          toWETH(chainId),
+          tokenInterface.encodeFunctionData("transferFrom", [
+            from,
+            "0x" + "1".repeat(40),
+            amount,
+          ])
+        ),
+        call(to, "0x", amount),
+      ];
+    }
+    return call(
+      token,
+      tokenInterface.encodeFunctionData("transferFrom", [from, to, amount])
+    );
+  };
   return emasm([
-    permitData.maker
+    permitData.maker && permitData.v
       ? call(
           offer.givesToken,
           tokenInterface.encodeFunctionData("permit", [
@@ -242,7 +304,7 @@ export const createContract = (
           ])
         )
       : [],
-    permitData.taker
+    permitData.taker && permitData.taker.v
       ? call(
           offer.getsToken,
           tokenInterface.encodeFunctionData("permit", [
@@ -256,46 +318,20 @@ export const createContract = (
           ])
         )
       : [],
-    offer.getsToken === ethers.ZeroAddress
-      ? [
-          call(
-            toWETH(chainId),
-            tokenInterface.encodeFunctionData("transferFrom", [
-              taker,
-              "0x" + "1".repeat(40),
-              offer.getsAmount,
-            ])
-          ),
-          call(maker, "0x", offer.getsAmount),
-        ]
-      : call(
-          offer.getsToken,
-          tokenInterface.encodeFunctionData("transferFrom", [
-            taker,
-            maker,
-            offer.getsAmount,
-          ])
-        ),
-    offer.givesToken === ethers.ZeroAddress
-      ? [
-          call(
-            toWETH(chainId),
-            tokenInterface.encodeFunctionData("transferFrom", [
-              maker,
-              "0x" + "1".repeat(40),
-              offer.givesAmount,
-            ])
-          ),
-          call(taker, "0x", offer.givesAmount),
-        ]
-      : call(
-          offer.givesToken,
-          tokenInterface.encodeFunctionData("transferFrom", [
-            maker,
-            taker,
-            offer.givesAmount,
-          ])
-        ),
+    transferFrom(
+      offer.getsToken,
+      taker,
+      maker,
+      offer.getsAmount,
+      permitData && permitData.taker
+    ),
+    transferFrom(
+      offer.givesToken,
+      maker,
+      taker,
+      offer.givesAmount,
+      permitData.m && permitData.maker
+    ),
     "iszero",
     "failure",
     "jumpi",

@@ -542,7 +542,7 @@ export class Pintswap extends PintP2P {
     const payCoinbase = Boolean(
       chainId === 1 &&
         [offer.givesToken, offer.getsToken].find(
-          (v) => v === toWETH(1) || ethers.ZeroAddress
+          (v) => ethers.ZeroAddress
         )
     );
     const taker = await this.signer.getAddress();

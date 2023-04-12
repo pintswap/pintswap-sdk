@@ -29,8 +29,8 @@ describe("Pintswap - Integration Tests", function () {
     offer = {
       givesToken: testingEth ? ethers.constants.AddressZero : tt1.address,
       getsToken: tt2.address,
-      givesAmount: ethers.utils.parseUnits("100.0", 18).toHexString(),
-      getsAmount: ethers.utils.parseUnits("100.0", 18).toHexString()
+      givesAmount: ethers.utils.parseUnits("500.0", 18).toHexString(),
+      getsAmount: ethers.utils.parseUnits("500.0", 18).toHexString()
     }
   }
 

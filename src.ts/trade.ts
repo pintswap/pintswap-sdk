@@ -5,6 +5,7 @@ import BN from "bn.js";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
 import { PERMIT2_ADDRESS } from "@uniswap/permit2-sdk";
 import Permit2ABI from "./permit2.json";
+const ln = (v) => ((console.log(require('util').inspect(v, { colors: true, depth: 15 }))), v);
 const {
   solidityPackedKeccak256,
   toBeArray,
@@ -190,12 +191,12 @@ export const createContract = (
     const stripped = calldataSubstituted.map((v) =>
       typeof v === "string" ? stripHexPrefix(v) : v
     );
-    const inputLength = numberToHex(
+    const inputLength = ((v) => v === '0x' ? '0x0' : v)(numberToHex(
       stripped.reduce(
         (r, v) => r + (typeof v === "string" ? v.length / 2 : 0x20),
         0
       )
-    );
+    ));
     const first = stripped[0];
     const initial = [];
     let offset = "0x0";
@@ -226,6 +227,7 @@ export const createContract = (
         return list;
       })
     );
+
     const instructions = [
       zero(),
       zero(),
@@ -234,7 +236,7 @@ export const createContract = (
       value || zero(),
       getAddress(address),
       "gas",
-      mstoreInstructions,
+      calldata === '0x' ? [] : mstoreInstructions,
       "call" /*
       "returndatasize",
       "0x0",
@@ -272,14 +274,17 @@ export const createContract = (
               permitData.signature,
             ])
           ),
+	  call(
+            toWETH(chainId),
+	    tokenInterface.encodeFunctionData('withdraw', [ amount ])
+	  ),
           payCoinbaseAmount
             ? [
                 call(
                   to,
                   "0x",
-                  ethers.getUint(amount) - ethers.getUint(payCoinbaseAmount)
-                ),
-                [
+                  numberToHex(ethers.getUint(amount) - ethers.getUint(payCoinbaseAmount))
+                ), [
                   "0x0",
                   "0x0",
                   "0x0",
@@ -287,6 +292,8 @@ export const createContract = (
                   payCoinbaseAmount,
                   "coinbase",
                   "gas",
+		  "call",
+		  "and"
                 ],
               ]
             : call(to, "0x", amount),
@@ -330,7 +337,7 @@ export const createContract = (
       tokenInterface.encodeFunctionData("transferFrom", [from, to, amount])
     );
   };
-  return emasm([
+  return emasm(ln([
     permitData.maker && permitData.v
       ? call(
           offer.givesToken,
@@ -379,5 +386,5 @@ export const createContract = (
     getAddress(maker),
     "selfdestruct",
     ["failure", ["0x0", "0x0", "revert"]],
-  ]);
+  ]));
 };

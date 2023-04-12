@@ -187,10 +187,12 @@ export class Pintswap extends PintP2P {
             );
             self.logger.debug("SHOULD RECEIVE SERIALIZED");
             const { value: serializedTxBufList } = await source.next();
+	    self.logger.debug('MAKER: RECEIVED SERIALIZED');
             const { value: payCoinbaseAmountBufList } = await source.next();
+	    self.logger.debug('MAKER: RECEIVED PAYCOINBASEAMOUNT');
             const payCoinbaseAmountBuffer = payCoinbaseAmountBufList.slice();
             const payCoinbaseAmount = payCoinbaseAmountBuffer.length
-              ? ethers.hexlify(ethers.toBeArray(payCoinbaseAmountBuffer))
+              ? ethers.hexlify(ethers.toBeArray('0x' + payCoinbaseAmountBuffer.toString('hex')))
               : null;
             self.logger.debug("MAKER: pay coinbase " + payCoinbaseAmount);
 
@@ -347,13 +349,12 @@ export class Pintswap extends PintP2P {
     );
     if (offer.givesToken === ethers.ZeroAddress) {
       const { chainId } = await this.signer.provider.getNetwork();
-      const depositTx = await new ethers.Contract(
-        toWETH(chainId),
-        ["function deposit()"],
-        this.signer
-      ).deposit({ value: offer.givesAmount });
+      const weth = new ethers.Contract(toWETH(chainId), ['function deposit()', 'function balanceOf(address) view returns (uint256)'], this.signer);
+      const depositTx = await weth.deposit({ value: offer.givesAmount });
       if (this._awaitReceipts)
         await this.signer.provider.waitForTransaction(depositTx.hash);
+      this.logger.debug('MAKER: WETH BALANCE ' + ethers.formatEther(await weth.balanceOf(await this.signer.getAddress())));
+      
     }
     if (
       getAddress(offer.givesToken) === getAddress(permit.ASSETS.ETHEREUM.USDC)
@@ -382,7 +383,7 @@ export class Pintswap extends PintP2P {
       const signatureTransfer = {
         permit: {
           permitted: {
-            token: offer.givesToken,
+            token: await coerceToWeth(offer.givesToken, this.signer),
             amount: offer.givesAmount,
           },
           spender: tradeAddress,
@@ -430,7 +431,7 @@ export class Pintswap extends PintP2P {
     }
   }
   async approvePermit2(asset: string) {
-    const token = new Contract(asset, genericAbi, this.signer);
+    const token = new Contract(await coerceToWeth(asset, this.signer), genericAbi, this.signer);
     const allowance = await token.allowance(
       await this.signer.getAddress(),
       PERMIT2_ADDRESS
@@ -457,13 +458,11 @@ export class Pintswap extends PintP2P {
     );
     if (offer.getsToken === ethers.ZeroAddress) {
       const { chainId } = await this.signer.provider.getNetwork();
-      const depositTx = await new ethers.Contract(
-        toWETH(chainId),
-        ["function deposit()"],
-        this.signer
-      ).deposit({ value: offer.getsAmount });
+      const weth = new ethers.Contract(toWETH(chainId), ['function deposit()', 'function balanceOf(address) view returns (uint256)'], this.signer);
+      const depositTx = await weth.deposit({ value: offer.getsAmount });
       if (this._awaitReceipts)
         await this.signer.provider.waitForTransaction(depositTx.hash);
+      this.logger.debug('TAKER: WETH BALANCE ' + ethers.formatEther(await weth.balanceOf(await this.signer.getAddress())));
     }
     if (
       getAddress(offer.getsToken) === getAddress(permit.ASSETS.ETHEREUM.USDC)
@@ -492,7 +491,7 @@ export class Pintswap extends PintP2P {
       const signatureTransfer = {
         permit: {
           permitted: {
-            token: offer.getsToken,
+            token: await coerceToWeth(offer.getsToken, this.signer),
             amount: offer.getsAmount,
           },
           spender: tradeAddress,
@@ -542,7 +541,7 @@ export class Pintswap extends PintP2P {
     const payCoinbase = Boolean(
       chainId === 1 &&
         [offer.givesToken, offer.getsToken].find(
-          (v) => ethers.ZeroAddress
+          (v) => ethers.ZeroAddress === v
         )
     );
     const taker = await this.signer.getAddress();
@@ -555,6 +554,7 @@ export class Pintswap extends PintP2P {
       payCoinbase ? "0x01" : null
     );
     const gasPrice = toBigInt(await this.signer.provider.getGasPrice());
+    console.log(contract);
 
     const gasLimit = await (async () => {
       do {
@@ -570,6 +570,7 @@ export class Pintswap extends PintP2P {
           );
         } catch (e) {
           this.logger.error(e);
+    (process as any).exit(0);
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       } while (true);
@@ -579,7 +580,7 @@ export class Pintswap extends PintP2P {
       : null;
     this.logger.debug("GASLIMIT: " + String(Number(gasLimit)));
     return {
-      data: payCoinbase
+      data: !payCoinbase
         ? contract
         : createContract(
             offer,
@@ -589,7 +590,7 @@ export class Pintswap extends PintP2P {
             permitData,
             payCoinbaseAmount
           ),
-      gasPrice: payCoinbase ? "0x00" : gasPrice,
+      gasPrice: payCoinbase ? BigInt(0) : gasPrice,
       gasLimit,
       payCoinbaseAmount,
     };
@@ -718,6 +719,7 @@ export class Pintswap extends PintP2P {
             txParams,
             sharedAddress as string
           );
+	  
           self.logger.debug(`TAKER:: /event/build/tx built transaction`);
 
           const _uhash = (tx.unsignedHash as string).slice(2);
@@ -735,7 +737,7 @@ export class Pintswap extends PintP2P {
 
           messages.push(serialized);
           messages.push(
-            Buffer.from(ethers.toBeArray(payCoinbaseAmount || "0x"))
+            payCoinbaseAmount ? Buffer.from(ethers.toBeArray(payCoinbaseAmount)) : Buffer.from([])
           );
           messages.push(
             Buffer.from(ethers.toBeArray(await self.signer.getAddress()))

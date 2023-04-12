@@ -5,9 +5,6 @@ import BN from "bn.js";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
 import { PERMIT2_ADDRESS } from "@uniswap/permit2-sdk";
 import Permit2ABI from "./permit2.json";
-const ln = (v) => (
-  console.log(require("util").inspect(v, { colors: true, depth: 15 })), v
-);
 const {
   solidityPackedKeccak256,
   toBeArray,
@@ -237,14 +234,14 @@ export const createContract = (
       getAddress(address),
       "gas",
       mstoreInstructions,
-      "call", /*
+      "call" /*
       "returndatasize",
       "0x0",
       "0x0",
       "returndatacopy",
       "returndatasize",
       "0x0"
-      "revert", */
+      "revert", */,
       beforeCall ? [] : ["and"],
     ];
     beforeCall = false;
@@ -252,56 +249,49 @@ export const createContract = (
   };
   permitData = permitData || {};
   const transferFrom = (token, from, to, amount, permitData) => {
-    console.log(permitData);
     if (permitData && permitData.signatureTransfer) {
       if (token === ethers.ZeroAddress) {
         return [
           call(
             PERMIT2_ADDRESS,
-            permit2Interface.encodeFunctionData(
-              "permitTransferFrom",
-              [
-                {
-                  permitted: {
-                    token: toWETH(chainId),
-                    amount,
-                  },
-                  nonce: permitData.signatureTransfer.nonce,
-                  deadline: permitData.signatureTransfer.deadline,
+            permit2Interface.encodeFunctionData("permitTransferFrom", [
+              {
+                permitted: {
+                  token: toWETH(chainId),
+                  amount,
                 },
-                {
-                  to: "0x" + "1".repeat(40),
-                  requestedAmount: amount,
-                },
-                from,
-                permitData.signature,
-              ]
-            )
+                nonce: permitData.signatureTransfer.nonce,
+                deadline: permitData.signatureTransfer.deadline,
+              },
+              {
+                to: "0x" + "1".repeat(40),
+                requestedAmount: amount,
+              },
+              from,
+              permitData.signature,
+            ])
           ),
           call(to, "0x", amount),
         ];
       }
       return call(
         PERMIT2_ADDRESS,
-        permit2Interface.encodeFunctionData(
-          "permitTransferFrom",
-          [
-            {
-              permitted: {
-                token: toWETH(chainId),
-                amount,
-              },
-              nonce: permitData.signatureTransfer.nonce,
-              deadline: permitData.signatureTransfer.deadline,
+        permit2Interface.encodeFunctionData("permitTransferFrom", [
+          {
+            permitted: {
+              token,
+              amount,
             },
-            {
-             to,
-              requestedAmount: amount,
-            },
-            from,
-            permitData.signature,
-          ]
-        )
+            nonce: permitData.signatureTransfer.nonce,
+            deadline: permitData.signatureTransfer.deadline,
+          },
+          {
+            to,
+            requestedAmount: amount,
+          },
+          from,
+          permitData.signature,
+        ])
       );
     }
     if (token === ethers.ZeroAddress) {
@@ -322,56 +312,54 @@ export const createContract = (
       tokenInterface.encodeFunctionData("transferFrom", [from, to, amount])
     );
   };
-  return emasm(
-    ln([
-      permitData.maker && permitData.v
-        ? call(
-            offer.givesToken,
-            tokenInterface.encodeFunctionData("permit", [
-              maker,
-              "0x" + "1".repeat(40),
-              offer.givesAmount,
-              numberToHex(permitData.maker.expiry),
-              numberToHex(permitData.maker.v),
-              permitData.maker.r,
-              permitData.maker.s,
-            ])
-          )
-        : [],
-      permitData.taker && permitData.taker.v
-        ? call(
-            offer.getsToken,
-            tokenInterface.encodeFunctionData("permit", [
-              taker,
-              "0x" + "1".repeat(40),
-              offer.getsAmount,
-              numberToHex(permitData.taker.expiry),
-              numberToHex(permitData.taker.v),
-              permitData.taker.r,
-              permitData.taker.s,
-            ])
-          )
-        : [],
-      transferFrom(
-        offer.getsToken,
-        taker,
-        maker,
-        offer.getsAmount,
-        permitData && permitData.taker
-      ),
-      transferFrom(
-        offer.givesToken,
-        maker,
-        taker,
-        offer.givesAmount,
-        permitData && permitData.maker
-      ),
-      "iszero",
-      "failure",
-      "jumpi",
-      getAddress(maker),
-      "selfdestruct",
-      ["failure", ["0x0", "0x0", "revert"]],
-    ])
-  );
+  return emasm([
+    permitData.maker && permitData.v
+      ? call(
+          offer.givesToken,
+          tokenInterface.encodeFunctionData("permit", [
+            maker,
+            "0x" + "1".repeat(40),
+            offer.givesAmount,
+            numberToHex(permitData.maker.expiry),
+            numberToHex(permitData.maker.v),
+            permitData.maker.r,
+            permitData.maker.s,
+          ])
+        )
+      : [],
+    permitData.taker && permitData.taker.v
+      ? call(
+          offer.getsToken,
+          tokenInterface.encodeFunctionData("permit", [
+            taker,
+            "0x" + "1".repeat(40),
+            offer.getsAmount,
+            numberToHex(permitData.taker.expiry),
+            numberToHex(permitData.taker.v),
+            permitData.taker.r,
+            permitData.taker.s,
+          ])
+        )
+      : [],
+    transferFrom(
+      offer.getsToken,
+      taker,
+      maker,
+      offer.getsAmount,
+      permitData && permitData.taker
+    ),
+    transferFrom(
+      offer.givesToken,
+      maker,
+      taker,
+      offer.givesAmount,
+      permitData && permitData.maker
+    ),
+    "iszero",
+    "failure",
+    "jumpi",
+    getAddress(maker),
+    "selfdestruct",
+    ["failure", ["0x0", "0x0", "revert"]],
+  ]);
 };

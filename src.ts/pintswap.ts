@@ -3,12 +3,12 @@ import { PintP2P } from "./p2p";
 import { ethers } from "ethers";
 import { pipe } from "it-pipe";
 import * as lp from "it-length-prefixed";
-import { SignatureTransfer, PERMIT2_ADDRESS } from "@uniswap/permit2-sdk";
 import {
   TPCEcdsaKeyGen as TPC,
   TPCEcdsaSign as TPCsign,
 } from "@safeheron/two-party-ecdsa-js";
 import { EventEmitter } from "events";
+import { SignatureTransfer, PERMIT2_ADDRESS } from "@uniswap/permit2-sdk";
 import pushable from "it-pushable";
 import { mapValues } from "lodash";
 import { toWETH } from "./trade";
@@ -30,6 +30,12 @@ import * as permit from "./permit";
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
 const logger = createLogger("pintswap");
+const ln = (v) => ((console.log(v)), v);
+
+const getPermitData = (signatureTransfer) => {
+  const { domain, types, values } = SignatureTransfer.getPermitData(signatureTransfer.permit, signatureTransfer.permit2Address, signatureTransfer.chainId);
+  return [domain, types, values];
+};
 
 export class PintswapTrade extends EventEmitter {
   public _deferred: ReturnType<typeof defer>;
@@ -150,8 +156,10 @@ export class Pintswap extends PintP2P {
               offer,
               sharedAddress as string
             );
+	    console.log('tx', tx);
             if (tx.permitData) {
-              messages.push(permit.encode(tx.permitData));
+              const encoded = permit.encode(tx.permitData);
+	      messages.push(encoded);
             } else {
               await self.signer.provider.waitForTransaction(tx.hash);
               messages.push(Buffer.from([]));
@@ -350,7 +358,7 @@ export class Pintswap extends PintP2P {
       };
     } else if ((await this.signer.provider.getNetwork()).chainId === 1) {
       const tx = await this.approvePermit2(offer.givesToken);
-      if (tx && this._awaitReceipts) await tx.wait();
+      if (tx && this._awaitReceipts) await this.signer.provider.waitForTransaction(tx.hash);
       const signatureTransfer = {
         permit: {
           permitted: {
@@ -358,16 +366,16 @@ export class Pintswap extends PintP2P {
 	    amount: offer.givesAmount
 	  },
 	  spender: tradeAddress,
-	  nonce: ethers.solidityPackedKeccak256(['uint256'], [ Date.now() ]),
+	  nonce: ethers.hexlify(ethers.toBeArray(ethers.getUint(Math.floor(Date.now()/1000)))),
 	  deadline: ethers.hexlify(ethers.toBeArray(ethers.getUint(Math.floor(Date.now() / 1000)) + BigInt(60*60*24)))
 	},
 	permit2Address: PERMIT2_ADDRESS,
 	chainId: 1
       };
-      const signature = await this.signer._signTypedData(SignatureTransfer.getPermitData(signatureTransfer.permit, signatureTransfer.permit2Address, signatureTransfer.chainId));
+      const signature = await this.signer._signTypedData(...getPermitData(signatureTransfer));
       return {
         permitData: {
-          signatureTransfer,
+          signatureTransfer: signatureTransfer.permit,
 	  signature
 	},
         async wait() {
@@ -447,7 +455,7 @@ export class Pintswap extends PintP2P {
       };
     } else if ((await this.signer.provider.getNetwork()).chainId === 1) {
       const tx = await this.approvePermit2(offer.getsToken);
-      if (tx && this._awaitReceipts) await tx.wait();
+      if (tx && this._awaitReceipts) await this.signer.provider.waitForTransaction(tx.hash);
       const signatureTransfer = {
         permit: {
           permitted: {
@@ -455,16 +463,16 @@ export class Pintswap extends PintP2P {
 	    amount: offer.getsAmount
 	  },
 	  spender: tradeAddress,
-	  nonce: ethers.solidityPackedKeccak256(['uint256'], [ Date.now() ]),
+	  nonce: ethers.hexlify(ethers.toBeArray(ethers.getUint(Math.floor(Date.now()/1000)))),
 	  deadline: ethers.hexlify(ethers.toBeArray(ethers.getUint(Math.floor(Date.now() / 1000)) + BigInt(60*60*24)))
 	},
 	permit2Address: PERMIT2_ADDRESS,
 	chainId: 1
       };
-      const signature = await this.signer._signTypedData(SignatureTransfer.getPermitData(signatureTransfer.permit, signatureTransfer.permit2Address, signatureTransfer.chainId));
+      const signature = await this.signer._signTypedData(...getPermitData(signatureTransfer));
       return {
         permitData: {
-          signatureTransfer,
+          signatureTransfer: signatureTransfer.permit,
 	  signature
 	},
         async wait() {
@@ -496,7 +504,9 @@ export class Pintswap extends PintP2P {
       (await this.signer.provider.getNetwork()).chainId,
       permitData
     );
+    console.log(contract);
     const gasPrice = toBigInt(await this.signer.provider.getGasPrice());
+    console.log(gasPrice);
 
     const gasLimit = await (async () => {
       do {

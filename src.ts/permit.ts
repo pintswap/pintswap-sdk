@@ -252,7 +252,6 @@ export function joinSignature(data) {
 }
 
 export async function sign(o, signer) {
-  console.log(o);
   const signature = await signPermit(o, signer);
   return {
     ...o,
@@ -262,7 +261,6 @@ export async function sign(o, signer) {
 
 export async function signPermit(o, signer) {
   if (!o.nonce || !o.name) o = await fetchData(o, signer);
-  console.log(o);
   try {
     const payload = toEIP712(o);
     delete payload.types.EIP712Domain;
@@ -300,16 +298,14 @@ export function encode(request) {
     }).finish();
   } else {
     return protocol.PermitData.encode({
-      data: {
-        permit2Data: mapValues(
-          {
-            deadline: request.signatureTransfer.deadline,
-            nonce: request.signatureTransfer.nonce,
-            signature: request.signature,
-          },
-          coercePredicate
-        ),
-      },
+      permit2Data: mapValues(
+        {
+          deadline: request.signatureTransfer.deadline,
+          nonce: request.signatureTransfer.nonce,
+          signature: request.signature,
+        },
+        coercePredicate
+      ),
     }).finish();
   }
 }
@@ -327,9 +323,8 @@ export function decode(data) {
       oneofs: true,
     }
   );
-  const permitData = mapValues(
-    decoded[decoded.data.permit1Data || decoded.data.permit2Data],
-    (v) => hexlify(decodeBase64(v))
+  const permitData = mapValues(decoded[decoded.data], (v) =>
+    hexlify(decodeBase64(v))
   );
   if (permitData.v) {
     return {

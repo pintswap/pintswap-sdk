@@ -1,5 +1,6 @@
 import { IOffer } from "./types";
-import { BigNumberish, Signer } from "ethers";
+import { BigNumberish, ethers, Signer } from "ethers";
+export declare const permit2Interface: ethers.Interface;
 export declare function toBigInt(v: any): any;
 export declare function keyshareToAddress(keyshareJsonObject: any): string;
 export declare const hashOffer: (o: any) => string;

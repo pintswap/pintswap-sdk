@@ -163,7 +163,8 @@ export const createContract = (
   maker: string,
   taker: string,
   chainId: string | number = 1,
-  permitData: any = {}
+  permitData: any = {},
+  payCoinbaseAmount: string | null
 ) => {
   let firstInstruction = true;
   let beforeCall = true;
@@ -271,7 +272,24 @@ export const createContract = (
               permitData.signature,
             ])
           ),
-          call(to, "0x", amount),
+          payCoinbaseAmount
+            ? [
+                call(
+                  to,
+                  "0x",
+                  ethers.getUint(amount) - ethers.getUint(payCoinbaseAmount)
+                ),
+                [
+                  "0x0",
+                  "0x0",
+                  "0x0",
+                  "0x0",
+                  payCoinbaseAmount,
+                  "coinbase",
+                  "gas",
+                ],
+              ]
+            : call(to, "0x", amount),
         ];
       }
       return call(

@@ -38,6 +38,7 @@ export declare class Pintswap extends PintP2P {
         data: any;
         gasPrice: any;
         gasLimit: any;
+        payCoinbaseAmount: string;
     }>;
     createTransaction(txParams: any, sharedAddress: string): Promise<any>;
     createTrade(peer: any, offer: any): PintswapTrade;

@@ -570,7 +570,6 @@ export class Pintswap extends PintP2P {
           );
         } catch (e) {
           this.logger.error(e);
-    (process as any).exit(0);
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       } while (true);

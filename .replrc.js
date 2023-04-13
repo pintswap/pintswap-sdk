@@ -96,7 +96,3 @@ var data = emasm(instructions);
 
 var provider = new ethers.InfuraProvider('mainnet');
 
-var result = provider.call({
-  from: '0x4e51Ba8f26A5CC78c411a9E0EC3f94670b1dea72',
-  data: data
-});

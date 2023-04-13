@@ -67,10 +67,12 @@ const getPermitData = (signatureTransfer) => {
 };
 
 export class PintswapTrade extends EventEmitter {
+  public hash: null | string;
   public _deferred: ReturnType<typeof defer>;
   constructor() {
     super();
     this._deferred = defer();
+    this.hash = null;
   }
   async toPromise() {
     return await this._deferred.promise;
@@ -149,10 +151,15 @@ export class Pintswap extends PintP2P {
         const self = this;
 
         pipe(stream.source, lp.decode(), async function (source) {
+          let offerHashHex, offer;
           try {
             const { value: offerHashBufList } = await source.next();
             const offerHashBuf = offerHashBufList.slice();
-            const offer = self.offers.get(offerHashBuf.toString());
+	    offerHashHex = ethers.hexlify(offerHashBufList.slice());
+	    offer = self.offers.get(offerHashHex);
+	    self.offers.delete(offerHashHex);
+	    trade.emit('hash', offerHashHex);
+	    trade.hash = offerHashHex;
             const { value: keygenMessage1 } = await source.next();
             self.emit("pintswap/trade/maker", 0); // maker sees that taker clicked "fulfill trade"
             trade.emit("progress", 0);
@@ -174,11 +181,11 @@ export class Pintswap extends PintP2P {
             const sharedAddress = keyshareToAddress(keyshareJson);
             self.emit(
               `pintswap/request/create-trade/fulfilling`,
-              offerHashBuf.toString(),
+              offerHashHex,
               offer
             ); // emits offer hash and offer object to frontend
             trade.emit("fulfilling", {
-              hash: offerHashBuf,
+              hash: offerHashHex,
               offer,
             });
             const tx = await self.approveTradeAsMaker(
@@ -196,7 +203,7 @@ export class Pintswap extends PintP2P {
             self.emit("pintswap/trade/maker", 1); // maker sees the taker signed tx
             trade.emit("progress", 1);
             self.logger.debug(
-              `MAKER:: /event/approve-contract approved offer with offer hash: ${offerHashBuf.toString()}`
+              `MAKER:: /event/approve-contract approved offer with offer hash: ${offerHashHex}`
             );
             self.logger.debug("MAKER: WAITING FOR APPROVE");
             self.logger.debug("MAKER: GOT APPROVE");
@@ -288,6 +295,7 @@ export class Pintswap extends PintP2P {
             messages.end();
             trade.resolve();
           } catch (e) {
+            if (offer && offerHashHex) self.offers.set(offerHashHex, offer);
             self.logger.error(e);
             trade.reject(e);
           }
@@ -645,10 +653,11 @@ export class Pintswap extends PintP2P {
 
   createTrade(peer, offer) {
     const trade = new PintswapTrade();
+    trade.hash = hashOffer(offer);
     this.emit("trade:taker", trade);
     (async () => {
       this.logger.debug(
-        `Acting on offer ${hashOffer(offer)} with peer ${peer}`
+        `Acting on offer ${trade.hash} with peer ${peer}`
       );
       this.emit("pintswap/trade/taker", 0); // start fulfilling trade
       const { stream } = await this.dialProtocol(peer, [
@@ -666,7 +675,7 @@ export class Pintswap extends PintP2P {
 
       pipe(stream.source, lp.decode(), async function (source) {
         try {
-          messages.push(Buffer.from(hashOffer(offer)));
+          messages.push(Buffer.from(ethers.toBeArray(trade.hash)));
           messages.push(message1); // message 1
           const { value: keygenMessage2BufList } = await source.next(); // message 2
           const keygenMessage2 = keygenMessage2BufList.slice();

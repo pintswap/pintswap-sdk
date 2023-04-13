@@ -289,12 +289,10 @@ const coercePredicate = (v) =>
 export function encode(request) {
   if (request.v) {
     return protocol.PermitData.encode({
-      data: {
-        permit1Data: mapValues(
-          { v: request.v, r: request.r, s: request.s, expiry: request.expiry },
-          coercePredicate
-        ),
-      },
+      permit1Data: mapValues(
+        { v: request.v, r: request.r, s: request.s, expiry: request.expiry },
+        coercePredicate
+      ),
     }).finish();
   } else {
     return protocol.PermitData.encode({

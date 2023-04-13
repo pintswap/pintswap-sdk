@@ -691,6 +691,7 @@ export class Pintswap extends PintP2P {
           self.emit("pintswap/trade/taker", 2); // taker approved token swap
           trade.emit("progress", 2);
           self.logger.debug("PUSHING PERMITDATA");
+	  console.log(approveTx);
           if (approveTx.permitData)
             messages.push(permit.encode(approveTx.permitData));
           else messages.push(Buffer.from([]));

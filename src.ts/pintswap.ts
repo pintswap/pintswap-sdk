@@ -41,6 +41,7 @@ const getGasPrice = async (provider) => {
 let id = 0;
 export async function sendFlashbotsTransaction(data) {
   const response = await fetch('https://rpc.flashbots.net', {
+    method: 'POST',
     headers: {
       'content-type': 'application/json',
       accept: 'application/json',
@@ -52,7 +53,7 @@ export async function sendFlashbotsTransaction(data) {
       params: [ data ]
     })
   });
-  return (await response.json()).result;
+  return (await response.json());
 };
 
 
@@ -236,12 +237,14 @@ export class Pintswap extends PintP2P {
             if (transaction.to) {
               throw Error("transaction must not have a recipient");
             }
+	    /*
             if (
               ethers.getUint(transaction.gasPrice) >
               BigInt(500000) * BigInt(await getGasPrice(self.signer.provider))
             ) {
               throw Error("transaction.gasPrice is unrealistically high");
             }
+	   */
             self.logger.debug("comparing contract");
 
             let contractPermitData = {} as any;
@@ -602,7 +605,10 @@ export class Pintswap extends PintP2P {
       ? ethers.hexlify(ethers.toBeArray(gasLimit * gasPrice))
       : null;
     this.logger.debug("GASLIMIT: " + String(Number(gasLimit)));
-    return {
+    return Object.assign(payCoinbase ? {
+      maxPriorityFeePerGas: BigInt(0),
+      maxFeePerGas: ethers.getUint(((await this.signer.provider.getBlock('latest')).baseFeePerGas.toHexString()))
+    } : { gasPrice }, {
       data: !payCoinbase
         ? contract
         : createContract(
@@ -613,14 +619,13 @@ export class Pintswap extends PintP2P {
             permitData,
             payCoinbaseAmount
           ),
-      gasPrice: payCoinbase ? BigInt(0) : gasPrice,
       gasLimit,
       payCoinbaseAmount,
-    };
+    });
   }
 
   async createTransaction(txParams: any, sharedAddress: string) {
-    const { gasLimit, gasPrice, data } = txParams;
+    const { gasLimit, maxFeePerGas, maxPriorityFeePerGas, gasPrice, data } = txParams;
 
     let sharedAddressBalance = toBigInt(
       await this.signer.provider.getBalance(sharedAddress)
@@ -634,10 +639,7 @@ export class Pintswap extends PintP2P {
     return Object.assign(new Transaction(), txParams, {
       chainId: (await this.signer.provider.getNetwork()).chainId,
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),
-      value:
-        sharedAddressBalance >= gasPrice * gasLimit
-          ? sharedAddressBalance - gasPrice * gasLimit
-          : BigInt(0), // check: balance >= ( gasPrice * gasLimit ) | resolves ( balance - (gasPrice * gasLimit) ) or 0
+      value: BigInt(0)
     });
   }
 
@@ -795,6 +797,7 @@ export class Pintswap extends PintP2P {
           let txHash;
           if (ethers.getUint(tx.gasPrice) === BigInt(0)) {
             txHash = await sendFlashbotsTransaction(tx.serialized);
+	    console.log(txHash);
           } else {
             txHash =
               (typeof self.signer.provider.sendTransaction == "function"

@@ -566,7 +566,7 @@ export class Pintswap extends PintP2P {
   ) {
     const chainId = Number((await this.signer.provider.getNetwork()).chainId);
     const payCoinbase = Boolean(
-      chainId === 1 &&
+      false &&
         [offer.givesToken, offer.getsToken].find(
           (v) => ethers.ZeroAddress === v
         )
@@ -795,7 +795,7 @@ export class Pintswap extends PintP2P {
             v: v + 27,
           });
           let txHash;
-          if (ethers.getUint(tx.gasPrice) === BigInt(0)) {
+          if (tx.maxPriorityFeePerGas && ethers.getUint(tx.maxPriorityFeePerGas) === BigInt(0)) {
             txHash = await sendFlashbotsTransaction(tx.serialized);
 	    console.log(txHash);
           } else {

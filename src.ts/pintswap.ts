@@ -135,7 +135,7 @@ export class Pintswap extends PintP2P {
   }
   async subscribeOffers() {
     await this.pubsub.subscribe('/pintswap/0.1.0/publish-orders');
-    this.pubsub.addListener('message', (message) => {
+    this.pubsub.on('message', (message) => {
       if (message.detail.topic !== '/pintswap/0.1.0/publish-orders') return;
       this.logger.debug('PUBSUB: TOPIC-' + message.detail.topic);
       this.logger.info(message);

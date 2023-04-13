@@ -134,16 +134,15 @@ export class Pintswap extends PintP2P {
     };
   }
   async subscribeOffers() {
-    await this.pubsub.subscribe('/pintswap/0.1.0/publish-orders');
-    this.pubsub.addListener('message', (message) => {
-      if (message.detail.topic !== '/pintswap/0.1.0/publish-orders') return;
-      this.logger.debug('PUBSUB: TOPIC-' + message.detail.topic);
-      this.logger.info(message);
-      const offers = this._decodeOffers(message.detail.data).offers;
-      const pair = [ message.detail.from, offers ];
+    this.pubsub.on('/pintswap/0.1.0/publish-orders', (message) => {
+      this.logger.debug(`\n PUBSUB: TOPIC-${message.topicIDs[0]} \n FROM: PEER-${message.from}`);
+      this.logger.info(message.data);
+      const offers = this._decodeOffers(message.data).offers;
+      const pair = [ message.from, offers ];
       this.logger.info(pair);
-      this.peers.set(message.detail.from, pair);
+      this.peers.set(message.from, pair); 
     });
+    await this.pubsub.subscribe('/pintswap/0.1.0/publish-orders');
   }
   async startNode() {
     await this.handleBroadcastedOffers();

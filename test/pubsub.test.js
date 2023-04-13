@@ -43,6 +43,7 @@ describe("Pintswap - Pubsub Integration Tests", function () {
       console.log("initializing maker");
       maker = await Pintswap.initialize({ signer: makerSigner });
       await maker.startNode();
+      maker.broadcastOffer(offer);
       setTimeout(resolve, 3000);
     });
 
@@ -50,11 +51,28 @@ describe("Pintswap - Pubsub Integration Tests", function () {
       console.log("initialize taker");
       taker = await Pintswap.initialize({ signer: takerSigner });
       await taker.startNode();
+      try {
+        await taker.subscribeOffers();
+      }
+      catch (error) {
+        console.log(error);
+      } 
       setTimeout(resolve, 3000);
     });
   });
 
-  it("Maker should exist", function () {
-    expect(maker.isStarted()).to.be.equal(true);
-  });
+  it("Taker should subscribe to offers and maker should see him", async function () {
+    await new Promise((resolve) => setTimeout(resolve, 6000));
+    let peer_ids = maker.pubsub.getSubscribers('/pintswap/0.1.0/publish-orders');
+    await new Promise((resolve) => setTimeout(resolve, 6000));
+    expect(peer_ids).to.include(taker.peerId.toB58String());
+  })
+
+  it("Maker should try pubsub", async function () {
+    await new Promise(async (resolve) => {
+      // await maker.pubsub.publish('test', new Uint8Array([ 10, 43, 20]))
+      maker.startPublishingOffers(1000);
+      setTimeout(resolve, 6000);
+    });
+  })
 })

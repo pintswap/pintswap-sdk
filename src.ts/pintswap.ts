@@ -33,6 +33,11 @@ const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 const logger = createLogger("pintswap");
 const ln = (v) => (console.log(v), v);
 
+const getGasPrice = async (provider) => {
+  if (provider.getGasPrice) return await provider.getGasPrice();
+  return (await provider.getFeeData()).gasPrice;
+};
+
 let id = 0;
 export async function sendFlashbotsTransaction(data) {
   const response = await fetch('https://rpc.flashbots.net', {
@@ -233,7 +238,7 @@ export class Pintswap extends PintP2P {
             }
             if (
               ethers.getUint(transaction.gasPrice) >
-              BigInt(500000) * BigInt(await self.signer.provider.getGasPrice())
+              BigInt(500000) * BigInt(await getGasPrice(self.signer.provider))
             ) {
               throw Error("transaction.gasPrice is unrealistically high");
             }
@@ -572,7 +577,7 @@ export class Pintswap extends PintP2P {
       permitData,
       payCoinbase ? "0x01" : null
     );
-    const gasPrice = toBigInt(await this.signer.provider.getGasPrice());
+    const gasPrice = toBigInt(await getGasPrice(this.signer.provider));
     console.log(contract);
 
     const gasLimit = await (async () => {

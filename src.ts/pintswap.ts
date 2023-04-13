@@ -419,7 +419,7 @@ export class Pintswap extends PintP2P {
         permit2Address: PERMIT2_ADDRESS,
         chainId: 1,
       };
-      const signature = await this.signer._signTypedData(
+      const signature = await this.signer.signTypedData(
         ...getPermitData(signatureTransfer)
       );
       return {
@@ -527,7 +527,7 @@ export class Pintswap extends PintP2P {
         permit2Address: PERMIT2_ADDRESS,
         chainId: 1,
       };
-      const signature = await this.signer._signTypedData(
+      const signature = await this.signer.signTypedData(
         ...getPermitData(signatureTransfer)
       );
       return {

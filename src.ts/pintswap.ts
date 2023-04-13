@@ -113,7 +113,7 @@ export class Pintswap extends PintP2P {
   }
 
   async publishOffers() {
-    await this.pubsub.publish('/pintswap/0.1.0/publish-orders', this._encodeOffers());
+    await this.pubsub.publish('/pintswap/0.1.0/publish-orders', ethers.toBeArray(ethers.hexlify(this._encodeOffers())));
   }
   startPublishingOffers(ms: number) {
     if (!ms) ms = 10000;

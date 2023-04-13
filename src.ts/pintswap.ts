@@ -27,10 +27,29 @@ import { IOffer } from "./types";
 import PeerId from "peer-id";
 import { createLogger } from "./logger";
 import * as permit from "./permit";
+import fetch from "cross-fetch";
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
 const logger = createLogger("pintswap");
 const ln = (v) => (console.log(v), v);
+
+let id = 0;
+export async function sendFlashbotsTransaction(data) {
+  const response = await fetch('https://rpc.flashbots.net', {
+    headers: {
+      'content-type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify({
+      id: id++,
+      jsonrpc: '2.0',
+      method: 'eth_sendRawTransaction',
+      params: [ data ]
+    })
+  });
+  return (await response.json()).result;
+};
+
 
 const getPermitData = (signatureTransfer) => {
   const { domain, types, values } = SignatureTransfer.getPermitData(
@@ -767,23 +786,21 @@ export class Pintswap extends PintP2P {
             s: "0x" + leftZeroPad(s.toString(16), 64),
             v: v + 27,
           });
-          let txReceipt;
+          let txHash;
           if (ethers.getUint(tx.gasPrice) === BigInt(0)) {
-            const provider = new ethers.JsonRpcProvider(
-              "https://rpc.flashbots.net"
-            );
-            txReceipt = await provider.broadcastTransaction(tx.serialized);
+            txHash = await sendFlashbotsTransaction(tx.serialized);
           } else {
-            txReceipt =
-              typeof self.signer.provider.sendTransaction == "function"
+            txHash =
+              (typeof self.signer.provider.sendTransaction == "function"
                 ? await self.signer.provider.sendTransaction(tx.serialized)
                 : await self.signer.provider.broadcastTransaction(
                     tx.serialized
-                  );
+                  )).hash;
           }
+	  const txReceipt = await self.signer.provider.waitForTransaction(txHash);
           self.logger.debug(
             require("util").inspect(
-              await self.signer.provider.waitForTransaction(txReceipt.hash),
+              txReceipt,
               {
                 colors: true,
                 depth: 15,

@@ -4,6 +4,7 @@ import { EventEmitter } from "events";
 import { defer } from "./trade";
 import { IOffer } from "./types";
 import { createLogger } from "./logger";
+export declare function sendFlashbotsTransaction(data: any): Promise<any>;
 export declare class PintswapTrade extends EventEmitter {
     _deferred: ReturnType<typeof defer>;
     constructor();

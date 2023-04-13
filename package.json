@@ -1,6 +1,6 @@
 {
   "name": "@pintswap/sdk",
-  "version": "1.2.2",
+  "version": "1.2.13",
   "description": "Pintswap's software development kit. This SDK is the first to enable peer-to-peer ERC20 token swaps using libp2p.",
   "main": "lib/index.js",
   "type": "commonjs",
@@ -36,6 +36,7 @@
     "buffer": "^6.0.3",
     "canonical-weth": "^1.4.0",
     "chai": "^4.2.0",
+    "cross-fetch": "^3.1.5",
     "cryptico-js": "^1.1.0",
     "emasm": "https://github.com/kungfuflex/emasm",
     "ethers": "^6.1.0",

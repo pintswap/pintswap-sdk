@@ -38,6 +38,11 @@ const getGasPrice = async (provider) => {
   return (await provider.getFeeData()).gasPrice;
 };
 
+const signTypedData = async (signer, ...args) => {
+  if (signer.signTypedData) return await signer.signTypedData(...args);
+  return await signer._signTypedData(...args);
+};
+
 let id = 0;
 export async function sendFlashbotsTransaction(data) {
   const response = await fetch('https://rpc.flashbots.net', {
@@ -435,9 +440,7 @@ export class Pintswap extends PintP2P {
         permit2Address: PERMIT2_ADDRESS,
         chainId: 1,
       };
-      const signature = await this.signer.signTypedData(
-        ...getPermitData(signatureTransfer)
-      );
+      const signature = await signTypedData(this.signer, ...getPermitData(signatureTransfer));
       return {
         permitData: {
           signatureTransfer: signatureTransfer.permit,
@@ -543,9 +546,7 @@ export class Pintswap extends PintP2P {
         permit2Address: PERMIT2_ADDRESS,
         chainId: 1,
       };
-      const signature = await this.signer.signTypedData(
-        ...getPermitData(signatureTransfer)
-      );
+      const signature = await signTypedData(this.signer, ...getPermitData(signatureTransfer));
       return {
         permitData: {
           signatureTransfer: signatureTransfer.permit,

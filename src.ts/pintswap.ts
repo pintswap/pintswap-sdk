@@ -148,6 +148,7 @@ export class Pintswap extends PintP2P {
   async startNode() {
     await this.handleBroadcastedOffers();
     await this.start();
+    await this.pubsub.start();
     this.emit(`pintswap/node/status`, 1);
   }
 

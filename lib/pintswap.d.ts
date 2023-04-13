@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { PintP2P } from "./p2p";
 import { EventEmitter } from "events";
 import { defer } from "./trade";
@@ -17,6 +18,7 @@ export declare class Pintswap extends PintP2P {
     signer: any;
     offers: Map<string, IOffer>;
     logger: ReturnType<typeof createLogger>;
+    peers: Map<string, IOffer[]>;
     _awaitReceipts: boolean;
     static initialize({ awaitReceipts, signer }: {
         awaitReceipts: any;
@@ -27,11 +29,19 @@ export declare class Pintswap extends PintP2P {
         signer: any;
         peerId: any;
     });
+    publishOffers(): Promise<void>;
+    startPublishingOffers(ms: number): {
+        setInterval(_ms: any): void;
+        stop(): void;
+    };
+    subscribeOffers(): Promise<void>;
     startNode(): Promise<void>;
     stopNode(): Promise<void>;
+    _encodeOffers(): any;
     handleBroadcastedOffers(): Promise<void>;
     broadcastOffer(_offer: IOffer): void;
     getTradesByPeerId(peerId: string): Promise<any>;
+    _decodeOffers(data: Buffer): any;
     getTradeAddress(sharedAddress: string): Promise<string>;
     approveTradeAsMaker(offer: IOffer, sharedAddress: string): Promise<any>;
     approvePermit2(asset: string): Promise<any>;

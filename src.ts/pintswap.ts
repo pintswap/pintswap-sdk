@@ -96,6 +96,7 @@ export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
   public logger: ReturnType<typeof createLogger>;
+  public peers: Map<string, IOffer[]>;
   public _awaitReceipts: boolean;
 
   static async initialize({ awaitReceipts, signer }) {
@@ -107,9 +108,43 @@ export class Pintswap extends PintP2P {
     super({ signer, peerId });
     this.signer = signer;
     this.logger = logger;
+    this.peers = new Map<string, IOffer[]>();
     this._awaitReceipts = awaitReceipts || false;
   }
 
+  async publishOffers() {
+    await this.pubsub.publish('/pintswap/0.1.0/publish-orders', this._encodeOffers());
+  }
+  startPublishingOffers(ms: number) {
+    if (!ms) ms = 10000;
+    let end = false;
+    (async () => {
+      while (!end) {
+        try {
+          await this.publishOffers();
+        } catch (e) {
+          this.logger.error(e);
+        }
+        await new Promise((resolve) => setTimeout(resolve, ms));
+      }
+    })().catch((err) => this.logger.error(err));
+    return {
+      setInterval(_ms) { ms = _ms; },
+      stop() { end = true; }
+    };
+  }
+  async subscribeOffers() {
+    await this.pubsub.subscribe('/pintswap/0.1.0/publish-orders');
+    this.pubsub.addListener('message', (message) => {
+      if (message.detail.topic !== '/pintswap/0.1.0/publish-orders') return;
+      this.logger.debug('PUBSUB: TOPIC-' + message.detail.topic);
+      this.logger.info(message);
+      const offers = this._decodeOffers(message.detail.data).offers;
+      const pair = [ message.detail.from, offers ];
+      this.logger.info(pair);
+      this.peers.set(message.detail.from, pair);
+    });
+  }
   async startNode() {
     await this.handleBroadcastedOffers();
     await this.start();
@@ -125,17 +160,18 @@ export class Pintswap extends PintP2P {
     this.emit(`pintswap/node/status`, 0);
   }
 
+  _encodeOffers() {
+    return protocol.OfferList.encode({
+      offers: [ ...this.offers.values()].map((v) => mapValues(v, (v) => Buffer.from(ethers.toBeArray(v))))
+    }).finish();
+  }
   async handleBroadcastedOffers() {
     const address = await this.signer.getAddress();
     await this.handle("/pintswap/0.1.0/orders", ({ stream }) => {
       try {
         this.logger.debug("handling order request from peer");
         this.emit("pintswap/trade/peer", 2); // maker sees that taker is connected
-        let offerList = protocol.OfferList.encode({
-          offers: [...this.offers.values()].map((v) =>
-            mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))
-          ),
-        }).finish();
+        let offerList = this._encodeOffers();
         const messages = pushable();
         pipe(messages, lp.encode(), stream.sink);
         messages.push(offerList);
@@ -341,8 +377,13 @@ export class Pintswap extends PintP2P {
     const { value: offerListBufferList } = await decoded.next();
     const result = offerListBufferList.slice();
     this.emit("pintswap/trade/peer", 2); // got offers
+    const offerList = this._decodeOffers(result);
+    this.emit("pintswap/trade/peer", 3); // offers decoded and returning
+    return offerList;
+  }
+  _decodeOffers(data: Buffer) {
     let offerList = protocol.OfferList.toObject(
-      protocol.OfferList.decode(result),
+      protocol.OfferList.decode(data),
       {
         enums: String,
         longs: String,
@@ -360,11 +401,8 @@ export class Pintswap extends PintP2P {
         return "0x" + leftZeroPad(address.substr(2), 40);
       });
     });
-
-    this.emit("pintswap/trade/peer", 3); // offers decoded and returning
     return Object.assign(offerList, { offers: remap });
   }
-
   async getTradeAddress(sharedAddress: string) {
     const address = getCreateAddress({
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),

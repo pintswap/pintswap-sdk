@@ -250,7 +250,7 @@ export class Pintswap extends PintP2P {
                 offer,
                 await self.signer.getAddress(),
                 takerAddress,
-                (await self.signer.provider.getNetwork()).chainId,
+                Number((await self.signer.provider.getNetwork()).chainId),
                 contractPermitData,
                 payCoinbaseAmount
               )
@@ -368,7 +368,7 @@ export class Pintswap extends PintP2P {
     );
     if (offer.givesToken === ethers.ZeroAddress) {
       const { chainId } = await this.signer.provider.getNetwork();
-      const weth = new ethers.Contract(toWETH(chainId), ['function deposit()', 'function balanceOf(address) view returns (uint256)'], this.signer);
+      const weth = new ethers.Contract(toWETH(Number(chainId)), ['function deposit()', 'function balanceOf(address) view returns (uint256)'], this.signer);
       const depositTx = await weth.deposit({ value: offer.givesAmount });
       if (this._awaitReceipts)
         await this.signer.provider.waitForTransaction(depositTx.hash);
@@ -395,7 +395,7 @@ export class Pintswap extends PintP2P {
           return {};
         },
       };
-    } else if ((await this.signer.provider.getNetwork()).chainId === 1) {
+    } else if (Number((await this.signer.provider.getNetwork()).chainId) === 1) {
       const tx = await this.approvePermit2(offer.givesToken);
       if (tx && this._awaitReceipts)
         await this.signer.provider.waitForTransaction(tx.hash);
@@ -477,7 +477,7 @@ export class Pintswap extends PintP2P {
     );
     if (offer.getsToken === ethers.ZeroAddress) {
       const { chainId } = await this.signer.provider.getNetwork();
-      const weth = new ethers.Contract(toWETH(chainId), ['function deposit()', 'function balanceOf(address) view returns (uint256)'], this.signer);
+      const weth = new ethers.Contract(toWETH(Number(chainId)), ['function deposit()', 'function balanceOf(address) view returns (uint256)'], this.signer);
       const depositTx = await weth.deposit({ value: offer.getsAmount });
       if (this._awaitReceipts)
         await this.signer.provider.waitForTransaction(depositTx.hash);
@@ -503,7 +503,7 @@ export class Pintswap extends PintP2P {
           return {};
         },
       };
-    } else if ((await this.signer.provider.getNetwork()).chainId === 1) {
+    } else if (Number((await this.signer.provider.getNetwork()).chainId) === 1) {
       const tx = await this.approvePermit2(offer.getsToken);
       if (tx && this._awaitReceipts)
         await this.signer.provider.waitForTransaction(tx.hash);
@@ -556,7 +556,7 @@ export class Pintswap extends PintP2P {
     sharedAddress: string,
     permitData: any
   ) {
-    const chainId = (await this.signer.provider.getNetwork()).chainId;
+    const chainId = Number((await this.signer.provider.getNetwork()).chainId);
     const payCoinbase = Boolean(
       chainId === 1 &&
         [offer.givesToken, offer.getsToken].find(

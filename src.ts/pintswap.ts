@@ -141,6 +141,7 @@ export class Pintswap extends PintP2P {
       const pair = [ message.from, offers ];
       this.logger.info(pair);
       this.peers.set(message.from, pair); 
+      this.emit('/pubsub/orderbook-update');
     });
     await this.pubsub.subscribe('/pintswap/0.1.0/publish-orders');
   }

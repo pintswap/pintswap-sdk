@@ -12,6 +12,15 @@ message OfferList {
   repeated Offer offers = 1;
 }
 
+message Fill {
+  bytes offer_hash = 1;
+  bytes amount = 2;
+}
+
+message BatchFill {
+  repeated Fill fills = 1;
+} 
+
 message Transmission {
   bytes data = 1;
 }

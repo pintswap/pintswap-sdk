@@ -1,5 +1,6 @@
 var trade = require('./lib/trade');
 var { ethers } = require('ethers');
+var { Pintswap } = require('./');
 
 var contract = trade.createContract({
     "givesToken": "0x0000000000000000000000000000000000000000",

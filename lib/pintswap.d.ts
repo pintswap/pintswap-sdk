@@ -1,19 +1,30 @@
 /// <reference types="node" />
 /// <reference types="node" />
 import { PintP2P } from "./p2p";
+import { BigNumberish } from "ethers";
 import { EventEmitter } from "events";
 import { defer } from "./trade";
 import { IOffer } from "./types";
 import { createLogger } from "./logger";
 export declare function sendFlashbotsTransaction(data: any): Promise<any>;
 export declare class PintswapTrade extends EventEmitter {
-    hash: null | string;
+    hashes: null | string[];
     _deferred: ReturnType<typeof defer>;
     constructor();
     toPromise(): Promise<unknown>;
     resolve(v?: any): void;
     reject(err: any): void;
 }
+export declare function encodeBatchFill(o: any): any;
+export declare function decodeBatchFill(data: any): any;
+export declare function scaleOffer(offer: IOffer, amount: BigNumberish): {
+    givesToken: string;
+    getsToken: string;
+    givesAmount: string;
+    getsAmount: string;
+};
+export declare function toBigIntFromBytes(b: any): bigint;
+export declare function sumOffers(offers: any[]): any;
 export declare class Pintswap extends PintP2P {
     signer: any;
     offers: Map<string, IOffer>;
@@ -61,4 +72,5 @@ export declare class Pintswap extends PintP2P {
     }>;
     createTransaction(txParams: any, sharedAddress: string): Promise<any>;
     createTrade(peer: any, offer: any): PintswapTrade;
+    createBatchTrade(peer: any, batchFill: any): PintswapTrade;
 }

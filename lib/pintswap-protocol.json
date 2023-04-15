@@ -31,6 +31,27 @@
                         }
                     }
                 },
+                "Fill": {
+                    "fields": {
+                        "offerHash": {
+                            "type": "bytes",
+                            "id": 1
+                        },
+                        "amount": {
+                            "type": "bytes",
+                            "id": 2
+                        }
+                    }
+                },
+                "BatchFill": {
+                    "fields": {
+                        "fills": {
+                            "rule": "repeated",
+                            "type": "Fill",
+                            "id": 1
+                        }
+                    }
+                },
                 "Transmission": {
                     "fields": {
                         "data": {

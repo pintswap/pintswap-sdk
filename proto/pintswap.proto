@@ -25,6 +25,32 @@ message Transmission {
   bytes data = 1;
 }
 
+message NameQuery {
+  oneof data {
+    bytes multiaddr = 1;
+    string name = 2;
+  }
+}
+
+message NameQueryResponse {
+  enum NameQueryResponseStatus {
+    NAMEREG_QUERY_ERR = 0;
+    NAMEREG_QUERY_OK = 1;
+  }
+  NameQueryResponseStatus status = 1;
+  string result = 2;
+}
+
+
+message NameRegisterResponse {
+  enum NameRegisterResponseStatus {
+    NAMEREG_OK = 0;
+    NAMEREG_NO = 1;
+    NAMEREG_ERR = 2;
+  }
+  NameRegisterResponseStatus status = 1;
+}
+
 message Permit1Data {
   bytes v = 1;
   bytes r = 2;

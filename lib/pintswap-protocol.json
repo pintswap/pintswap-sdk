@@ -60,6 +60,63 @@
                         }
                     }
                 },
+                "NameQuery": {
+                    "oneofs": {
+                        "data": {
+                            "oneof": [
+                                "multiaddr",
+                                "name"
+                            ]
+                        }
+                    },
+                    "fields": {
+                        "multiaddr": {
+                            "type": "bytes",
+                            "id": 1
+                        },
+                        "name": {
+                            "type": "string",
+                            "id": 2
+                        }
+                    }
+                },
+                "NameQueryResponse": {
+                    "fields": {
+                        "status": {
+                            "type": "NameQueryResponseStatus",
+                            "id": 1
+                        },
+                        "result": {
+                            "type": "string",
+                            "id": 2
+                        }
+                    },
+                    "nested": {
+                        "NameQueryResponseStatus": {
+                            "values": {
+                                "NAMEREG_QUERY_ERR": 0,
+                                "NAMEREG_QUERY_OK": 1
+                            }
+                        }
+                    }
+                },
+                "NameRegisterResponse": {
+                    "fields": {
+                        "status": {
+                            "type": "NameRegisterResponseStatus",
+                            "id": 1
+                        }
+                    },
+                    "nested": {
+                        "NameRegisterResponseStatus": {
+                            "values": {
+                                "NAMEREG_OK": 0,
+                                "NAMEREG_NO": 1,
+                                "NAMEREG_ERR": 2
+                            }
+                        }
+                    }
+                },
                 "Permit1Data": {
                     "fields": {
                         "v": {

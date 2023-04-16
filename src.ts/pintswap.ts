@@ -148,6 +148,10 @@ export function sumOffers(offers: any[]) {
   );
 }
 
+export const NS_MULTIADDRS = {
+  DRIP: ['QmUtvU33iaHun99yD9HgiyLSrmPhWUbXVX2hAZRY4AEV2d']
+};
+
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
@@ -160,6 +164,52 @@ export class Pintswap extends PintP2P {
     return new Pintswap({ signer, awaitReceipts, peerId });
   }
 
+  async resolveName(name) {
+    const parts = name.split('.');
+    const query = parts.slice(0, Math.max(parts.length - 1, 1)).join('.');
+    const tld = parts.length === 1 ? 'drip' : parts[parts.length - 1];
+    const messages = pushable();
+    const response: any = await new Promise((resolve, reject) => {
+      (async () => {
+        const nsHosts = NS_MULTIADDRS[tld.toUpperCase()];
+        const { stream } = await this.dialProtocol(PeerId.createFromB58String(nsHosts[Math.floor(nsHosts.length*Math.random())]), '/pintswap/0.1.0/ns/query');
+	pipe(messages, lp.encode(), stream.sink);
+	messages.push(protocol.NameQuery.encode({
+          name: query
+	}).finish());
+	messages.end();
+	const it = pipe(stream.source, lp.decode());
+	const response = protocol.NameQueryResponse.decode((await it.next()).value.slice());
+	resolve({
+          status: response.status,
+	  result: response.result
+	});
+      })().catch(reject);
+    });
+    if (response.status === 0) throw Error('no name registered');
+    return response.result + (parts.length > 1 ? '' : '.' + tld);
+  }
+  async registerName(name) {
+    let parts = name.split('.');
+    const query = parts.slice(0, -1).join('.');
+    const tld = parts[parts.length - 1];
+    const messages = pushable();
+    const response = await new Promise((resolve, reject) => {
+      (async () => {
+        const nsHosts = NS_MULTIADDRS[tld.toUpperCase()];
+        const { stream } = await this.dialProtocol(PeerId.createFromB58String(nsHosts[Math.floor(nsHosts.length*Math.random())]), '/pintswap/0.1.0/ns/register');
+	pipe(messages, lp.encode(), stream.sink);
+	messages.push(Buffer.from(query));
+	messages.end();
+	const it = await pipe(stream.source, lp.decode());
+	const response = protocol.NameRegisterResponse.decode((await it.next()).value.slice());
+	resolve({
+          status: response.status
+	});
+      })().catch(reject);
+    });
+    return response;
+  }
   constructor({ awaitReceipts, signer, peerId }) {
     super({ signer, peerId });
     this.signer = signer;

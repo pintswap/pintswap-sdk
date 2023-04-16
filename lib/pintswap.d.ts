@@ -25,6 +25,9 @@ export declare function scaleOffer(offer: IOffer, amount: BigNumberish): {
 };
 export declare function toBigIntFromBytes(b: any): bigint;
 export declare function sumOffers(offers: any[]): any;
+export declare const NS_MULTIADDRS: {
+    DRIP: string[];
+};
 export declare class Pintswap extends PintP2P {
     signer: any;
     offers: Map<string, IOffer>;
@@ -35,6 +38,8 @@ export declare class Pintswap extends PintP2P {
         awaitReceipts: any;
         signer: any;
     }): Promise<Pintswap>;
+    resolveName(name: any): Promise<string>;
+    registerName(name: any): Promise<unknown>;
     constructor({ awaitReceipts, signer, peerId }: {
         awaitReceipts: any;
         signer: any;

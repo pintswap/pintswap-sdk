@@ -30,7 +30,9 @@ import fetch from "cross-fetch";
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
 const logger = createLogger("pintswap");
-const ln = (v) => (console.log(require('util').inspect(v, { colors: true, depth: 15 })), v);
+const ln = (v) => (
+  console.log(require("util").inspect(v, { colors: true, depth: 15 })), v
+);
 
 const getGasPrice = async (provider) => {
   if (provider.getGasPrice) return await provider.getGasPrice();
@@ -125,14 +127,17 @@ export function scaleOffer(offer: IOffer, amount: BigNumberish) {
     givesToken: offer.givesToken,
     getsToken: offer.getsToken,
     givesAmount: ethers.hexlify(
-      ethers.toBeArray((ethers.getUint(offer.givesAmount) * ethers.getUint(amount)) / ethers.getUint(offer.getsAmount)) 
+      ethers.toBeArray(
+        (ethers.getUint(offer.givesAmount) * ethers.getUint(amount)) /
+          ethers.getUint(offer.getsAmount)
+      )
     ),
     getsAmount: ethers.hexlify(ethers.toBeArray(ethers.getUint(amount))),
   };
 }
 
 export function toBigIntFromBytes(b) {
-  if (b === '0x' || b.length === 0) return BigInt(0);
+  if (b === "0x" || b.length === 0) return BigInt(0);
   return ethers.toBigInt(b);
 }
 
@@ -141,8 +146,12 @@ export function sumOffers(offers: any[]) {
     (r, v) => ({
       getsToken: v.getsToken,
       givesToken: v.givesToken,
-      getsAmount: ethers.toBeHex(toBigIntFromBytes(v.getsAmount) + toBigIntFromBytes(r.getsAmount)),
-      givesAmount: ethers.toBeHex(toBigIntFromBytes(v.givesAmount) + toBigIntFromBytes(r.givesAmount))
+      getsAmount: ethers.toBeHex(
+        toBigIntFromBytes(v.getsAmount) + toBigIntFromBytes(r.getsAmount)
+      ),
+      givesAmount: ethers.toBeHex(
+        toBigIntFromBytes(v.givesAmount) + toBigIntFromBytes(r.givesAmount)
+      ),
     }),
     { getsAmount: ethers.toBigInt(0), givesAmount: ethers.toBigInt(0) }
   );
@@ -156,7 +165,7 @@ export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
   public logger: ReturnType<typeof createLogger>;
-  public peers: Map<string, IOffer[]>;
+  public peers: Map<string, [string, IOffer]>;
   public _awaitReceipts: boolean;
 
   static async initialize({ awaitReceipts, signer }) {
@@ -214,7 +223,7 @@ export class Pintswap extends PintP2P {
     super({ signer, peerId });
     this.signer = signer;
     this.logger = logger;
-    this.peers = new Map<string, IOffer[]>();
+    this.peers = new Map<string, [string, IOffer]>();
     this._awaitReceipts = awaitReceipts || false;
   }
 
@@ -253,12 +262,19 @@ export class Pintswap extends PintP2P {
       );
       this.logger.info(message.data);
       const offers = this._decodeOffers(message.data).offers;
-      const pair = [message.from, offers];
+      let _offerhash = ethers.keccak256(message.data);
+      const pair: [string, IOffer] = [_offerhash, offers];
       this.logger.info(pair);
+      if (this.peers.has(message.from)) {
+        if (this.peers.get(message.from)[0] == _offerhash) return;
+        this.peers.set(message.from, pair);
+        this.emit("/pubsub/orderbook-update");
+        return;
+      }
       this.peers.set(message.from, pair);
       this.emit("/pubsub/orderbook-update");
     });
-    await this.pubsub.subscribe("/pintswap/0.1.0/publish-orders");
+    this.pubsub.subscribe("/pintswap/0.1.0/publish-orders");
   }
   async startNode() {
     await this.handleBroadcastedOffers();
@@ -314,8 +330,8 @@ export class Pintswap extends PintP2P {
           try {
             const { value: batchFillBufList } = await source.next();
             batchFill = decodeBatchFill(batchFillBufList.slice());
-	    ln('batch fill decode');
-	    ln(batchFill);
+            ln("batch fill decode");
+            ln(batchFill);
             originalOffers = batchFill.map((v) => self.offers.get(v.offerHash));
             offers = batchFill.map((v, i) => ({
               ...scaleOffer(originalOffers[i], v.amount),

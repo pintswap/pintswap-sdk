@@ -12,6 +12,13 @@ message OfferList {
   repeated Offer offers = 1;
 }
 
+message UserData {
+  string bio = 1;
+  bytes image = 2;
+  repeated Offer offers = 3;
+}
+  
+
 message Fill {
   bytes offer_hash = 1;
   bytes amount = 2;

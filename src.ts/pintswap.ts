@@ -161,11 +161,17 @@ export const NS_MULTIADDRS = {
   DRIP: ['QmUtvU33iaHun99yD9HgiyLSrmPhWUbXVX2hAZRY4AEV2d']
 };
 
+export interface IUserData {
+  bio: string;
+  image: Buffer;
+}
+
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
   public logger: ReturnType<typeof createLogger>;
   public peers: Map<string, [string, IOffer]>;
+  public userData: IUserData;
   public _awaitReceipts: boolean;
 
   static async initialize({ awaitReceipts, signer }) {
@@ -224,9 +230,18 @@ export class Pintswap extends PintP2P {
     this.signer = signer;
     this.logger = logger;
     this.peers = new Map<string, [string, IOffer]>();
+    this.userData = {
+      bio: '',
+      image: Buffer.from([])
+    };
     this._awaitReceipts = awaitReceipts || false;
   }
-
+  setBio(s: string) {
+    this.userData.bio = s;
+  }
+  setImage(b: Buffer) {
+    this.userData.image = b;
+  }
   async publishOffers() {
     await this.pubsub.publish(
       "/pintswap/0.1.0/publish-orders",
@@ -278,6 +293,7 @@ export class Pintswap extends PintP2P {
   }
   async startNode() {
     await this.handleBroadcastedOffers();
+    await this.handleUserData();
     await this.start();
     await this.pubsub.start();
     this.emit(`pintswap/node/status`, 1);
@@ -298,6 +314,31 @@ export class Pintswap extends PintP2P {
         mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))
       ),
     }).finish();
+  }
+  _encodeUserData() {
+    return protocol.UserData.encode({
+      offers: [...this.offers.values()].map((v) =>
+        mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))),
+      image: this.userData.image,
+      bio: this.userData.bio
+    }).finish();
+  }
+  async handleUserData() {
+    await this.handle('/pintswap/0,1,0/userdata', ({
+      stream
+    }) => {
+      try {
+        this.logger.debug('handling userdata request');
+	this.emit('pintswap/trade/peer', 2);
+	let userData = this._encodeUserData();
+	const messages = pushable();
+	pipe(messages, lp.encode(), stream.sink);
+	messages.push(userData);
+	messages.end();
+      } catch (e) {
+        this.logger.error(e);
+      }
+    });
   }
   async handleBroadcastedOffers() {
     const address = await this.signer.getAddress();
@@ -514,6 +555,28 @@ export class Pintswap extends PintP2P {
     this.offers.set(hash, _offer);
     this.emit("pintswap/trade/broadcast", hash);
   }
+  async getUserDataByPeerId(peerId: string) {
+    let pid = PeerId.createFromB58String(peerId);
+    while (true) {
+      try {
+        await this.peerRouting.findPeer(pid);
+        break;
+      } catch (e) {
+        this.logger.error(e);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
+    this.emit("pintswap/trade/peer", 0); // start finding peer's orders
+    const { stream } = await this.dialProtocol(pid, "/pintswap/0.1.0/userdata");
+    this.emit("pintswap/trade/peer", 1); // peer found
+    const decoded = pipe(stream.source, lp.decode());
+    const { value: userDataBufferList } = await decoded.next();
+    const result = userDataBufferList.slice();
+    this.emit("pintswap/trade/peer", 2); // got offers
+    const userData = this._decodeUserData(result);
+    this.emit("pintswap/trade/peer", 3); // offers decoded and returning
+    return userData;
+  }
 
   // Takes in a peerId and returns a list of exisiting trades
   async getTradesByPeerId(peerId: string) {
@@ -559,6 +622,32 @@ export class Pintswap extends PintP2P {
       });
     });
     return Object.assign(offerList, { offers: remap });
+  }
+  _decodeUserData(data: Buffer) {
+    let userData = protocol.UserData.toObject(
+      protocol.UserData.decode(data),
+      {
+        enums: String,
+        longs: String,
+        bytes: String,
+        defaults: true,
+        arrays: true,
+        objects: true,
+        oneofs: true,
+      }
+    );
+
+    const offers = userData.offers.map((v) => {
+      return mapValues(v, (v) => {
+        const address = ethers.hexlify(ethers.decodeBase64(v));
+        return "0x" + leftZeroPad(address.substr(2), 40);
+      });
+    });
+    return {
+      offers,
+      image: Buffer.from(ethers.decodeBase64(userData.image)),
+      bio: userData.bio
+    };
   }
   async getTradeAddress(sharedAddress: string) {
     const address = getCreateAddress({

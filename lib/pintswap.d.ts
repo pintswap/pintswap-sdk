@@ -28,11 +28,16 @@ export declare function sumOffers(offers: any[]): any;
 export declare const NS_MULTIADDRS: {
     DRIP: string[];
 };
+export interface IUserData {
+    bio: string;
+    image: Buffer;
+}
 export declare class Pintswap extends PintP2P {
     signer: any;
     offers: Map<string, IOffer>;
     logger: ReturnType<typeof createLogger>;
-    peers: Map<string, IOffer[]>;
+    peers: Map<string, [string, IOffer]>;
+    userData: IUserData;
     _awaitReceipts: boolean;
     static initialize({ awaitReceipts, signer }: {
         awaitReceipts: any;
@@ -45,6 +50,8 @@ export declare class Pintswap extends PintP2P {
         signer: any;
         peerId: any;
     });
+    setBio(s: string): void;
+    setImage(b: Buffer): void;
     publishOffers(): Promise<void>;
     startPublishingOffers(ms: number): {
         setInterval(_ms: any): void;
@@ -54,10 +61,22 @@ export declare class Pintswap extends PintP2P {
     startNode(): Promise<void>;
     stopNode(): Promise<void>;
     _encodeOffers(): any;
+    _encodeUserData(): any;
+    handleUserData(): Promise<void>;
     handleBroadcastedOffers(): Promise<void>;
     broadcastOffer(_offer: IOffer): void;
+    getUserDataByPeerId(peerId: string): Promise<{
+        offers: any;
+        image: Buffer;
+        bio: any;
+    }>;
     getTradesByPeerId(peerId: string): Promise<any>;
     _decodeOffers(data: Buffer): any;
+    _decodeUserData(data: Buffer): {
+        offers: any;
+        image: Buffer;
+        bio: any;
+    };
     getTradeAddress(sharedAddress: string): Promise<string>;
     approveTradeAsMaker(offer: IOffer, sharedAddress: string): Promise<any>;
     approvePermit2(asset: string): Promise<any>;

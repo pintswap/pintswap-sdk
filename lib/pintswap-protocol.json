@@ -31,6 +31,23 @@
                         }
                     }
                 },
+                "UserData": {
+                    "fields": {
+                        "bio": {
+                            "type": "string",
+                            "id": 1
+                        },
+                        "image": {
+                            "type": "bytes",
+                            "id": 2
+                        },
+                        "offers": {
+                            "rule": "repeated",
+                            "type": "Offer",
+                            "id": 3
+                        }
+                    }
+                },
                 "Fill": {
                     "fields": {
                         "offerHash": {

@@ -158,7 +158,7 @@ export function sumOffers(offers: any[]) {
 }
 
 export const NS_MULTIADDRS = {
-  DRIP: ['QmUtvU33iaHun99yD9HgiyLSrmPhWUbXVX2hAZRY4AEV2d']
+  DRIP: ["QmUtvU33iaHun99yD9HgiyLSrmPhWUbXVX2hAZRY4AEV2d"],
 };
 
 export interface IUserData {
@@ -180,47 +180,63 @@ export class Pintswap extends PintP2P {
   }
 
   async resolveName(name) {
-    const parts = name.split('.');
-    const query = parts.slice(0, Math.max(parts.length - 1, 1)).join('.');
-    const tld = parts.length === 1 ? 'drip' : parts[parts.length - 1];
+    const parts = name.split(".");
+    const query = parts.slice(0, Math.max(parts.length - 1, 1)).join(".");
+    const tld = parts.length === 1 ? "drip" : parts[parts.length - 1];
     const messages = pushable();
     const response: any = await new Promise((resolve, reject) => {
       (async () => {
         const nsHosts = NS_MULTIADDRS[tld.toUpperCase()];
-        const { stream } = await this.dialProtocol(PeerId.createFromB58String(nsHosts[Math.floor(nsHosts.length*Math.random())]), '/pintswap/0.1.0/ns/query');
-	pipe(messages, lp.encode(), stream.sink);
-	messages.push(protocol.NameQuery.encode({
-          name: query
-	}).finish());
-	messages.end();
-	const it = pipe(stream.source, lp.decode());
-	const response = protocol.NameQueryResponse.decode((await it.next()).value.slice());
-	resolve({
+        const { stream } = await this.dialProtocol(
+          PeerId.createFromB58String(
+            nsHosts[Math.floor(nsHosts.length * Math.random())]
+          ),
+          "/pintswap/0.1.0/ns/query"
+        );
+        pipe(messages, lp.encode(), stream.sink);
+        messages.push(
+          protocol.NameQuery.encode({
+            name: query,
+          }).finish()
+        );
+        messages.end();
+        const it = pipe(stream.source, lp.decode());
+        const response = protocol.NameQueryResponse.decode(
+          (await it.next()).value.slice()
+        );
+        resolve({
           status: response.status,
-	  result: response.result
-	});
+          result: response.result,
+        });
       })().catch(reject);
     });
-    if (response.status === 0) throw Error('no name registered');
-    return response.result + (parts.length > 1 ? '' : '.' + tld);
+    if (response.status === 0) throw Error("no name registered");
+    return response.result + (parts.length > 1 ? "" : "." + tld);
   }
   async registerName(name) {
-    let parts = name.split('.');
-    const query = parts.slice(0, -1).join('.');
+    let parts = name.split(".");
+    const query = parts.slice(0, -1).join(".");
     const tld = parts[parts.length - 1];
     const messages = pushable();
     const response = await new Promise((resolve, reject) => {
       (async () => {
         const nsHosts = NS_MULTIADDRS[tld.toUpperCase()];
-        const { stream } = await this.dialProtocol(PeerId.createFromB58String(nsHosts[Math.floor(nsHosts.length*Math.random())]), '/pintswap/0.1.0/ns/register');
-	pipe(messages, lp.encode(), stream.sink);
-	messages.push(Buffer.from(query));
-	messages.end();
-	const it = await pipe(stream.source, lp.decode());
-	const response = protocol.NameRegisterResponse.decode((await it.next()).value.slice());
-	resolve({
-          status: response.status
-	});
+        const { stream } = await this.dialProtocol(
+          PeerId.createFromB58String(
+            nsHosts[Math.floor(nsHosts.length * Math.random())]
+          ),
+          "/pintswap/0.1.0/ns/register"
+        );
+        pipe(messages, lp.encode(), stream.sink);
+        messages.push(Buffer.from(query));
+        messages.end();
+        const it = await pipe(stream.source, lp.decode());
+        const response = protocol.NameRegisterResponse.decode(
+          (await it.next()).value.slice()
+        );
+        resolve({
+          status: response.status,
+        });
       })().catch(reject);
     });
     return response;
@@ -231,8 +247,8 @@ export class Pintswap extends PintP2P {
     this.logger = logger;
     this.peers = new Map<string, [string, IOffer]>();
     this.userData = {
-      bio: '',
-      image: Buffer.from([])
+      bio: "",
+      image: Buffer.from([]),
     };
     this._awaitReceipts = awaitReceipts || false;
   }
@@ -318,23 +334,22 @@ export class Pintswap extends PintP2P {
   _encodeUserData() {
     return protocol.UserData.encode({
       offers: [...this.offers.values()].map((v) =>
-        mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))),
+        mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))
+      ),
       image: this.userData.image,
-      bio: this.userData.bio
+      bio: this.userData.bio,
     }).finish();
   }
   async handleUserData() {
-    await this.handle('/pintswap/0,1,0/userdata', ({
-      stream
-    }) => {
+    await this.handle("/pintswap/0,1,0/userdata", ({ stream }) => {
       try {
-        this.logger.debug('handling userdata request');
-	this.emit('pintswap/trade/peer', 2);
-	let userData = this._encodeUserData();
-	const messages = pushable();
-	pipe(messages, lp.encode(), stream.sink);
-	messages.push(userData);
-	messages.end();
+        this.logger.debug("handling userdata request");
+        this.emit("pintswap/trade/peer", 2);
+        let userData = this._encodeUserData();
+        const messages = pushable();
+        pipe(messages, lp.encode(), stream.sink);
+        messages.push(userData);
+        messages.end();
       } catch (e) {
         this.logger.error(e);
       }
@@ -624,18 +639,15 @@ export class Pintswap extends PintP2P {
     return Object.assign(offerList, { offers: remap });
   }
   _decodeUserData(data: Buffer) {
-    let userData = protocol.UserData.toObject(
-      protocol.UserData.decode(data),
-      {
-        enums: String,
-        longs: String,
-        bytes: String,
-        defaults: true,
-        arrays: true,
-        objects: true,
-        oneofs: true,
-      }
-    );
+    let userData = protocol.UserData.toObject(protocol.UserData.decode(data), {
+      enums: String,
+      longs: String,
+      bytes: String,
+      defaults: true,
+      arrays: true,
+      objects: true,
+      oneofs: true,
+    });
 
     const offers = userData.offers.map((v) => {
       return mapValues(v, (v) => {
@@ -646,7 +658,7 @@ export class Pintswap extends PintP2P {
     return {
       offers,
       image: Buffer.from(ethers.decodeBase64(userData.image)),
-      bio: userData.bio
+      bio: userData.bio,
     };
   }
   async getTradeAddress(sharedAddress: string) {

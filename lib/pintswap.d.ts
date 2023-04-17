@@ -65,7 +65,7 @@ export declare class Pintswap extends PintP2P {
         };
         offers: IOffer[];
     };
-    static fromObject(o: any, signer: any): Pintswap;
+    static fromObject(o: any, signer: any): Promise<Pintswap>;
     _encodeOffers(): any;
     _encodeUserData(): any;
     handleUserData(): Promise<void>;

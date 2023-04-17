@@ -335,7 +335,7 @@ export class Pintswap extends PintP2P {
       offers: [ ...this.offers.values() ]
     }
   }
-  static fromObject(o, signer) {
+  static async fromObject(o, signer) {
     const initArg = {
        ...o,
        userData: o.userData && {
@@ -343,7 +343,7 @@ export class Pintswap extends PintP2P {
 	 image: Buffer.from(o.userData.image, 'base64')
        },
        offers: o.offers && new Map<string, IOffer>(o.offers.map((v) => [ hashOffer(v), v ])),
-       peerId: o.peerId && PeerId.createFromJSON(o.peerId),
+       peerId: o.peerId && await PeerId.createFromJSON(o.peerId),
        signer
     };
     return new Pintswap(initArg);
@@ -365,7 +365,7 @@ export class Pintswap extends PintP2P {
     }).finish();
   }
   async handleUserData() {
-    await this.handle("/pintswap/0,1,0/userdata", ({ stream }) => {
+    await this.handle("/pintswap/0.1.0/userdata", ({ stream }) => {
       try {
         this.logger.debug("handling userdata request");
         this.emit("pintswap/trade/peer", 2);

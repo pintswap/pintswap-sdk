@@ -5,6 +5,7 @@ import { BigNumberish } from "ethers";
 import { EventEmitter } from "events";
 import { defer } from "./trade";
 import { IOffer } from "./types";
+import PeerId from "peer-id";
 import { createLogger } from "./logger";
 export declare function sendFlashbotsTransaction(data: any): Promise<any>;
 export declare class PintswapTrade extends EventEmitter {
@@ -45,11 +46,7 @@ export declare class Pintswap extends PintP2P {
     }): Promise<Pintswap>;
     resolveName(name: any): Promise<string>;
     registerName(name: any): Promise<unknown>;
-    constructor({ awaitReceipts, signer, peerId }: {
-        awaitReceipts: any;
-        signer: any;
-        peerId: any;
-    });
+    constructor({ awaitReceipts, signer, peerId, userData, offers }: any);
     setBio(s: string): void;
     setImage(b: Buffer): void;
     publishOffers(): Promise<void>;
@@ -60,6 +57,15 @@ export declare class Pintswap extends PintP2P {
     subscribeOffers(): Promise<void>;
     startNode(): Promise<void>;
     stopNode(): Promise<void>;
+    toObject(): {
+        peerId: PeerId.JSONPeerId;
+        userData: {
+            bio: string;
+            image: string;
+        };
+        offers: IOffer[];
+    };
+    static fromObject(o: any, signer: any): Pintswap;
     _encodeOffers(): any;
     _encodeUserData(): any;
     handleUserData(): Promise<void>;

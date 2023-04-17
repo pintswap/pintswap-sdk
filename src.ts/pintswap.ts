@@ -241,12 +241,13 @@ export class Pintswap extends PintP2P {
     });
     return response;
   }
-  constructor({ awaitReceipts, signer, peerId }) {
+  constructor({ awaitReceipts, signer, peerId, userData, offers }: any) {
     super({ signer, peerId });
     this.signer = signer;
     this.logger = logger;
     this.peers = new Map<string, [string, IOffer]>();
-    this.userData = {
+    this.offers = offers || new Map<string, IOffer>();
+    this.userData = userData || {
       bio: "",
       image: Buffer.from([]),
     };
@@ -324,6 +325,29 @@ export class Pintswap extends PintP2P {
     this.emit(`pintswap/node/status`, 0);
   }
 
+  toObject() {
+    return {
+      peerId: this.peerId.toJSON(),
+      userData: {
+        bio: this.userData.bio,
+	image: this.userData.image.toString('base64')
+      },
+      offers: [ ...this.offers.values() ]
+    }
+  }
+  static fromObject(o, signer) {
+    const initArg = {
+       ...o,
+       userData: o.userData && {
+         bio: o.userData.bio,
+	 image: Buffer.from(o.userData.image, 'base64')
+       },
+       offers: o.offers && new Map<string, IOffer>(o.offers.map((v) => [ hashOffer(v), v ])),
+       peerId: o.peerId && PeerId.createFromJSON(o.peerId),
+       signer
+    };
+    return new Pintswap(initArg);
+  }
   _encodeOffers() {
     return protocol.OfferList.encode({
       offers: [...this.offers.values()].map((v) =>

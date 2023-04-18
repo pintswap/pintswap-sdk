@@ -1,9 +1,10 @@
 var { Pintswap } = require('./');
+var { detectPermit } = require('./lib/detect-permit');
 
-var nodes = Promise.all([1, 2].map(async (v) => await Pintswap.initialize({ signer: require('ethers').Wallet.createRandom() })));
+var { ethers } = require('ethers');
 
-(async () => {
-  await Promise.all((await nodes).map(async (v) => await v.startNode()));
-  const n = (await nodes)[0];
-  n.setBio('woop');
-})().catch(console.error);
+var provider = new ethers.InfuraProvider('mainnet');
+
+
+var usdc = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+var weth = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';

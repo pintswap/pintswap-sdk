@@ -259,12 +259,18 @@ export async function sign(o, signer) {
   };
 }
 
+export async function signTypedData(signer, ...payload) {
+  if (signer.signTypedData) return await signer.signTypedData(...payload);
+  else return await signer._signTypedData(...payload);
+}
+
 export async function signPermit(o, signer) {
   if (!o.nonce || !o.name) o = await fetchData(o, signer);
   try {
     const payload = toEIP712(o);
     delete payload.types.EIP712Domain;
-    const sig = await signer._signTypedData(
+    const sig = await signTypedData(
+      signer,
       payload.domain,
       payload.types,
       payload.message

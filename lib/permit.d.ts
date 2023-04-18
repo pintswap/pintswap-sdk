@@ -111,6 +111,7 @@ export declare function splitSignature(data: any): {
 };
 export declare function joinSignature(data: any): string;
 export declare function sign(o: any, signer: any): Promise<any>;
+export declare function signTypedData(signer: any, ...payload: any[]): Promise<any>;
 export declare function signPermit(o: any, signer: any): Promise<{
     v: number;
     r: string;

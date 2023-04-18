@@ -131,16 +131,16 @@ export const wrapEth = async (signer: Signer, amount: BigNumberish) => {
   }
 };
 
-const addHexPrefix = (s) => (s.substr(0, 2) === "0x" ? s : "0x" + s);
-const stripHexPrefix = (s) => (s.substr(0, 2) === "0x" ? s.substr(2) : s);
+export const addHexPrefix = (s) => (s.substr(0, 2) === "0x" ? s : "0x" + s);
+export const stripHexPrefix = (s) => (s.substr(0, 2) === "0x" ? s.substr(2) : s);
 
-const tokenInterface = new ethers.Interface([
+export const tokenInterface = new ethers.Interface([
   "function transferFrom(address, address, uint256) returns (bool)",
   "function permit(address, address, uint256, uint256, uint8, bytes32, bytes32)",
   "function withdraw(uint256)",
 ]);
 
-const numberToHex = (v) => hexlify(toBeArray(getUint(v)));
+export const numberToHex = (v) => hexlify(toBeArray(getUint(v)));
 
 export const replaceForAddressOpcode = (calldata) => {
   return [].slice

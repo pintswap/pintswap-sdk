@@ -26,6 +26,7 @@ import { IOffer } from "./types";
 import PeerId from "peer-id";
 import { createLogger } from "./logger";
 import * as permit from "./permit";
+import { detectPermit } from "./detect-permit";
 import fetch from "cross-fetch";
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
@@ -728,7 +729,7 @@ export class Pintswap extends PintP2P {
       );
     }
     if (
-      getAddress(offer.givesToken) === getAddress(permit.ASSETS.ETHEREUM.USDC)
+      await detectPermit(offer.givesToken, this.signer)
     ) {
       const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
       const permitData = await permit.sign(
@@ -855,7 +856,7 @@ export class Pintswap extends PintP2P {
       );
     }
     if (
-      getAddress(offer.getsToken) === getAddress(permit.ASSETS.ETHEREUM.USDC)
+      await detectPermit(offer.getsToken, this.signer)
     ) {
       const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
       const permitData = await permit.sign(

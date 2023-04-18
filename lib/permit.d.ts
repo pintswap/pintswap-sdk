@@ -21,18 +21,6 @@ export declare function getMessage(request: any): {
     nonce: any;
     deadline: any;
     value: any;
-    holder?: undefined;
-    expiry?: undefined;
-    allowed?: undefined;
-} | {
-    holder: any;
-    spender: any;
-    nonce: any;
-    expiry: any;
-    allowed: string;
-    owner?: undefined;
-    deadline?: undefined;
-    value?: undefined;
 };
 export declare function getDomainStructure(asset: any): {
     name: string;
@@ -90,18 +78,6 @@ export declare function toEIP712(o: any): {
         nonce: any;
         deadline: any;
         value: any;
-        holder?: undefined;
-        expiry?: undefined;
-        allowed?: undefined;
-    } | {
-        holder: any;
-        spender: any;
-        nonce: any;
-        expiry: any;
-        allowed: string;
-        owner?: undefined;
-        deadline?: undefined;
-        value?: undefined;
     };
 };
 export declare function splitSignature(data: any): {

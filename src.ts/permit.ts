@@ -33,7 +33,6 @@ export const ASSETS = {
 export function getMessage(request) {
   const address = getAddress(request.asset);
   const chainId = toChainId(toNetwork(address));
-  if (isUSDC(address) && chainId !== 43114) {
     return {
       owner: request.owner,
       spender: request.spender,
@@ -41,14 +40,6 @@ export function getMessage(request) {
       deadline: request.expiry,
       value: request.value,
     };
-  }
-  return {
-    holder: request.owner,
-    spender: request.spender,
-    nonce: request.nonce,
-    expiry: request.expiry,
-    allowed: "true",
-  };
 }
 
 export function getDomainStructure(asset) {
@@ -114,10 +105,6 @@ export function isUSDC(asset) {
 }
 
 export function getPermitStructure(asset) {
-  if (
-    isUSDC(asset) &&
-    getAddress(asset) !== getAddress(ASSETS.AVALANCHE.USDC)
-  ) {
     return [
       {
         name: "owner",
@@ -140,29 +127,6 @@ export function getPermitStructure(asset) {
         type: "uint256",
       },
     ];
-  }
-  return [
-    {
-      name: "holder",
-      type: "address",
-    },
-    {
-      name: "spender",
-      type: "address",
-    },
-    {
-      name: "nonce",
-      type: "uint256",
-    },
-    {
-      name: "expiry",
-      type: "uint256",
-    },
-    {
-      name: "allowed",
-      type: "bool",
-    },
-  ];
 }
 
 export function toChainId(network) {
@@ -178,7 +142,7 @@ export function toChainId(network) {
     case "OPTIMISM":
       return 10;
     default:
-      throw Error("No network: " + network);
+      return 1;
   }
 }
 
@@ -222,7 +186,7 @@ export function getDomain(o) {
     name: o.name,
     version: "1",
     chainId: String(chainId),
-    verifyingContract: ZeroAddress,
+    verifyingContract: address
   };
 }
 export function toEIP712(o) {

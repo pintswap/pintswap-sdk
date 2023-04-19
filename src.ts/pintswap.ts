@@ -54,6 +54,20 @@ const toTypedTransfer = (transfer) =>
     ],
   ]);
 
+export const protobufOffersToHex = (offers) =>
+  offers.map((v) => {
+    return mapValues(v, (v) => {
+      const transfer = v[v.data];
+      const o: any = {};
+      if (["erc20", "erc1155"].includes(v.data))
+        o.amount = ethers.hexlify(ethers.decodeBase64(transfer.amount));
+      if (["erc721", "erc1155"].includes(v.data))
+        o.tokenId = ethers.hexlify(ethers.decodeBase64(transfer.tokenId));
+      o.token = ethers.getAddress(ethers.zeroPadValue(transfer.token, 20));
+      return o;
+    });
+  });
+
 const getGasPrice = async (provider) => {
   if (provider.getGasPrice) return await provider.getGasPrice();
   return (await provider.getFeeData()).gasPrice;
@@ -698,14 +712,7 @@ export class Pintswap extends PintP2P {
       }
     );
 
-    const offers = offerList.offers.map((v) => {
-      return mapValues(v, (v) =>
-        mapValues(v[v.data], (v) => {
-          const address = ethers.hexlify(ethers.decodeBase64(v));
-          return "0x" + leftZeroPad(address.substr(2), 40);
-        })
-      );
-    });
+    const offers = protobufOffersToHex(offerList.offers);
     return Object.assign(offerList, { offers });
   }
   _decodeUserData(data: Buffer) {
@@ -719,15 +726,7 @@ export class Pintswap extends PintP2P {
       oneofs: true,
     });
 
-    console.log(userData);
-    const offers = userData.offers.map((v) => {
-      return mapValues(v, (v) =>
-        mapValues(v[v.data], (v) => {
-          const address = ethers.hexlify(ethers.decodeBase64(v));
-          return "0x" + leftZeroPad(address.substr(2), 40);
-        })
-      );
-    });
+    const offers = protobufOffersToHex(userData.offers);
     return {
       offers,
       image: Buffer.from(ethers.decodeBase64(userData.image)),

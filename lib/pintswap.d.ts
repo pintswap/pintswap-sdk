@@ -7,6 +7,7 @@ import { defer } from "./trade";
 import { IOffer } from "./types";
 import PeerId from "peer-id";
 import { createLogger } from "./logger";
+export declare const protobufOffersToHex: (offers: any) => any;
 export declare function sendFlashbotsTransaction(data: any): Promise<any>;
 export declare class PintswapTrade extends EventEmitter {
     hashes: null | string[];

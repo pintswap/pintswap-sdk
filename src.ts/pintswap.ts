@@ -727,11 +727,12 @@ export class Pintswap extends PintP2P {
       oneofs: true,
     });
 
+    console.log(userData);
     const offers = userData.offers.map((v) => {
-      return mapValues(v, (v) => {
+      return mapValues(v, (v) => mapValues(v[v.data], (v) => {
         const address = ethers.hexlify(ethers.decodeBase64(v));
         return "0x" + leftZeroPad(address.substr(2), 40);
-      });
+      }));
     });
     return {
       offers,

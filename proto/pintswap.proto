@@ -1,11 +1,33 @@
 syntax = "proto3";
 package pintswap;
 
+message ERC20Transfer {
+  bytes token = 1;
+  bytes amount = 2;
+}
+
+message ERC721Transfer {
+  bytes token = 1;
+  bytes token_id = 2;
+}
+
+message ERC1155Transfer {
+  bytes token = 1;
+  bytes token_id = 2;
+  bytes amount = 3;
+}
+
+message Transfer {
+  oneof data {
+    ERC20Transfer erc20 = 1;
+    ERC721Transfer erc721 = 2;
+    ERC1155Transfer erc1155 = 3;
+  }
+}
+
 message Offer {
-  bytes gives_token = 1;
-  bytes gets_token = 2;
-  bytes gives_amount = 3;
-  bytes gets_amount = 4;
+  Transfer gives = 1;
+  Transfer gets = 2;
 }
 
 message OfferList {

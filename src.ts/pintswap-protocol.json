@@ -2,23 +2,80 @@
   "nested": {
     "pintswap": {
       "nested": {
-        "Offer": {
+        "ERC20Transfer": {
           "fields": {
-            "givesToken": {
+            "token": {
               "type": "bytes",
               "id": 1
             },
-            "getsToken": {
+            "amount": {
+              "type": "bytes",
+              "id": 2
+            }
+          }
+        },
+        "ERC721Transfer": {
+          "fields": {
+            "token": {
+              "type": "bytes",
+              "id": 1
+            },
+            "tokenId": {
+              "type": "bytes",
+              "id": 2
+            }
+          }
+        },
+        "ERC1155Transfer": {
+          "fields": {
+            "token": {
+              "type": "bytes",
+              "id": 1
+            },
+            "tokenId": {
               "type": "bytes",
               "id": 2
             },
-            "givesAmount": {
+            "amount": {
               "type": "bytes",
               "id": 3
+            }
+          }
+        },
+        "Transfer": {
+          "oneofs": {
+            "data": {
+              "oneof": [
+                "erc20",
+                "erc721",
+                "erc1155"
+              ]
+            }
+          },
+          "fields": {
+            "erc20": {
+              "type": "ERC20Transfer",
+              "id": 1
             },
-            "getsAmount": {
-              "type": "bytes",
-              "id": 4
+            "erc721": {
+              "type": "ERC721Transfer",
+              "id": 2
+            },
+            "erc1155": {
+              "type": "ERC1155Transfer",
+              "id": 3
+            }
+          }
+        },
+        "Offer": {
+          "fields": {
+            "gives": {
+              "type": "Transfer",
+              "id": 1
+            },
+            "gets": {
+              "type": "Transfer",
+              "id": 2
             }
           }
         },

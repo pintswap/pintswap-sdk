@@ -30,16 +30,21 @@ export function keyshareToAddress(keyshareJsonObject) {
   return computeAddress(derivedPubKey as string);
 }
 
+export const isERC20Transfer = (o) => !o.tokenId;
+
+export const isERC721Transfer = (o) => Boolean(o.tokenId && o.token && o.amount === undefined);
+
+export const isERC1155Transfer = (o) => Boolean(o.tokenId && o.token && o.amount !== undefined)
+
+export const hashTransfer = (o) => {
+  if (isERC20Transfer(o)) return solidityPackedKeccak256(['string', 'address', 'uint256'], ['/pintswap/erc20', o.token, o.amount]);
+  if (isERC721Transfer(o)) return solidityPackedKecack256(['string', 'address', 'uint256'], ['/pintswap/erc721', o.token, o.tokenId]);
+  if (isERC1155Transfer(o)) return solidityPackedKeccak256(['string', 'address', 'uint256', 'uint256'], ['/pintswap/erc1155', o.token, o.tokenId, o.amount ]);
+  throw Error('no matching token structure');
+};
+
 export const hashOffer = (o) => {
-  return solidityPackedKeccak256(
-    ["address", "address", "uint256", "uint256"],
-    [
-      getAddress(o.givesToken),
-      getAddress(o.getsToken),
-      o.givesAmount,
-      o.getsAmount,
-    ]
-  );
+  return solidityPackedKeccak256(['bytes32', 'bytes32'], [ hashTransfer(o.gives), hashTransfer(o.gets) ]);
 };
 
 export function leftZeroPad(s, n) {

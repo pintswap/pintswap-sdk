@@ -656,10 +656,15 @@ export class Pintswap extends PintP2P {
     );
 
     let remap = offerList.offers.map((v) => {
-      return mapValues(v, (v) => {
+      return {
+        gets: v.gets[v.gets.data],
+	gives: v.gives[v.gives.data]
+      };
+    }).map(({ gets, gives }) => {
+      return Object.fromEntries([['gets', gets ], ['gives', gives ]].map(([ key, value ]) => mapValues(value, (v) => {
         const address = ethers.hexlify(ethers.decodeBase64(v));
         return "0x" + leftZeroPad(address.substr(2), 40);
-      });
+      })));
     });
     return Object.assign(offerList, { offers: remap });
   }

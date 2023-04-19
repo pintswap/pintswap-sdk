@@ -59,11 +59,12 @@ export const protobufOffersToHex = (offers) =>
     return mapValues(v, (v) => {
       const transfer = v[v.data];
       const o: any = {};
-      if (["erc20", "erc1155"].includes(v.data))
+      console.log(transfer);
+      if (['erc20', 'erc1155'].includes(v.data))
         o.amount = ethers.hexlify(ethers.decodeBase64(transfer.amount));
-      if (["erc721", "erc1155"].includes(v.data))
+      if (['erc721', 'erc1155'].includes(v.data))
         o.tokenId = ethers.hexlify(ethers.decodeBase64(transfer.tokenId));
-      o.token = ethers.getAddress(ethers.zeroPadValue(transfer.token, 20));
+      o.token = ethers.getAddress(ethers.zeroPadValue(ethers.decodeBase64(transfer.token), 20));
       return o;
     });
   });

@@ -11,15 +11,23 @@ describe("Pintswap - Integration Tests", function () {
   let maker, taker;
 
   async function setupTestEnv() {
-    const [ maker, taker ] = await ethers.getSigners();
+    const [maker, taker] = await ethers.getSigners();
 
     const TestERC20 = await ethers.getContractFactory("TestToken", maker);
-    tt1 = await TestERC20.deploy(ethers.utils.parseEther('1000'), "Token1", "TK1");
+    tt1 = await TestERC20.deploy(
+      ethers.utils.parseEther("1000"),
+      "Token1",
+      "TK1"
+    );
 
     let TakerTestERC20 = await ethers.getContractFactory("TestToken", taker);
-    tt2 = await TakerTestERC20.deploy(ethers.utils.parseEther('1000'), "Token2", "TK2");
+    tt2 = await TakerTestERC20.deploy(
+      ethers.utils.parseEther("1000"),
+      "Token2",
+      "TK2"
+    );
 
-    if(testingEth) {
+    if (testingEth) {
       const WETH = new ethers.ContractFactory(WETH9.abi, WETH9.bytecode, maker);
       weth = await WETH.connect(maker).deploy();
       weth = await weth.deployed();
@@ -27,27 +35,29 @@ describe("Pintswap - Integration Tests", function () {
     }
 
     offer = {
-      givesToken: testingEth ? ethers.constants.AddressZero : tt1.address,
-      getsToken: tt2.address,
-      givesAmount: ethers.utils.parseUnits("500.0", 18).toHexString(),
-      getsAmount: ethers.utils.parseUnits("500.0", 18).toHexString()
-    }
+      gives: {
+        token: testingEth ? ethers.constants.AddressZero : tt1.address,
+        amount: ethers.utils.parseUnits("500.0", 18).toHexString(),
+      },
+      gets: {
+        token: tt2.address,
+        amount: ethers.utils.parseUnits("500.0", 18).toHexString(),
+      },
+    };
   }
 
-  before(async function() {
-    await setupTestEnv()
-    const [ makerSigner, takerSigner ] = await ethers.getSigners();
+  before(async function () {
+    await setupTestEnv();
+    const [makerSigner, takerSigner] = await ethers.getSigners();
 
     await new Promise(async (resolve) => {
       maker = await Pintswap.initialize({ signer: makerSigner });
       await maker.startNode();
       maker.on("peer:discovery", async (peer) => {
-        console.log(
-          `Maker:: found peer with id: ${peer}`
-        )
-      })
+        console.log(`Maker:: found peer with id: ${peer}`);
+      });
 
-      console.log('broadcasting offer \n', offer);
+      console.log("broadcasting offer \n", offer);
       maker.broadcastOffer(offer);
       setTimeout(resolve, 6000);
     });
@@ -56,10 +66,8 @@ describe("Pintswap - Integration Tests", function () {
       taker = await Pintswap.initialize({ signer: takerSigner });
       await taker.startNode();
       taker.on("peer:discovery", async (peer) => {
-        console.log(
-          `Taker:: found peer with id: ${peer}`
-        )
-      })
+        console.log(`Taker:: found peer with id: ${peer}`);
+      });
       setTimeout(resolve, 6000);
     });
   });
@@ -74,7 +82,7 @@ describe("Pintswap - Integration Tests", function () {
   });
 
   it("`Maker` should dialProtocol `Taker` to create a trade", async function () {
-    let val = await (await taker.createTrade(maker.peerId, offer).toPromise());
+    let val = await await taker.createTrade(maker.peerId, offer).toPromise();
     expect(Number(val.status)).to.eql(1);
-  })
+  });
 });

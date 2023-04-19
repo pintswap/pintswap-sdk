@@ -21,6 +21,9 @@ import {
   coerceToWeth,
   genericAbi,
   defer,
+  isERC20Transfer,
+  isERC721Transfer,
+  isERC1155Transfer,
 } from "./trade";
 import { IOffer } from "./types";
 import PeerId from "peer-id";
@@ -34,6 +37,22 @@ const logger = createLogger("pintswap");
 const ln = (v) => (
   console.log(require("util").inspect(v, { colors: true, depth: 15 })), v
 );
+
+const toTypedTransfer = (transfer) =>
+  Object.fromEntries([
+    [
+      isERC20Transfer(transfer)
+        ? "erc20"
+        : isERC721Transfer(transfer)
+        ? "erc721"
+        : isERC721Transfer(transfer)
+        ? "erc1155"
+        : (() => {
+            throw Error("no token type found");
+          })(),
+      transfer,
+    ],
+  ]);
 
 const getGasPrice = async (provider) => {
   if (provider.getGasPrice) return await provider.getGasPrice();
@@ -365,7 +384,14 @@ export class Pintswap extends PintP2P {
   _encodeOffers() {
     return protocol.OfferList.encode({
       offers: [...this.offers.values()].map((v) =>
-        mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))
+        Object.fromEntries(
+          Object.entries(v).map(([key, value]) => [
+            key,
+            toTypedTransfer(
+              mapValues(value, (v) => Buffer.from(ethers.toBeArray(v)))
+            ),
+          ])
+        )
       ),
     }).finish();
   }
@@ -668,27 +694,27 @@ export class Pintswap extends PintP2P {
       }
     );
 
-    let remap = offerList.offers
-      .map((v) => {
-        return {
-          gets: v.gets[v.gets.data],
-          gives: v.gives[v.gives.data],
-        };
-      })
-      .map(({ gets, gives }) => {
-        return Object.fromEntries(
-          [
-            ["gets", gets],
-            ["gives", gives],
-          ].map(([key, value]) =>
-            mapValues(value, (v) => {
-              const address = ethers.hexlify(ethers.decodeBase64(v));
-              return "0x" + leftZeroPad(address.substr(2), 40);
-            })
-          )
-        );
-      });
-    return Object.assign(offerList, { offers: remap });
+    let remap = offerList.offers.map((v) => {
+      return {
+        gets: v.gets[v.gets.data],
+        gives: v.gives[v.gives.data],
+      };
+    });
+    const decoded = remap.map(({ gets, gives }) => {
+      return Object.fromEntries(
+        [
+          ["gets", gets],
+          ["gives", gives],
+        ].map(([key, value]) => [
+          key,
+          mapValues(value, (v) => {
+            const address = ethers.hexlify(ethers.decodeBase64(v));
+            return "0x" + leftZeroPad(address.substr(2), 40);
+          }),
+        ])
+      );
+    });
+    return Object.assign(offerList, { offers: decoded });
   }
   _decodeUserData(data: Buffer) {
     let userData = protocol.UserData.toObject(protocol.UserData.decode(data), {

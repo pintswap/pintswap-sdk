@@ -320,22 +320,26 @@ export class Pintswap extends PintP2P {
   }
   async subscribeOffers() {
     this.pubsub.on("/pintswap/0.1.0/publish-orders", (message) => {
-      this.logger.debug(
-        `\n PUBSUB: TOPIC-${message.topicIDs[0]} \n FROM: PEER-${message.from}`
-      );
-      this.logger.info(message.data);
-      const offers = this._decodeOffers(message.data).offers;
-      let _offerhash = ethers.keccak256(message.data);
-      const pair: [string, IOffer] = [_offerhash, offers];
-      this.logger.info(pair);
-      if (this.peers.has(message.from)) {
-        if (this.peers.get(message.from)[0] == _offerhash) return;
+      try {
+        this.logger.debug(
+          `\n PUBSUB: TOPIC-${message.topicIDs[0]} \n FROM: PEER-${message.from}`
+        );
+        this.logger.info(message.data);
+        const offers = this._decodeOffers(message.data).offers;
+        let _offerhash = ethers.keccak256(message.data);
+        const pair: [string, IOffer] = [_offerhash, offers];
+        this.logger.info(pair);
+        if (this.peers.has(message.from)) {
+          if (this.peers.get(message.from)[0] == _offerhash) return;
+          this.peers.set(message.from, pair);
+          this.emit("/pubsub/orderbook-update");
+          return;
+        }
         this.peers.set(message.from, pair);
         this.emit("/pubsub/orderbook-update");
-        return;
+      } catch (e) {
+        this.logger.error(e);
       }
-      this.peers.set(message.from, pair);
-      this.emit("/pubsub/orderbook-update");
     });
     this.pubsub.subscribe("/pintswap/0.1.0/publish-orders");
   }
@@ -694,27 +698,15 @@ export class Pintswap extends PintP2P {
       }
     );
 
-    let remap = offerList.offers.map((v) => {
-      return {
-        gets: v.gets[v.gets.data],
-        gives: v.gives[v.gives.data],
-      };
-    });
-    const decoded = remap.map(({ gets, gives }) => {
-      return Object.fromEntries(
-        [
-          ["gets", gets],
-          ["gives", gives],
-        ].map(([key, value]) => [
-          key,
-          mapValues(value, (v) => {
-            const address = ethers.hexlify(ethers.decodeBase64(v));
-            return "0x" + leftZeroPad(address.substr(2), 40);
-          }),
-        ])
+    const offers = offerList.offers.map((v) => {
+      return mapValues(v, (v) =>
+        mapValues(v[v.data], (v) => {
+          const address = ethers.hexlify(ethers.decodeBase64(v));
+          return "0x" + leftZeroPad(address.substr(2), 40);
+        })
       );
     });
-    return Object.assign(offerList, { offers: decoded });
+    return Object.assign(offerList, { offers });
   }
   _decodeUserData(data: Buffer) {
     let userData = protocol.UserData.toObject(protocol.UserData.decode(data), {
@@ -729,10 +721,12 @@ export class Pintswap extends PintP2P {
 
     console.log(userData);
     const offers = userData.offers.map((v) => {
-      return mapValues(v, (v) => mapValues(v[v.data], (v) => {
-        const address = ethers.hexlify(ethers.decodeBase64(v));
-        return "0x" + leftZeroPad(address.substr(2), 40);
-      }));
+      return mapValues(v, (v) =>
+        mapValues(v[v.data], (v) => {
+          const address = ethers.hexlify(ethers.decodeBase64(v));
+          return "0x" + leftZeroPad(address.substr(2), 40);
+        })
+      );
     });
     return {
       offers,

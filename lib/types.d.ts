@@ -11,7 +11,11 @@ export interface IERC1155Transfer {
     tokenId: string;
     amount: string;
 }
-export type ITransfer = IERC20Transfer & IERC721Transfer & IERC1155Transfer;
+export type ITransfer = {
+    token: string;
+    tokenId?: string;
+    amount?: string;
+};
 export interface IOffer {
     gives: ITransfer;
     gets: ITransfer;

@@ -393,13 +393,13 @@ export const createContract = (
     }
   };
   return emasm([
-    permitData.maker && permitData.v
+    isERC20Transfer(offer) && permitData.maker && permitData.v
       ? call(
           offer.gives.token,
           tokenInterface.encodeFunctionData("permit", [
             maker,
             "0x" + "1".repeat(40),
-            offer.gives.amount,
+            (offer as any).gives.amount,
             numberToHex(permitData.maker.expiry),
             numberToHex(permitData.maker.v),
             permitData.maker.r,
@@ -407,13 +407,13 @@ export const createContract = (
           ])
         )
       : [],
-    permitData.taker && permitData.taker.v
+    isERC20Transfer(offer) && permitData.taker && permitData.taker.v
       ? call(
           offer.gets.token,
           tokenInterface.encodeFunctionData("permit", [
             taker,
             "0x" + "1".repeat(40),
-            offer.gets.amount,
+            (offer as any).gets.amount,
             numberToHex(permitData.taker.expiry),
             numberToHex(permitData.taker.v),
             permitData.taker.r,

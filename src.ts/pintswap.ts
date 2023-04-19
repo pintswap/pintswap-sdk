@@ -122,18 +122,22 @@ export function decodeBatchFill(data) {
 }
 
 export function scaleOffer(offer: IOffer, amount: BigNumberish) {
-  if (ethers.getUint(amount) > ethers.getUint(offer.getsAmount))
+  if (ethers.getUint(amount) > ethers.getUint(offer.gets.amount))
     throw Error("fill amount exceeds order capacity");
   return {
-    givesToken: offer.givesToken,
-    getsToken: offer.getsToken,
-    givesAmount: ethers.hexlify(
-      ethers.toBeArray(
-        (ethers.getUint(offer.givesAmount) * ethers.getUint(amount)) /
-          ethers.getUint(offer.getsAmount)
-      )
-    ),
-    getsAmount: ethers.hexlify(ethers.toBeArray(ethers.getUint(amount))),
+    gives: {
+      token: offer.gives.token,
+      amount: ethers.hexlify(
+        ethers.toBeArray(
+          (ethers.getUint(offer.gives.amount) * ethers.getUint(amount)) /
+            ethers.getUint(offer.gets.amount)
+        )
+      ),
+    },
+    gets: {
+      token: offer.gets.token,
+      amount: ethers.hexlify(ethers.toBeArray(ethers.getUint(amount))),
+    },
   };
 }
 
@@ -145,16 +149,23 @@ export function toBigIntFromBytes(b) {
 export function sumOffers(offers: any[]) {
   return offers.reduce(
     (r, v) => ({
-      getsToken: v.getsToken,
-      givesToken: v.givesToken,
-      getsAmount: ethers.toBeHex(
-        toBigIntFromBytes(v.getsAmount) + toBigIntFromBytes(r.getsAmount)
-      ),
-      givesAmount: ethers.toBeHex(
-        toBigIntFromBytes(v.givesAmount) + toBigIntFromBytes(r.givesAmount)
-      ),
+      gets: {
+        token: v.gets.token,
+        amount: ethers.toBeHex(
+          toBigIntFromBytes(v.gets.amount) + toBigIntFromBytes(r.gets.amount)
+        ),
+      },
+      gives: {
+        token: v.gives.token,
+        amount: ethers.toBeHex(
+          toBigIntFromBytes(v.gives.amount) + toBigIntFromBytes(r.gives.amount)
+        ),
+      },
     }),
-    { getsAmount: ethers.toBigInt(0), givesAmount: ethers.toBigInt(0) }
+    {
+      gets: { amount: ethers.toBigInt(0) },
+      gives: { amount: ethers.toBigInt(0) },
+    }
   );
 }
 
@@ -331,21 +342,23 @@ export class Pintswap extends PintP2P {
       peerId: this.peerId.toJSON(),
       userData: {
         bio: this.userData.bio,
-	image: this.userData.image.toString('base64')
+        image: this.userData.image.toString("base64"),
       },
-      offers: [ ...this.offers.values() ]
-    }
+      offers: [...this.offers.values()],
+    };
   }
   static async fromObject(o, signer) {
     const initArg = {
-       ...o,
-       userData: o.userData && {
-         bio: o.userData.bio,
-	 image: Buffer.from(o.userData.image, 'base64')
-       },
-       offers: o.offers && new Map<string, IOffer>(o.offers.map((v) => [ hashOffer(v), v ])),
-       peerId: o.peerId && await PeerId.createFromJSON(o.peerId),
-       signer
+      ...o,
+      userData: o.userData && {
+        bio: o.userData.bio,
+        image: Buffer.from(o.userData.image, "base64"),
+      },
+      offers:
+        o.offers &&
+        new Map<string, IOffer>(o.offers.map((v) => [hashOffer(v), v])),
+      peerId: o.peerId && (await PeerId.createFromJSON(o.peerId)),
+      signer,
     };
     return new Pintswap(initArg);
   }
@@ -418,9 +431,9 @@ export class Pintswap extends PintP2P {
               ...scaleOffer(originalOffers[i], v.amount),
             }));
             if (
-              uniq(offers.map((v) => ethers.getAddress(v.getsToken))).length !==
-                1 ||
-              uniq(offers.map((v) => ethers.getAddress(v.givesToken)))
+              uniq(offers.map((v) => ethers.getAddress(v.gets.token)))
+                .length !== 1 ||
+              uniq(offers.map((v) => ethers.getAddress(v.gives.token)))
                 .length !== 1
             )
               throw Error("must fill orders for same trade pair");
@@ -655,17 +668,26 @@ export class Pintswap extends PintP2P {
       }
     );
 
-    let remap = offerList.offers.map((v) => {
-      return {
-        gets: v.gets[v.gets.data],
-	gives: v.gives[v.gives.data]
-      };
-    }).map(({ gets, gives }) => {
-      return Object.fromEntries([['gets', gets ], ['gives', gives ]].map(([ key, value ]) => mapValues(value, (v) => {
-        const address = ethers.hexlify(ethers.decodeBase64(v));
-        return "0x" + leftZeroPad(address.substr(2), 40);
-      })));
-    });
+    let remap = offerList.offers
+      .map((v) => {
+        return {
+          gets: v.gets[v.gets.data],
+          gives: v.gives[v.gives.data],
+        };
+      })
+      .map(({ gets, gives }) => {
+        return Object.fromEntries(
+          [
+            ["gets", gets],
+            ["gives", gives],
+          ].map(([key, value]) =>
+            mapValues(value, (v) => {
+              const address = ethers.hexlify(ethers.decodeBase64(v));
+              return "0x" + leftZeroPad(address.substr(2), 40);
+            })
+          )
+        );
+      });
     return Object.assign(offerList, { offers: remap });
   }
   _decodeUserData(data: Buffer) {
@@ -702,7 +724,7 @@ export class Pintswap extends PintP2P {
   async approveTradeAsMaker(offer: IOffer, sharedAddress: string) {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
     const token = new Contract(
-      await coerceToWeth(ethers.getAddress(offer.givesToken), this.signer),
+      await coerceToWeth(ethers.getAddress(offer.gives.token), this.signer),
       genericAbi,
       this.signer
     );
@@ -713,7 +735,7 @@ export class Pintswap extends PintP2P {
           await token.balanceOf(await this.signer.getAddress())
         )
     );
-    if (offer.givesToken === ethers.ZeroAddress) {
+    if (offer.gives.token === ethers.ZeroAddress) {
       const { chainId } = await this.signer.provider.getNetwork();
       const weth = new ethers.Contract(
         toWETH(Number(chainId)),
@@ -723,7 +745,7 @@ export class Pintswap extends PintP2P {
         ],
         this.signer
       );
-      const depositTx = await weth.deposit({ value: offer.givesAmount });
+      const depositTx = await weth.deposit({ value: offer.gives.amount });
       if (this._awaitReceipts)
         await this.signer.provider.waitForTransaction(depositTx.hash);
       this.logger.debug(
@@ -733,14 +755,12 @@ export class Pintswap extends PintP2P {
           )
       );
     }
-    if (
-      await detectPermit(offer.givesToken, this.signer)
-    ) {
+    if (await detectPermit(offer.gives.token, this.signer)) {
       const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
       const permitData = await permit.sign(
         {
-          asset: offer.givesToken,
-          value: offer.givesAmount,
+          asset: offer.gives.token,
+          value: offer.gives.amount,
           spender: tradeAddress,
           owner: await this.signer.getAddress(),
           expiry,
@@ -756,14 +776,14 @@ export class Pintswap extends PintP2P {
     } else if (
       Number((await this.signer.provider.getNetwork()).chainId) === 1
     ) {
-      const tx = await this.approvePermit2(offer.givesToken);
+      const tx = await this.approvePermit2(offer.gives.token);
       if (tx && this._awaitReceipts)
         await this.signer.provider.waitForTransaction(tx.hash);
       const signatureTransfer = {
         permit: {
           permitted: {
-            token: await coerceToWeth(offer.givesToken, this.signer),
-            amount: offer.givesAmount,
+            token: await coerceToWeth(offer.gives.token, this.signer),
+            amount: offer.gives.amount,
           },
           spender: tradeAddress,
           nonce: ethers.hexlify(
@@ -793,7 +813,7 @@ export class Pintswap extends PintP2P {
         },
       };
     } else {
-      const tx = await token.approve(tradeAddress, offer.givesAmount);
+      const tx = await token.approve(tradeAddress, offer.gives.amount);
       this.logger.debug("TRADE ADDRESS", tradeAddress);
       this.logger.debug(
         "MAKER BALANCE AFTER APPROVING " +
@@ -829,7 +849,7 @@ export class Pintswap extends PintP2P {
   async approveTradeAsTaker(offer: IOffer, sharedAddress: string) {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
     const address = await coerceToWeth(
-      getAddress(offer.getsToken),
+      getAddress(offer.gets.token),
       this.signer
     );
     const token = new Contract(address, genericAbi, this.signer);
@@ -840,7 +860,7 @@ export class Pintswap extends PintP2P {
           await token.balanceOf(await this.signer.getAddress())
         )
     );
-    if (offer.getsToken === ethers.ZeroAddress) {
+    if (offer.gets.token === ethers.ZeroAddress) {
       const { chainId } = await this.signer.provider.getNetwork();
       const weth = new ethers.Contract(
         toWETH(Number(chainId)),
@@ -850,7 +870,7 @@ export class Pintswap extends PintP2P {
         ],
         this.signer
       );
-      const depositTx = await weth.deposit({ value: offer.getsAmount });
+      const depositTx = await weth.deposit({ value: offer.gets.amount });
       if (this._awaitReceipts)
         await this.signer.provider.waitForTransaction(depositTx.hash);
       this.logger.debug(
@@ -860,14 +880,12 @@ export class Pintswap extends PintP2P {
           )
       );
     }
-    if (
-      await detectPermit(offer.getsToken, this.signer)
-    ) {
+    if (await detectPermit(offer.gets.token, this.signer)) {
       const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
       const permitData = await permit.sign(
         {
-          asset: offer.getsToken,
-          value: offer.getsAmount,
+          asset: offer.gets.token,
+          value: offer.gets.amount,
           spender: tradeAddress,
           owner: await this.signer.getAddress(),
           expiry,
@@ -883,14 +901,14 @@ export class Pintswap extends PintP2P {
     } else if (
       Number((await this.signer.provider.getNetwork()).chainId) === 1
     ) {
-      const tx = await this.approvePermit2(offer.getsToken);
+      const tx = await this.approvePermit2(offer.gets.token);
       if (tx && this._awaitReceipts)
         await this.signer.provider.waitForTransaction(tx.hash);
       const signatureTransfer = {
         permit: {
           permitted: {
-            token: await coerceToWeth(offer.getsToken, this.signer),
-            amount: offer.getsAmount,
+            token: await coerceToWeth(offer.gets.token, this.signer),
+            amount: offer.gets.amount,
           },
           spender: tradeAddress,
           nonce: ethers.hexlify(
@@ -920,7 +938,7 @@ export class Pintswap extends PintP2P {
         },
       };
     } else {
-      const tx = await token.approve(tradeAddress, offer.getsAmount);
+      const tx = await token.approve(tradeAddress, offer.gets.amount);
       this.logger.debug(
         "TAKER BALANCE AFTER APPROVING " +
           ethers.formatEther(
@@ -939,7 +957,7 @@ export class Pintswap extends PintP2P {
     const chainId = Number((await this.signer.provider.getNetwork()).chainId);
     const payCoinbase = Boolean(
       false &&
-        [offer.givesToken, offer.getsToken].find(
+        [offer.gives.token, offer.gets.token].find(
           (v) => ethers.ZeroAddress === v
         )
     );
@@ -1029,7 +1047,7 @@ export class Pintswap extends PintP2P {
     return this.createBatchTrade(peer, [
       {
         offer,
-        amount: offer.getsAmount,
+        amount: offer.gets.amount,
       },
     ]);
   }

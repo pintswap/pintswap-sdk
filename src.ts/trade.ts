@@ -5,7 +5,6 @@ import BN from "bn.js";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
 import { PERMIT2_ADDRESS } from "@uniswap/permit2-sdk";
 import Permit2ABI from "./permit2.json";
-const ln = (v) => ((console.log(require('util').inspect(v, { colors: true, depth: 15 }))), v);
 const {
   solidityPackedKeccak256,
   toBeArray,
@@ -32,19 +31,36 @@ export function keyshareToAddress(keyshareJsonObject) {
 
 export const isERC20Transfer = (o) => !o.tokenId;
 
-export const isERC721Transfer = (o) => Boolean(o.tokenId && o.token && o.amount === undefined);
+export const isERC721Transfer = (o) =>
+  Boolean(o.tokenId && o.token && o.amount === undefined);
 
-export const isERC1155Transfer = (o) => Boolean(o.tokenId && o.token && o.amount !== undefined)
+export const isERC1155Transfer = (o) =>
+  Boolean(o.tokenId && o.token && o.amount !== undefined);
 
 export const hashTransfer = (o) => {
-  if (isERC20Transfer(o)) return solidityPackedKeccak256(['string', 'address', 'uint256'], ['/pintswap/erc20', o.token, o.amount]);
-  if (isERC721Transfer(o)) return solidityPackedKecack256(['string', 'address', 'uint256'], ['/pintswap/erc721', o.token, o.tokenId]);
-  if (isERC1155Transfer(o)) return solidityPackedKeccak256(['string', 'address', 'uint256', 'uint256'], ['/pintswap/erc1155', o.token, o.tokenId, o.amount ]);
-  throw Error('no matching token structure');
+  if (isERC20Transfer(o))
+    return solidityPackedKeccak256(
+      ["string", "address", "uint256"],
+      ["/pintswap/erc20", o.token, o.amount]
+    );
+  if (isERC721Transfer(o))
+    return solidityPackedKeccak256(
+      ["string", "address", "uint256"],
+      ["/pintswap/erc721", o.token, o.tokenId]
+    );
+  if (isERC1155Transfer(o))
+    return solidityPackedKeccak256(
+      ["string", "address", "uint256", "uint256"],
+      ["/pintswap/erc1155", o.token, o.tokenId, o.amount]
+    );
+  throw Error("no matching token structure");
 };
 
 export const hashOffer = (o) => {
-  return solidityPackedKeccak256(['bytes32', 'bytes32'], [ hashTransfer(o.gives), hashTransfer(o.gets) ]);
+  return solidityPackedKeccak256(
+    ["bytes32", "bytes32"],
+    [hashTransfer(o.gives), hashTransfer(o.gets)]
+  );
 };
 
 export function leftZeroPad(s, n) {
@@ -137,12 +153,18 @@ export const wrapEth = async (signer: Signer, amount: BigNumberish) => {
 };
 
 export const addHexPrefix = (s) => (s.substr(0, 2) === "0x" ? s : "0x" + s);
-export const stripHexPrefix = (s) => (s.substr(0, 2) === "0x" ? s.substr(2) : s);
+export const stripHexPrefix = (s) =>
+  s.substr(0, 2) === "0x" ? s.substr(2) : s;
 
 export const tokenInterface = new ethers.Interface([
   "function transferFrom(address, address, uint256) returns (bool)",
+  "function safeTransferFrom(address, address, uint256)",
   "function permit(address, address, uint256, uint256, uint8, bytes32, bytes32)",
   "function withdraw(uint256)",
+]);
+
+export const erc1155Interface = new ethers.Interface([
+  "function safeTransferFrom(address, address, uint256, uint256)",
 ]);
 
 export const numberToHex = (v) => hexlify(toBeArray(getUint(v)));
@@ -196,12 +218,14 @@ export const createContract = (
     const stripped = calldataSubstituted.map((v) =>
       typeof v === "string" ? stripHexPrefix(v) : v
     );
-    const inputLength = ((v) => v === '0x' ? '0x0' : v)(numberToHex(
-      stripped.reduce(
-        (r, v) => r + (typeof v === "string" ? v.length / 2 : 0x20),
-        0
+    const inputLength = ((v) => (v === "0x" ? "0x0" : v))(
+      numberToHex(
+        stripped.reduce(
+          (r, v) => r + (typeof v === "string" ? v.length / 2 : 0x20),
+          0
+        )
       )
-    ));
+    );
     const first = stripped[0];
     const initial = [];
     let offset = "0x0";
@@ -241,7 +265,7 @@ export const createContract = (
       value || zero(),
       getAddress(address),
       "gas",
-      calldata === '0x' ? [] : mstoreInstructions,
+      calldata === "0x" ? [] : mstoreInstructions,
       "call" /*
       "returndatasize",
       "0x0",
@@ -256,100 +280,124 @@ export const createContract = (
     return instructions;
   };
   permitData = permitData || {};
-  const transferFrom = (token, from, to, amount, permitData) => {
-    if (permitData && permitData.signatureTransfer) {
-      if (token === ethers.ZeroAddress) {
+  const transferFrom = (transfer, from, to, permitData) => {
+    if (isERC20Transfer(transfer)) {
+      if (permitData && permitData.signatureTransfer) {
+        if (transfer.token === ethers.ZeroAddress) {
+          return [
+            call(
+              PERMIT2_ADDRESS,
+              permit2Interface.encodeFunctionData("permitTransferFrom", [
+                {
+                  permitted: {
+                    token: toWETH(chainId),
+                    amount: transfer.amount,
+                  },
+                  nonce: permitData.signatureTransfer.nonce,
+                  deadline: permitData.signatureTransfer.deadline,
+                },
+                {
+                  to: "0x" + "1".repeat(40),
+                  requestedAmount: transfer.amount,
+                },
+                from,
+                permitData.signature,
+              ])
+            ),
+            call(
+              toWETH(chainId),
+              tokenInterface.encodeFunctionData("withdraw", [transfer.amount])
+            ),
+            payCoinbaseAmount
+              ? [
+                  call(
+                    to,
+                    "0x",
+                    numberToHex(
+                      ethers.getUint(transfer.amount) - ethers.getUint(payCoinbaseAmount)
+                    )
+                  ),
+                  [
+                    "0x0",
+                    "0x0",
+                    "0x0",
+                    "0x0",
+                    payCoinbaseAmount,
+                    "coinbase",
+                    "gas",
+                    "call",
+                    "and",
+                  ],
+                ]
+              : call(to, "0x", transfer.amount),
+          ];
+        }
+        return call(
+          PERMIT2_ADDRESS,
+          permit2Interface.encodeFunctionData("permitTransferFrom", [
+            {
+              permitted: {
+                token: transfer.token,
+                amount: transfer.amount,
+              },
+              nonce: permitData.signatureTransfer.nonce,
+              deadline: permitData.signatureTransfer.deadline,
+            },
+            {
+              to,
+              requestedAmount: transfer.amount,
+            },
+            from,
+            permitData.signature,
+          ])
+        );
+      }
+      if (transfer.token === ethers.ZeroAddress) {
         return [
           call(
-            PERMIT2_ADDRESS,
-            permit2Interface.encodeFunctionData("permitTransferFrom", [
-              {
-                permitted: {
-                  token: toWETH(chainId),
-                  amount,
-                },
-                nonce: permitData.signatureTransfer.nonce,
-                deadline: permitData.signatureTransfer.deadline,
-              },
-              {
-                to: "0x" + "1".repeat(40),
-                requestedAmount: amount,
-              },
+            toWETH(chainId),
+            tokenInterface.encodeFunctionData("transferFrom", [
               from,
-              permitData.signature,
+              "0x" + "1".repeat(40),
+              transfer.amount,
             ])
           ),
-	  call(
-            toWETH(chainId),
-	    tokenInterface.encodeFunctionData('withdraw', [ amount ])
-	  ),
-          payCoinbaseAmount
-            ? [
-                call(
-                  to,
-                  "0x",
-                  numberToHex(ethers.getUint(amount) - ethers.getUint(payCoinbaseAmount))
-                ), [
-                  "0x0",
-                  "0x0",
-                  "0x0",
-                  "0x0",
-                  payCoinbaseAmount,
-                  "coinbase",
-                  "gas",
-		  "call",
-		  "and"
-                ],
-              ]
-            : call(to, "0x", amount),
+          call(to, "0x", transfer.amount),
         ];
       }
       return call(
-        PERMIT2_ADDRESS,
-        permit2Interface.encodeFunctionData("permitTransferFrom", [
-          {
-            permitted: {
-              token,
-              amount,
-            },
-            nonce: permitData.signatureTransfer.nonce,
-            deadline: permitData.signatureTransfer.deadline,
-          },
-          {
-            to,
-            requestedAmount: amount,
-          },
+        transfer.token,
+        tokenInterface.encodeFunctionData("transferFrom", [from, to, transfer.amount])
+      );
+    } else if (isERC721Transfer(transfer)) {
+      return call(
+        transfer.token,
+        tokenInterface.encodeFunctionData("safeTransferFrom", [
           from,
-          permitData.signature,
+          to,
+          transfer.tokenId,
+        ])
+      );
+    } else if (isERC1155Transfer(transfer)) {
+      return call(
+        transfer.token,
+        erc1155Interface.encodeFunctionData("safeTransferFrom", [
+          from,
+          to,
+          transfer.tokenId,
+          transfer.amount,
         ])
       );
     }
-    if (token === ethers.ZeroAddress) {
-      return [
-        call(
-          toWETH(chainId),
-          tokenInterface.encodeFunctionData("transferFrom", [
-            from,
-            "0x" + "1".repeat(40),
-            amount,
-          ])
-        ),
-        call(to, "0x", amount),
-      ];
-    }
-    return call(
-      token,
-      tokenInterface.encodeFunctionData("transferFrom", [from, to, amount])
-    );
   };
-  return emasm(ln([
+  return emasm([
     permitData.maker && permitData.v
       ? call(
-          offer.givesToken,
+          offer.gives.token,
           tokenInterface.encodeFunctionData("permit", [
             maker,
             "0x" + "1".repeat(40),
-            offer.givesAmount,
+            offer.gives.amount,
             numberToHex(permitData.maker.expiry),
             numberToHex(permitData.maker.v),
             permitData.maker.r,
@@ -359,11 +407,11 @@ export const createContract = (
       : [],
     permitData.taker && permitData.taker.v
       ? call(
-          offer.getsToken,
+          offer.gets.token,
           tokenInterface.encodeFunctionData("permit", [
             taker,
             "0x" + "1".repeat(40),
-            offer.getsAmount,
+            offer.gets.amount,
             numberToHex(permitData.taker.expiry),
             numberToHex(permitData.taker.v),
             permitData.taker.r,
@@ -371,25 +419,13 @@ export const createContract = (
           ])
         )
       : [],
-    transferFrom(
-      offer.getsToken,
-      taker,
-      maker,
-      offer.getsAmount,
-      permitData && permitData.taker
-    ),
-    transferFrom(
-      offer.givesToken,
-      maker,
-      taker,
-      offer.givesAmount,
-      permitData && permitData.maker
-    ),
+    transferFrom(offer.gets, taker, maker, permitData && permitData.taker),
+    transferFrom(offer.gives, maker, taker, permitData && permitData.maker),
     "iszero",
     "failure",
     "jumpi",
     getAddress(maker),
     "selfdestruct",
     ["failure", ["0x0", "0x0", "revert"]],
-  ]));
+  ]);
 };

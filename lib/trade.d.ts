@@ -3,6 +3,10 @@ import { BigNumberish, ethers, Signer } from "ethers";
 export declare const permit2Interface: ethers.Interface;
 export declare function toBigInt(v: any): any;
 export declare function keyshareToAddress(keyshareJsonObject: any): string;
+export declare const isERC20Transfer: (o: any) => boolean;
+export declare const isERC721Transfer: (o: any) => boolean;
+export declare const isERC1155Transfer: (o: any) => boolean;
+export declare const hashTransfer: (o: any) => string;
 export declare const hashOffer: (o: any) => string;
 export declare function leftZeroPad(s: any, n: any): string;
 export declare const genericAbi: string[];
@@ -35,6 +39,7 @@ export declare const wrapEth: (signer: Signer, amount: BigNumberish) => Promise<
 export declare const addHexPrefix: (s: any) => any;
 export declare const stripHexPrefix: (s: any) => any;
 export declare const tokenInterface: ethers.Interface;
+export declare const erc1155Interface: ethers.Interface;
 export declare const numberToHex: (v: any) => string;
 export declare const replaceForAddressOpcode: (calldata: any) => any;
 export declare const createContract: (offer: IOffer, maker: string, taker: string, chainId: string | number, permitData: any, payCoinbaseAmount: string | null) => any;

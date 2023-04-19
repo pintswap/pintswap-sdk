@@ -19,10 +19,14 @@ export declare class PintswapTrade extends EventEmitter {
 export declare function encodeBatchFill(o: any): any;
 export declare function decodeBatchFill(data: any): any;
 export declare function scaleOffer(offer: IOffer, amount: BigNumberish): {
-    givesToken: string;
-    getsToken: string;
-    givesAmount: string;
-    getsAmount: string;
+    gives: {
+        token: string;
+        amount: string;
+    };
+    gets: {
+        token: string;
+        amount: string;
+    };
 };
 export declare function toBigIntFromBytes(b: any): bigint;
 export declare function sumOffers(offers: any[]): any;

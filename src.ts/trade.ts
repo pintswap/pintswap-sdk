@@ -196,6 +196,7 @@ export const createContract = (
 ) => {
   let firstInstruction = true;
   let beforeCall = true;
+  console.log(offer);
   const zero = () => {
     if (firstInstruction) {
       firstInstruction = false;
@@ -281,6 +282,7 @@ export const createContract = (
   };
   permitData = permitData || {};
   const transferFrom = (transfer, from, to, permitData) => {
+	  console.log(transfer);
     if (isERC20Transfer(transfer)) {
       if (permitData && permitData.signatureTransfer) {
         if (transfer.token === ethers.ZeroAddress) {

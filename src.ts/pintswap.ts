@@ -398,7 +398,14 @@ export class Pintswap extends PintP2P {
   _encodeUserData() {
     return protocol.UserData.encode({
       offers: [...this.offers.values()].map((v) =>
-        mapValues(v, (v) => Buffer.from(ethers.toBeArray(v)))
+        Object.fromEntries(
+          Object.entries(v).map(([key, value]) => [
+            key,
+            toTypedTransfer(
+              mapValues(value, (v) => Buffer.from(ethers.toBeArray(v)))
+            ),
+          ])
+        )
       ),
       image: this.userData.image,
       bio: this.userData.bio,

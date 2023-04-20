@@ -59,7 +59,6 @@ export const protobufOffersToHex = (offers) =>
     return mapValues(v, (v) => {
       const transfer = v[v.data];
       const o: any = {};
-      console.log(transfer);
       if (['erc20', 'erc1155'].includes(v.data))
         o.amount = ethers.hexlify(ethers.decodeBase64(transfer.amount));
       if (['erc721', 'erc1155'].includes(v.data))
@@ -528,7 +527,6 @@ export class Pintswap extends PintP2P {
               offer,
               sharedAddress as string
             );
-            console.log("tx", tx);
             if (tx.permitData) {
               const encoded = permit.encode(tx.permitData);
               messages.push(encoded);
@@ -999,7 +997,6 @@ export class Pintswap extends PintP2P {
       payCoinbase ? "0x01" : null
     );
     const gasPrice = toBigInt(await getGasPrice(this.signer.provider));
-    console.log(contract);
 
     const gasLimit = await (async () => {
       do {
@@ -1141,7 +1138,6 @@ export class Pintswap extends PintP2P {
           self.emit("pintswap/trade/taker", 2); // taker approved token swap
           trade.emit("progress", 2);
           self.logger.debug("PUSHING PERMITDATA");
-          console.log(approveTx);
           if (approveTx.permitData)
             messages.push(permit.encode(approveTx.permitData));
           else messages.push(Buffer.from([]));
@@ -1245,7 +1241,6 @@ export class Pintswap extends PintP2P {
             ethers.getUint(tx.maxPriorityFeePerGas) === BigInt(0)
           ) {
             txHash = await sendFlashbotsTransaction(tx.serialized);
-            console.log(txHash);
           } else {
             txHash = (
               typeof self.signer.provider.sendTransaction == "function"

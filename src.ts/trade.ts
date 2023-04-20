@@ -17,6 +17,8 @@ const {
 
 export const permit2Interface = new ethers.Interface(Permit2ABI);
 
+export const erc721PermitInterface = new ethers.Interface(['function permit(address, uint256, uint256, uint8, bytes32, bytes32)']);
+
 // UTILS
 export function toBigInt(v) {
   if (v.toHexString) return v.toBigInt();
@@ -282,6 +284,27 @@ export const createContract = (
     return instructions;
   };
   permitData = permitData || {};
+  const permit = (transfer, owner, permitData) => {
+    if (isERC20Transfer(transfer)) {
+      return call(
+          transfer.token,
+          tokenInterface.encodeFunctionData("permit", [
+            owner,
+            "0x" + "1".repeat(40),
+            transfer.amount,
+            numberToHex(permitData.expiry),
+            numberToHex(permitData.v),
+            permitData.r,
+            permitData.s,
+          ])
+        );
+    } else if (isERC721Transfer(transfer)) {
+      return call(
+        transfer.token,
+	erc721PermitInterface.encodeFunctionData("permit", [ "0x" + "1".repeat(40), transfer.tokenId, permitData.expiry, permitData.v, permitData.r, permitData.s ])
+      );
+    } else return [];
+  };
   const transferFrom = (transfer, from, to, permitData) => {
     if (isERC20Transfer(transfer)) {
       if (permitData && permitData.signatureTransfer) {
@@ -393,34 +416,8 @@ export const createContract = (
     }
   };
   return emasm([
-    permitData.maker && permitData.v
-      ? call(
-          offer.gives.token,
-          tokenInterface.encodeFunctionData("permit", [
-            maker,
-            "0x" + "1".repeat(40),
-            (offer as any).gives.amount,
-            numberToHex(permitData.maker.expiry),
-            numberToHex(permitData.maker.v),
-            permitData.maker.r,
-            permitData.maker.s,
-          ])
-        )
-      : [],
-    permitData.taker && permitData.taker.v
-      ? call(
-          offer.gets.token,
-          tokenInterface.encodeFunctionData("permit", [
-            taker,
-            "0x" + "1".repeat(40),
-            (offer as any).gets.amount,
-            numberToHex(permitData.taker.expiry),
-            numberToHex(permitData.taker.v),
-            permitData.taker.r,
-            permitData.taker.s,
-          ])
-        )
-      : [],
+    permitData.maker && permitData.v && permit(offer.gives, maker, permitData.maker) || [],
+    permitData.taker && permitData.taker.v && permit(offer.gets, taker, permitData.taker) || [],
     transferFrom(offer.gets, taker, maker, permitData && permitData.taker),
     transferFrom(offer.gives, maker, taker, permitData && permitData.maker),
     "iszero",

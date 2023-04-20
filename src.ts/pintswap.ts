@@ -29,7 +29,9 @@ import { IOffer, ITransfer } from "./types";
 import PeerId from "peer-id";
 import { createLogger } from "./logger";
 import * as permit from "./permit";
+import * as erc721Permit from "./erc721-permit";
 import { detectPermit } from "./detect-permit";
+import { detectERC721Permit } from "./detect-erc721-permit";
 import fetch from "cross-fetch";
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
@@ -56,11 +58,13 @@ export const protobufOffersToHex = (offers) =>
     return mapValues(v, (v) => {
       const transfer = v[v.data];
       const o: any = {};
-      if (['erc20', 'erc1155'].includes(v.data))
+      if (["erc20", "erc1155"].includes(v.data))
         o.amount = ethers.hexlify(ethers.decodeBase64(transfer.amount));
-      if (['erc721', 'erc1155'].includes(v.data))
+      if (["erc721", "erc1155"].includes(v.data))
         o.tokenId = ethers.hexlify(ethers.decodeBase64(transfer.tokenId));
-      o.token = ethers.getAddress(ethers.zeroPadValue(ethers.decodeBase64(transfer.token), 20));
+      o.token = ethers.getAddress(
+        ethers.zeroPadValue(ethers.decodeBase64(transfer.token), 20)
+      );
       return o;
     });
   });
@@ -184,22 +188,28 @@ export function sumOffers(offers: any[]) {
     (r, v) => ({
       gets: {
         token: v.gets.token,
-        amount: v.gets.amount && ethers.toBeHex(
-          toBigIntFromBytes(v.gets.amount) + toBigIntFromBytes(r.gets.amount || '0x0')
-        ),
-	tokenId: v.gets.tokenId
+        amount:
+          v.gets.amount &&
+          ethers.toBeHex(
+            toBigIntFromBytes(v.gets.amount) +
+              toBigIntFromBytes(r.gets.amount || "0x0")
+          ),
+        tokenId: v.gets.tokenId,
       },
       gives: {
         token: v.gives.token,
-        amount: v.gives.amount && ethers.toBeHex(
-          toBigIntFromBytes(v.gives.amount) + toBigIntFromBytes(r.gives.amount || '0x0')
-        ),
-	tokenId: v.gives.tokenId
+        amount:
+          v.gives.amount &&
+          ethers.toBeHex(
+            toBigIntFromBytes(v.gives.amount) +
+              toBigIntFromBytes(r.gives.amount || "0x0")
+          ),
+        tokenId: v.gives.tokenId,
       },
     }),
     {
       gets: {},
-      gives: {}
+      gives: {},
     }
   );
 }
@@ -750,12 +760,45 @@ export class Pintswap extends PintP2P {
   async approveTrade(transfer: ITransfer, sharedAddress: string) {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
     if (isERC721Transfer(transfer) || isERC1155Transfer(transfer)) {
-      const token = new Contract(transfer.token, ['function setApprovalForAll(address, bool)', 'function isApprovedForAll(address, address) view returns (bool)'], this.signer);
-      if (!await token.isApprovedForAll(await this.signer.getAddress(), tradeAddress)) {
+      if (await detectERC721Permit(transfer.token, this.signer)) {
+        const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
+        const permitData = await erc721Permit.signAndMergeERC721(
+          {
+            asset: transfer.token,
+            tokenId: transfer.tokenId,
+            spender: tradeAddress,
+            owner: await this.signer.getAddress(),
+            expiry,
+          },
+          this.signer
+        );
+        return {
+          permitData,
+          async wait() {
+            return {};
+          },
+        };
+      }
+      const token = new Contract(
+        transfer.token,
+        [
+          "function setApprovalForAll(address, bool)",
+          "function isApprovedForAll(address, address) view returns (bool)",
+        ],
+        this.signer
+      );
+      if (
+        !(await token.isApprovedForAll(
+          await this.signer.getAddress(),
+          tradeAddress
+        ))
+      ) {
         return await token.setApprovalForAll(tradeAddress, true);
       }
       return {
-        async wait() { return {}; }
+        async wait() {
+          return {};
+        },
       };
     }
     const token = new Contract(

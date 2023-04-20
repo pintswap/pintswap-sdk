@@ -750,8 +750,8 @@ export class Pintswap extends PintP2P {
   async approveTrade(transfer: ITransfer, sharedAddress: string) {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
     if (isERC721Transfer(transfer) || isERC1155Transfer(transfer)) {
-      const token = new Contract(transfer.token, ['function setApprovalForAll(address, bool)', 'function isApprovedForAll(address) view returns (bool)'], this.signer);
-      if (!await token.isApprovedForAll(tradeAddress)) {
+      const token = new Contract(transfer.token, ['function setApprovalForAll(address, bool)', 'function isApprovedForAll(address, address) view returns (bool)'], this.signer);
+      if (!await token.isApprovedForAll(await this.signer.getAddress(), tradeAddress)) {
         return await token.setApprovalForAll(tradeAddress, true);
       }
       return {
@@ -1020,8 +1020,6 @@ export class Pintswap extends PintP2P {
             )
           );
           const offer = sumOffers(batchFill.map((v) => v.offer));
-	  console.log(offer);
-	  process.exit(0);
           messages.push(message1); // message 1
           const { value: keygenMessage2BufList } = await source.next(); // message 2
           const keygenMessage2 = keygenMessage2BufList.slice();

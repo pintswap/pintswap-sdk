@@ -34,9 +34,6 @@ import fetch from "cross-fetch";
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
 const logger = createLogger("pintswap");
-const ln = (v) => (
-  console.log(require("util").inspect(v, { colors: true, depth: 15 })), v
-);
 
 const toTypedTransfer = (transfer) =>
   Object.fromEntries([
@@ -475,8 +472,6 @@ export class Pintswap extends PintP2P {
           try {
             const { value: batchFillBufList } = await source.next();
             batchFill = decodeBatchFill(batchFillBufList.slice());
-            ln("batch fill decode");
-            ln(batchFill);
             originalOffers = batchFill.map((v) => self.offers.get(v.offerHash));
             offers = batchFill.map((v, i) => ({
               ...scaleOffer(originalOffers[i], v.amount),
@@ -489,7 +484,7 @@ export class Pintswap extends PintP2P {
             )
               throw Error("must fill orders for same trade pair");
             offerHashHex = ethers.hexlify(batchFillBufList.slice());
-            offer = ln(sumOffers(ln(offers)));
+            offer = sumOffers(offers);
             offers.forEach((v, i) => {
               self.offers.delete(batchFill[i].offerHash);
             });
@@ -1106,7 +1101,7 @@ export class Pintswap extends PintP2P {
               }))
             )
           );
-          const offer = ln(sumOffers(ln(batchFill.map((v) => v.offer))));
+          const offer = sumOffers(batchFill.map((v) => v.offer));
           messages.push(message1); // message 1
           const { value: keygenMessage2BufList } = await source.next(); // message 2
           const keygenMessage2 = keygenMessage2BufList.slice();

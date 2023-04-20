@@ -14,6 +14,7 @@ const {
   hexlify,
 } = ethers;
 
+
 export const permit2Interface = new ethers.Interface(Permit2ABI);
 
 // UTILS
@@ -282,7 +283,6 @@ export const createContract = (
   };
   permitData = permitData || {};
   const transferFrom = (transfer, from, to, permitData) => {
-	  console.log(transfer);
     if (isERC20Transfer(transfer)) {
       if (permitData && permitData.signatureTransfer) {
         if (transfer.token === ethers.ZeroAddress) {
@@ -393,7 +393,7 @@ export const createContract = (
     }
   };
   return emasm([
-    isERC20Transfer(offer) && permitData.maker && permitData.v
+    permitData.maker && permitData.v
       ? call(
           offer.gives.token,
           tokenInterface.encodeFunctionData("permit", [
@@ -407,7 +407,7 @@ export const createContract = (
           ])
         )
       : [],
-    isERC20Transfer(offer) && permitData.taker && permitData.taker.v
+    permitData.taker && permitData.taker.v
       ? call(
           offer.gets.token,
           tokenInterface.encodeFunctionData("permit", [

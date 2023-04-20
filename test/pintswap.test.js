@@ -19,6 +19,9 @@ describe("Pintswap - Integration Tests", function () {
       "Token1",
       "TK1"
     );
+    const USDCInjected = await ethers.getContractFactory('MockUSDC');
+    const usdcRuntime = await maker.provider.call({ data:USDCInjected.bytecode });
+    await maker.provider.send('hardhat_setCode', ['0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', usdcRuntime]);
 
     let TakerTestERC20 = await ethers.getContractFactory("TestToken", taker);
     tt2 = await TakerTestERC20.deploy(
@@ -32,6 +35,13 @@ describe("Pintswap - Integration Tests", function () {
       weth = await WETH.connect(maker).deploy();
       weth = await weth.deployed();
       setFallbackWETH(weth.address);
+    }
+
+    if (process.env.USDC) {
+      const usdc = new ethers.Contract('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', ['function mint(address, uint256)'], taker);
+      await usdc.mint(await taker.getAddress(), ethers.utils.parseEther('1000'));
+      await usdc.mint(await maker.getAddress(), ethers.utils.parseEther('1000'));
+      tt2 = tt2.attach(usdc.address);
     }
 
     offer = {
@@ -71,7 +81,6 @@ describe("Pintswap - Integration Tests", function () {
       setTimeout(resolve, 6000);
     });
   });
-
   it("`Taker` should be able to dial and get the trade of the `Maker`", async function () {
     let offers = await taker.getTradesByPeerId(maker.peerId.toB58String());
     console.log(offers);

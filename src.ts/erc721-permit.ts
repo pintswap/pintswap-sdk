@@ -60,7 +60,7 @@ export async function fetchData(o, provider) {
   const contract = new Contract(
     o.asset,
     [
-      "function nonces(address) view returns (uint256)",
+      "function nonces(uint256) view returns (uint256)",
       "function name() view returns (string)",
       "function version() view returns (string)",
       "function VERSION() view returns (string)",
@@ -70,7 +70,7 @@ export async function fetchData(o, provider) {
 
   return {
     ...o,
-    nonce: await contract.nonces(o.owner),
+    nonce: await contract.nonces(o.tokenId),
     name: await contract.name(),
     version: await getVersion(contract),
   };

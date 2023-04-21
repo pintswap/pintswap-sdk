@@ -599,7 +599,7 @@ export class Pintswap extends PintP2P {
             ) {
               throw Error("transaction.gasPrice is unrealistically high");
             }
-	   */
+     */
             self.logger.debug("comparing contract");
 
             let contractPermitData = {} as any;

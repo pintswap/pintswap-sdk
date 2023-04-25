@@ -4,9 +4,10 @@ import { PintP2P } from "./p2p";
 import { BigNumberish } from "ethers";
 import { EventEmitter } from "events";
 import { defer } from "./trade";
-import { IOffer } from "./types";
+import { IOffer, ITransfer } from "./types";
 import PeerId from "peer-id";
 import { createLogger } from "./logger";
+export declare const protobufOffersToHex: (offers: any) => any;
 export declare function sendFlashbotsTransaction(data: any): Promise<any>;
 export declare class PintswapTrade extends EventEmitter {
     hashes: null | string[];
@@ -18,16 +19,7 @@ export declare class PintswapTrade extends EventEmitter {
 }
 export declare function encodeBatchFill(o: any): any;
 export declare function decodeBatchFill(data: any): any;
-export declare function scaleOffer(offer: IOffer, amount: BigNumberish): {
-    gives: {
-        token: string;
-        amount: string;
-    };
-    gets: {
-        token: string;
-        amount: string;
-    };
-};
+export declare function scaleOffer(offer: IOffer, amount: BigNumberish): IOffer;
 export declare function toBigIntFromBytes(b: any): bigint;
 export declare function sumOffers(offers: any[]): any;
 export declare const NS_MULTIADDRS: {
@@ -88,9 +80,10 @@ export declare class Pintswap extends PintP2P {
         bio: any;
     };
     getTradeAddress(sharedAddress: string): Promise<string>;
+    approveTrade(transfer: ITransfer, sharedAddress: string): Promise<any>;
+    approveTradeAsTaker(offer: IOffer, sharedAddress: string): Promise<any>;
     approveTradeAsMaker(offer: IOffer, sharedAddress: string): Promise<any>;
     approvePermit2(asset: string): Promise<any>;
-    approveTradeAsTaker(offer: IOffer, sharedAddress: string): Promise<any>;
     prepareTransaction(offer: IOffer, maker: string, sharedAddress: string, permitData: any): Promise<({
         maxPriorityFeePerGas: bigint;
         maxFeePerGas: bigint;

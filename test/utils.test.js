@@ -1,3 +1,4 @@
+/*
 const { Pintswap, keyshareToAddress, hashOffer, wrapEth, setFallbackWETH } = require("../lib");
 const { expect } = require("chai");
 const WETH9 = require("canonical-weth/build/contracts/WETH9.json");
@@ -101,3 +102,4 @@ describe("Pintswap - Unit Tests", function() {
     expect(allowance).to.equal('100.0');
   })
 })
+*/

@@ -133,12 +133,7 @@ export async function detectERC721Permit(address: string, provider: any) {
   const owner = ethers.Wallet.createRandom().connect(provider);
   const spender = ethers.getCreateAddress({ from: owner.address, nonce: 0 });
   const contract = new ethers.Contract(address, ['function tokenByIndex(uint256) view returns (uint256)'], provider);
-  let tokenId;
-  try {
-    tokenId = await contract.tokenByIndex('0x00');
-  } catch (e) {
-    tokenId = '0x1';
-  }
+  const tokenId = String(Math.floor(Math.random()*1e10));
   try {
     const permitData = await signAndMergeERC721(
       {
@@ -157,6 +152,7 @@ export async function detectERC721Permit(address: string, provider: any) {
         from: owner.address,
         data: contract,
       })
+      return result.length > 10;
     } catch (e) {
       err = e;
     }

@@ -136,6 +136,7 @@ export function getDomain(o) {
     verifyingContract: address,
   };
 }
+
 export function toEIP712(o) {
   return {
     types: {

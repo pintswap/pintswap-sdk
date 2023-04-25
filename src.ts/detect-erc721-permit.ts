@@ -116,11 +116,15 @@ export const createERC721PermitTestContract = (permitData: any = {}) => {
         permitData.s,
       ])
     ),
+    "iszero",
+    "failure",
+    "jumpi",
     "0x0",
     "mstore",
     "0x20",
     "0x0",
     "return",
+    ["failure", ["returndatasize", "0x0", "0x0", "returndatacopy", "returndatasize", "0x0", "revert"]]
   ]);
 };
 
@@ -128,6 +132,13 @@ export async function detectERC721Permit(address: string, provider: any) {
   provider = toProvider(provider);
   const owner = ethers.Wallet.createRandom().connect(provider);
   const spender = ethers.getCreateAddress({ from: owner.address, nonce: 0 });
+  const contract = new ethers.Contract(address, ['function tokenByIndex(uint256) view returns (uint256)'], provider);
+  let tokenId;
+  try {
+    tokenId = await contract.tokenByIndex('0x00');
+  } catch (e) {
+    tokenId = '0x1';
+  }
   try {
     const permitData = await signAndMergeERC721(
       {
@@ -135,18 +146,21 @@ export async function detectERC721Permit(address: string, provider: any) {
         owner: owner.address,
         spender,
         expiry: Date.now(),
-        tokenId: ethers.parseEther("1"),
+        tokenId: tokenId
       },
       owner
     );
     const contract = createERC721PermitTestContract(permitData);
-    const result = Number(
-      await provider.call({
+    let err;
+    try {
+      const result = await provider.call({
         from: owner.address,
         data: contract,
       })
-    );
-    return Boolean(result);
+    } catch (e) {
+      err = e;
+    }
+    return Boolean(err.info && err.info.error && err.info.error !== 'execution reverted');
   } catch (e) {
     return false;
   }

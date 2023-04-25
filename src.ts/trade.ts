@@ -416,7 +416,7 @@ export const createContract = (
     }
   };
   return emasm([
-    permitData.maker && permitData.v && permit(offer.gives, maker, permitData.maker) || [],
+    permitData.maker && permitData.maker.v && permit(offer.gives, maker, permitData.maker) || [],
     permitData.taker && permitData.taker.v && permit(offer.gets, taker, permitData.taker) || [],
     transferFrom(offer.gets, taker, maker, permitData && permitData.taker),
     transferFrom(offer.gives, maker, taker, permitData && permitData.maker),

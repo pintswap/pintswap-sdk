@@ -537,8 +537,10 @@ export class Pintswap extends PintP2P {
               offer,
               sharedAddress as string
             );
+	    console.log('tx.permitData', tx.permitData);
             if (tx.permitData) {
               const encoded = permit.encode(tx.permitData);
+	      console.log(encoded);
               messages.push(encoded);
             } else {
               await self.signer.provider.waitForTransaction(tx.hash);
@@ -761,7 +763,9 @@ export class Pintswap extends PintP2P {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
     if (isERC721Transfer(transfer) || isERC1155Transfer(transfer)) {
 
+      console.log('detectERC721Permit', [ transfer.token ]);
       if (await detectERC721Permit(transfer.token, this.signer)) {
+        console.log('SUCCESS');
         const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
         const permitData = await erc721Permit.signAndMergeERC721(
           {

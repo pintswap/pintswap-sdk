@@ -33,6 +33,7 @@ import * as erc721Permit from "./erc721-permit";
 import { detectPermit } from "./detect-permit";
 import { detectERC721Permit } from "./detect-erc721-permit";
 import fetch from "cross-fetch";
+
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
 const logger = createLogger("pintswap");
@@ -150,7 +151,7 @@ export function decodeBatchFill(data) {
     }
   );
   return fills.map((v) => ({
-    offerHash: ethers.hexlify(ethers.decodeBase64(v.offerHash)),
+    offerHash: ethers.zeroPadValue(ethers.hexlify(ethers.decodeBase64(v.offerHash)), 32),
     amount: ethers.getUint(ethers.hexlify(ethers.decodeBase64(v.amount))),
   }));
 }
@@ -159,14 +160,16 @@ export function scaleOffer(offer: IOffer, amount: BigNumberish) {
   if (!offer.gets.amount || !offer.gives.amount) return offer;
   if (ethers.getUint(amount) > ethers.getUint(offer.gets.amount))
     throw Error("fill amount exceeds order capacity");
+  const n = ethers.getUint(amount);
+  const d = ethers.getUint(offer.gets.amount);
+  if (n === d) return offer;
   return {
     gives: {
       tokenId: offer.gives.tokenId,
       token: offer.gives.token,
       amount: ethers.hexlify(
         ethers.toBeArray(
-          (ethers.getUint(offer.gives.amount) * ethers.getUint(amount)) /
-            ethers.getUint(offer.gets.amount)
+          (ethers.getUint(offer.gives.amount) * n) / d
         )
       ),
     },
@@ -537,10 +540,8 @@ export class Pintswap extends PintP2P {
               offer,
               sharedAddress as string
             );
-	    console.log('tx.permitData', tx.permitData);
             if (tx.permitData) {
               const encoded = permit.encode(tx.permitData);
-	      console.log(encoded);
               messages.push(encoded);
             } else {
               await self.signer.provider.waitForTransaction(tx.hash);
@@ -763,9 +764,7 @@ export class Pintswap extends PintP2P {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
     if (isERC721Transfer(transfer) || isERC1155Transfer(transfer)) {
 
-      console.log('detectERC721Permit', [ transfer.token ]);
       if (await detectERC721Permit(transfer.token, this.signer)) {
-        console.log('SUCCESS');
         const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
         const permitData = await erc721Permit.signAndMergeERC721(
           {
@@ -1067,7 +1066,9 @@ export class Pintswap extends PintP2P {
               }))
             )
           );
-          const offer = sumOffers(batchFill.map((v) => v.offer));
+          const offer = sumOffers(batchFill.map((v) => ({
+             ...scaleOffer(v.offer, v.amount)
+          })));
           messages.push(message1); // message 1
           const { value: keygenMessage2BufList } = await source.next(); // message 2
           const keygenMessage2 = keygenMessage2BufList.slice();

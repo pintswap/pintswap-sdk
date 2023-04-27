@@ -43,7 +43,6 @@ const returnOp = (v) => v;
 
 globalObject.Buffer = globalObject.Buffer || Buffer;
 
-const ln = (v) => ((console.log(v)), v);
 
 const mapToBuffers = (o) => mapValues(o, (v) => (base64url as any)(v.toByteArray && Buffer.from(v.toByteArray()) || hexlify(Buffer.from([v]))));
 

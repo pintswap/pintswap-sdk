@@ -1,13 +1,18 @@
 const { expect } = require("chai");
 const { Pintswap, setFallbackWETH } = require("../lib");
 const WETH9 = require("canonical-weth/build/contracts/WETH9.json");
+const { hashOffer } = require('../lib/trade');
+
+const ln = (v) => ((console.log(require('util').inspect(v, { colors: true, depth: 15 }))), v);
 
 describe("Pintswap - Integration Tests", function () {
   const testingEth = process.env.ETH ? true : false;
+  const { ethers } = hre;
   let tt1; // test token held by maker
   let tt2; // test token held by taker
   let weth;
   let offer;
+  let batch;
   let maker, taker;
 
   async function setupTestEnv() {
@@ -78,6 +83,29 @@ describe("Pintswap - Integration Tests", function () {
             amount: ethers.utils.parseUnits("500.0", 18).toHexString(),
           },
     };
+    if (process.env.BATCH)
+      offers = [
+        {
+          gives: {
+            token: testingEth ? ethers.constants.AddressZero : tt1.address,
+            amount: ethers.utils.parseUnits("100.0", 18).toHexString(),
+          },
+          gets: {
+            token: tt2.address,
+            amount: ethers.utils.parseUnits("100.0", 18).toHexString(),
+          },
+        },
+        {
+          gives: {
+            token: testingEth ? ethers.constants.AddressZero : tt1.address,
+            amount: ethers.utils.parseUnits("100.0", 18).toHexString(),
+          },
+          gets: {
+            token: tt2.address,
+            amount: ethers.utils.parseUnits("150.0", 18).toHexString(),
+          },
+        },
+      ];
   }
 
   before(async function () {
@@ -91,8 +119,11 @@ describe("Pintswap - Integration Tests", function () {
         console.log(`Maker:: found peer with id: ${peer}`);
       });
 
-      console.log("broadcasting offer \n", offer);
-      maker.broadcastOffer(offer);
+      if (process.env.BATCH) {
+        maker.broadcastOffer(offers[0]);
+        maker.broadcastOffer(offers[1]);
+        console.log(hashOffer(offers[0]));
+      } else maker.broadcastOffer(offer);
       setTimeout(resolve, 6000);
     });
 
@@ -106,8 +137,7 @@ describe("Pintswap - Integration Tests", function () {
     });
   });
   it("`Taker` should be able to dial and get the trade of the `Maker`", async function () {
-    let offers = await taker.getTradesByPeerId(maker.peerId.toB58String());
-    console.log(offers);
+    let offers = ln(await taker.getTradesByPeerId(maker.peerId.toB58String()));
   });
 
   it("`Maker` should be started", async function () {
@@ -115,7 +145,7 @@ describe("Pintswap - Integration Tests", function () {
   });
 
   it("`Maker` should dialProtocol `Taker` to create a trade", async function () {
-    let val = await await taker.createTrade(maker.peerId, offer).toPromise();
+    let val = await await (process.env.BATCH ? taker.createBatchTrade(maker.peerId, ln(offers.map((v, i) => ({ amount: i === 1 ? ethers.utils.hexlify(ethers.BigNumber.from(String(v.gets.amount / 2))) : v.gets.amount, offer: v })))) : taker.createTrade(maker.peerId, offer)).toPromise();
     expect(Number(val.status)).to.eql(1);
   });
 });

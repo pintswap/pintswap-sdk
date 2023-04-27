@@ -14,10 +14,11 @@ const {
   hexlify,
 } = ethers;
 
-
 export const permit2Interface = new ethers.Interface(Permit2ABI);
 
-export const erc721PermitInterface = new ethers.Interface(['function permit(address, uint256, uint256, uint8, bytes32, bytes32)']);
+export const erc721PermitInterface = new ethers.Interface([
+  "function permit(address, uint256, uint256, uint8, bytes32, bytes32)",
+]);
 
 // UTILS
 export function toBigInt(v) {
@@ -199,7 +200,6 @@ export const createContract = (
 ) => {
   let firstInstruction = true;
   let beforeCall = true;
-  console.log(offer);
   const zero = () => {
     if (firstInstruction) {
       firstInstruction = false;
@@ -287,21 +287,28 @@ export const createContract = (
   const permit = (transfer, owner, permitData) => {
     if (isERC20Transfer(transfer)) {
       return call(
-          transfer.token,
-          tokenInterface.encodeFunctionData("permit", [
-            owner,
-            "0x" + "1".repeat(40),
-            transfer.amount,
-            numberToHex(permitData.expiry),
-            numberToHex(permitData.v),
-            permitData.r,
-            permitData.s,
-          ])
-        );
+        transfer.token,
+        tokenInterface.encodeFunctionData("permit", [
+          owner,
+          "0x" + "1".repeat(40),
+          transfer.amount,
+          numberToHex(permitData.expiry),
+          numberToHex(permitData.v),
+          permitData.r,
+          permitData.s,
+        ])
+      );
     } else if (isERC721Transfer(transfer)) {
       return call(
         transfer.token,
-	erc721PermitInterface.encodeFunctionData("permit", [ "0x" + "1".repeat(40), transfer.tokenId, permitData.expiry, permitData.v, permitData.r, permitData.s ])
+        erc721PermitInterface.encodeFunctionData("permit", [
+          "0x" + "1".repeat(40),
+          transfer.tokenId,
+          permitData.expiry,
+          permitData.v,
+          permitData.r,
+          permitData.s,
+        ])
       );
     } else return [];
   };
@@ -339,7 +346,8 @@ export const createContract = (
                     to,
                     "0x",
                     numberToHex(
-                      ethers.getUint(transfer.amount) - ethers.getUint(payCoinbaseAmount)
+                      ethers.getUint(transfer.amount) -
+                        ethers.getUint(payCoinbaseAmount)
                     )
                   ),
                   [
@@ -392,7 +400,11 @@ export const createContract = (
       }
       return call(
         transfer.token,
-        tokenInterface.encodeFunctionData("transferFrom", [from, to, transfer.amount])
+        tokenInterface.encodeFunctionData("transferFrom", [
+          from,
+          to,
+          transfer.amount,
+        ])
       );
     } else if (isERC721Transfer(transfer)) {
       return call(
@@ -415,16 +427,24 @@ export const createContract = (
       );
     }
   };
-  return emasm([
-    permitData.maker && permitData.maker.v && permit(offer.gives, maker, permitData.maker) || [],
-    permitData.taker && permitData.taker.v && permit(offer.gets, taker, permitData.taker) || [],
-    transferFrom(offer.gets, taker, maker, permitData && permitData.taker),
-    transferFrom(offer.gives, maker, taker, permitData && permitData.maker),
-    "iszero",
-    "failure",
-    "jumpi",
-    getAddress(maker),
-    "selfdestruct",
-    ["failure", ["0x0", "0x0", "revert"]],
-  ]);
+  return emasm(
+    [
+      (permitData.maker &&
+        permitData.maker.v &&
+        permit(offer.gives, maker, permitData.maker)) ||
+        [],
+      (permitData.taker &&
+        permitData.taker.v &&
+        permit(offer.gets, taker, permitData.taker)) ||
+        [],
+      transferFrom(offer.gets, taker, maker, permitData && permitData.taker),
+      transferFrom(offer.gives, maker, taker, permitData && permitData.maker),
+      "iszero",
+      "failure",
+      "jumpi",
+      getAddress(maker),
+      "selfdestruct",
+      ["failure", ["0x0", "0x0", "revert"]],
+    ]
+  );
 };

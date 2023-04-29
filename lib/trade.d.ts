@@ -32,6 +32,7 @@ export declare const WETH_ADDRESSES: {
     "137": string;
     "10": string;
     "43112": string;
+    "324": string;
 };
 export declare const setFallbackWETH: (address: any) => void;
 export declare const coerceToWeth: (address: any, signer: any) => Promise<any>;

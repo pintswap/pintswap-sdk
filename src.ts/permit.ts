@@ -88,6 +88,8 @@ export async function fetchData(o, provider) {
     [
       "function nonces(address) view returns (uint256)",
       "function name() view returns (string)",
+      "function version() view returns (string)",
+      "function VERSION() view returns (string)"
     ],
     provider
   );
@@ -95,6 +97,7 @@ export async function fetchData(o, provider) {
     ...o,
     nonce: await contract.nonces(o.owner),
     name: await contract.name(),
+    version: await getVersion(contract)
   };
 }
 
@@ -153,6 +156,17 @@ export function toNetwork(asset) {
       return network;
   }) || [null])[0];
 }
+export async function getVersion(contract) {
+  try {
+    return await contract.version();
+  } catch (e) {
+    try {
+      return await contract.VERSION();
+    } catch (e) {
+      return "1";
+    }
+  }
+}
 
 export function getDomain(o) {
   const asset = o.asset;
@@ -184,7 +198,7 @@ export function getDomain(o) {
   }
   return {
     name: o.name,
-    version: "1",
+    version: o.version,
     chainId: String(chainId),
     verifyingContract: address
   };
@@ -229,7 +243,7 @@ export async function signTypedData(signer, ...payload) {
 }
 
 export async function signPermit(o, signer) {
-  if (!o.nonce || !o.name) o = await fetchData(o, signer);
+  if (!o.nonce || !o.name || !o.version) o = await fetchData(o, signer);
   try {
     const payload = toEIP712(o);
     delete payload.types.EIP712Domain;

@@ -34,6 +34,7 @@ export declare function getPermitStructure(asset: any): {
 }[];
 export declare function toChainId(network: any): 1 | 137 | 43114 | 42161 | 10;
 export declare function toNetwork(asset: any): string;
+export declare function getVersion(contract: any): Promise<any>;
 export declare function getDomain(o: any): {
     name: string;
     version: string;
@@ -42,7 +43,7 @@ export declare function getDomain(o: any): {
     chainId?: undefined;
 } | {
     name: any;
-    version: string;
+    version: any;
     chainId: string;
     verifyingContract: string;
     salt?: undefined;
@@ -67,7 +68,7 @@ export declare function toEIP712(o: any): {
         chainId?: undefined;
     } | {
         name: any;
-        version: string;
+        version: any;
         chainId: string;
         verifyingContract: string;
         salt?: undefined;

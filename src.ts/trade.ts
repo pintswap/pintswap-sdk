@@ -444,7 +444,7 @@ export const createContract = (
       "failure",
       "jumpi",
       getAddress(maker),
-      "selfdestruct",
+      Number(chainId) === 324 ? [] : "selfdestruct",
       ["failure", ["0x0", "0x0", "revert"]],
     ]
   );

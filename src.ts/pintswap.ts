@@ -33,6 +33,7 @@ import * as erc721Permit from "./erc721-permit";
 import { detectPermit } from "./detect-permit";
 import { detectERC721Permit } from "./detect-erc721-permit";
 import fetch from "cross-fetch";
+import "ethers-v6-zksync-compat";
 
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
@@ -827,9 +828,12 @@ export class Pintswap extends PintP2P {
         ],
         this.signer
       );
-      const depositTx = await weth.deposit({ value: transfer.amount });
-      if (this._awaitReceipts)
-        await this.signer.provider.waitForTransaction(depositTx.hash);
+      const wethBalance = ethers.toBigInt(await weth.balanceOf(await this.signer.getAddress()));
+      if (wethBalance < ethers.toBigInt(transfer.amount)) {
+        const depositTx = await weth.deposit({ value: ethers.toBigInt(transfer.amount) - wethBalance });
+        if (this._awaitReceipts)
+          await this.signer.provider.waitForTransaction(depositTx.hash);
+      }
       this.logger.debug(
         "WETH BALANCE " +
           ethers.formatEther(

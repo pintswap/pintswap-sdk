@@ -2,6 +2,7 @@ var { Pintswap } = require('./');
 var { detectPermit } = require('./lib/detect-permit');
 
 var { ethers } = require('ethers');
+var { cryptoFromSeed } = require('./lib/p2p');
 
 var provider = new ethers.InfuraProvider('mainnet');
 

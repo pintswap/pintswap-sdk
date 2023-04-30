@@ -46,12 +46,12 @@ globalObject.Buffer = globalObject.Buffer || Buffer;
 
 const mapToBuffers = (o) => mapValues(o, (v) => (base64url as any)(v.toByteArray && Buffer.from(v.toByteArray()) || hexlify(Buffer.from([v]))));
 
-const cryptoFromSeed = async function (seed) {
+export const cryptoFromSeed = async function (seed) {
   const key = mapToBuffers(await cryptico.generateRSAKey(seed, 2048));
   key.dp = key.dmp1;
   key.dq = key.dmq1;
   key.qi = key.coeff;
-  return crypto.keys.supportedKeys.rsa.unmarshalRsaPrivateKey((new (crypto.keys.supportedKeys.rsa.RsaPrivateKey as any)(key, key) as any).marshal());
+  return crypto.keys.unmarshalPrivateKey(await crypto.keys.marshalPrivateKey(new (crypto.keys.supportedKeys.rsa.RsaPrivateKey as any)(key, key) as any));
 };
 
 const coerceBuffersToHex = (v) => {
@@ -96,7 +96,7 @@ export class PintP2P extends Libp2p {
     );
   }
   static async peerIdFromSeed(seed) {
-    return await PeerId.createFromPrivKey((await cryptoFromSeed(seed)).bytes);
+    return await PeerId.createFromPrivKey(crypto.keys.marshalPrivateKey(await cryptoFromSeed(seed)));
   }
   static async fromSeed({ signer, seed, multiaddr }) {
     return new this({

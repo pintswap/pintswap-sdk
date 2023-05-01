@@ -7,7 +7,6 @@ import { defer } from "./trade";
 import { IOffer, ITransfer } from "./types";
 import PeerId from "peer-id";
 import { createLogger } from "./logger";
-import "ethers-v6-zksync-compat";
 export declare const protobufOffersToHex: (offers: any) => any;
 export declare function sendFlashbotsTransaction(data: any): Promise<any>;
 export declare class PintswapTrade extends EventEmitter {

@@ -1,12 +1,11 @@
 import PeerId from "peer-id";
 import { VoidSigner } from "ethers";
 import Libp2p from "libp2p";
-import crypto from "libp2p-crypto";
 export declare function bufferToString(buf: Uint8Array): string;
 export declare function stringToBuffer(text: string): Uint8Array;
 export declare function fromBufferToJSON(buf: Uint8Array): any;
 export declare function fromJSONtoBuffer(obj: any): Uint8Array;
-export declare const cryptoFromSeed: (seed: any) => Promise<crypto.PrivateKey>;
+export declare const cryptoFromSeed: (seed: any) => Promise<Uint8Array>;
 export declare class PintP2P extends Libp2p {
     signer: VoidSigner;
     addressPromise: Promise<string>;

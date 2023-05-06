@@ -3,6 +3,7 @@ import Mplex from "libp2p-mplex";
 import { NOISE } from 'libp2p-noise';
 import KadDHT from "libp2p-kad-dht";
 import Bootstrap from "libp2p-bootstrap";
+import { ethers } from "ethers";
 import PeerId from "peer-id";
 import GossipSub from "libp2p-gossipsub";
 import RelayConstants from 'libp2p/src/circuit/constants'
@@ -12,7 +13,6 @@ import { VoidSigner, hexlify, solidityPackedKeccak256 } from "ethers";
 import Libp2p from "libp2p";
 import crypto from "libp2p-crypto";
 import wrtc from "wrtc";
-import cryptico from 'cryptico-js';
 import globalObject from 'the-global-object';
 import { Buffer } from 'buffer';
 import { mapValues } from 'lodash';
@@ -47,11 +47,16 @@ globalObject.Buffer = globalObject.Buffer || Buffer;
 const mapToBuffers = (o) => mapValues(o, (v) => (base64url as any)(v.toByteArray && Buffer.from(v.toByteArray()) || hexlify(Buffer.from([v]))));
 
 export const cryptoFromSeed = async function (seed) {
+  const key = await (crypto.keys.generateKeyPairFromSeed as any)('ed25519', Buffer.from(ethers.toBeArray(ethers.solidityPackedKeccak256(['string'], [seed]))));
+  return crypto.keys.marshalPrivateKey(key);
+	/*
   const key = mapToBuffers(await cryptico.generateRSAKey(seed, 2048));
+  console.log('KEY', key);
   key.dp = key.dmp1;
   key.dq = key.dmq1;
   key.qi = key.coeff;
-  return crypto.keys.unmarshalPrivateKey(await crypto.keys.marshalPrivateKey(new (crypto.keys.supportedKeys.rsa.RsaPrivateKey as any)(key, key) as any));
+  return await crypto.keys.marshalPrivateKey(new (crypto.keys.supportedKeys.rsa.RsaPrivateKey as any)(key, key) as any);
+ */
 };
 
 const coerceBuffersToHex = (v) => {
@@ -96,7 +101,8 @@ export class PintP2P extends Libp2p {
     );
   }
   static async peerIdFromSeed(seed) {
-    return await PeerId.createFromPrivKey(crypto.keys.marshalPrivateKey(await cryptoFromSeed(seed)));
+    const marshalled = await cryptoFromSeed(seed);
+    return await PeerId.createFromPrivKey(marshalled);
   }
   static async fromSeed({ signer, seed, multiaddr }) {
     return new this({

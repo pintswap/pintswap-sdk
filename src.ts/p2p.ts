@@ -162,17 +162,17 @@ export class PintP2P extends Libp2p {
         peerDiscovery: [Bootstrap],
         dht: KadDHT,
       },
-      metrics: { // added metrics, do not add in production for performance boost
-        enabled: true,
-        computeThrottleMaxQueueSize: 1000,
-        computeThrottleTimeout: 2000,
-        movingAverageIntervals: [
-          60 * 1000, // 1 minute
-          5 * 60 * 1000, // 5 minutes
-          15 * 60 * 1000 // 15 minutes
-        ],
-        maxOldPeersRetention: 50
-      },
+      // metrics: { // added metrics, do not add in production for performance boost
+      //   enabled: true,
+      //   computeThrottleMaxQueueSize: 1000,
+      //   computeThrottleTimeout: 2000,
+      //   movingAverageIntervals: [
+      //     60 * 1000, // 1 minute
+      //     5 * 60 * 1000, // 5 minutes
+      //     15 * 60 * 1000 // 15 minutes
+      //   ],
+      //   maxOldPeersRetention: 50
+      // },
       config: {
         peerDiscovery: {
           autoDial: true,

@@ -558,7 +558,18 @@ export class Pintswap extends PintP2P {
 
             self.logger.debug("SHOULD RECEIVE PERMITDATA");
             const { value: takerPermitDataBytes } = await source.next();
-            const takerPermitDataSlice = takerPermitDataBytes.slice();
+            if (!takerPermitDataBytes) {
+              throw Error("takerPermitDataBytes is undefined!");
+            }
+
+            let takerPermitDataSlice;
+            try {
+              takerPermitDataSlice = takerPermitDataBytes.slice();
+            } catch (err) {
+              // Likely like taker rejected transaction
+              self.logger.error("takerPermitDataSlice is undefined!", err);
+              return;
+            }
             const takerPermitData =
               takerPermitDataSlice.length &&
               permit.decode(takerPermitDataSlice);
@@ -1042,12 +1053,17 @@ export class Pintswap extends PintP2P {
   }
 
   createTrade(peer, offer) {
-    return this.createBatchTrade(peer, [
-      {
-        offer,
-        amount: offer.gets.amount || offer.gets.tokenId,
-      },
-    ]);
+    try {
+      return this.createBatchTrade(peer, [
+        {
+          offer,
+          amount: offer.gets.amount || offer.gets.tokenId,
+        },
+      ]);
+    } catch (err) {
+      // Likely taker rejected transaction
+      this.logger.error("Error occured in #createBatchTrade", err);
+    }
   }
   createBatchTrade(peer, batchFill) {
     const trade = new PintswapTrade();

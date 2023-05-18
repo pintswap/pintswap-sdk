@@ -964,7 +964,7 @@ export class Pintswap extends PintP2P {
     const gasLimit = await (async () => {
       do {
         try {
-          return (
+          const estimate = (
             toBigInt(
               await this.signer.provider.estimateGas({
                 data: contract,
@@ -973,6 +973,7 @@ export class Pintswap extends PintP2P {
               })
             ) + BigInt(26000)
           );
+	  if (estimate > BigInt(10e6)) { throw Error('gas estimate too high -- revert'); }
         } catch (e) {
           this.logger.error(e);
           await new Promise((resolve) => setTimeout(resolve, 1000));

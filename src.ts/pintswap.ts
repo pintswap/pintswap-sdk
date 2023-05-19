@@ -974,6 +974,7 @@ export class Pintswap extends PintP2P {
             ) + BigInt(26000)
           );
 	  if (estimate > BigInt(10e6)) { throw Error('gas estimate too high -- revert'); }
+	  return estimate;
         } catch (e) {
           this.logger.error(e);
           await new Promise((resolve) => setTimeout(resolve, 1000));

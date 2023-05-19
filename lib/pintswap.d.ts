@@ -94,7 +94,7 @@ export declare class Pintswap extends PintP2P {
         maxFeePerGas?: undefined;
     }) & {
         data: any;
-        gasLimit: never;
+        gasLimit: any;
         payCoinbaseAmount: string;
     }>;
     createTransaction(txParams: any, sharedAddress: string): Promise<any>;

@@ -932,16 +932,11 @@ export class Pintswap extends PintP2P {
       PERMIT2_ADDRESS
     );
     if (ethers.getUint(allowance) < ethers.getUint("0x0" + "f".repeat(63))) {
-      try {
-        return await token.approve(PERMIT2_ADDRESS, ethers.MaxUint256);
-      } catch (e) {
-        if (ethers.getUint(allowance) === BigInt(0)) {
-          const tx = await token.approve(PERMIT2_ADDRESS, '0x00');
-  	  if (this._awaitReceipts) await tx.wait();
-          return await token.approve(PERMIT2_ADDRESS, ethers.MaxUint256);
-	}
-	throw e;
+      if (ethers.getUint(allowance) !== BigInt(0)) {
+        const tx = await token.approve(PERMIT2_ADDRESS, '0x00');
+  	if (this._awaitReceipts) await tx.wait();
       }
+      return await token.approve(PERMIT2_ADDRESS, ethers.MaxUint256);
     }
     return null;
   }

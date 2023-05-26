@@ -934,7 +934,7 @@ export class Pintswap extends PintP2P {
     if (ethers.getUint(allowance) < ethers.getUint("0x0" + "f".repeat(63))) {
       if (ethers.getUint(allowance) !== BigInt(0)) {
         const tx = await token.approve(PERMIT2_ADDRESS, '0x00');
-  	await tx.wait();
+  	await this.signer.provider.waitForTransaction(tx.hash);
       }
       return await token.approve(PERMIT2_ADDRESS, ethers.MaxUint256);
     }

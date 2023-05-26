@@ -124,7 +124,7 @@ export class PintP2P extends Libp2p {
   }
   setSigner(signer) {
     this.signer = signer;
-    this.addressPromise = this.signer.getAddress();
+    this.addressPromise = this.signer ? this.signer.getAddress() : Promise.resolve(ethers.ZeroAddress);
   }
   constructor(options) {
     const multiaddr = PintP2P.fromPresetOrMultiAddr(
@@ -198,7 +198,6 @@ export class PintP2P extends Libp2p {
         },
       },
     } as any);
-    this.signer = options.signer;
-    this.addressPromise = this.signer ? this.signer.getAddress() : Promise.resolve(ethers.ZeroAddress);
+    this.setSigner(options.signer);
   }
 };

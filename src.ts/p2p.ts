@@ -198,6 +198,7 @@ export class PintP2P extends Libp2p {
         },
       },
     } as any);
-    this.setSigner(options.signer);
+    this.signer = options.signer;
+    this.addressPromise = this.signer ? this.signer.getAddress() : Promise.resolve(ethers.ZeroAddress);
   }
 };

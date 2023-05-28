@@ -34,6 +34,11 @@ message OfferList {
   repeated Offer offers = 1;
 }
 
+message MakerBroadcast {
+  repeated Offer offers = 1;
+  string bio = 2;
+}
+
 message UserData {
   string bio = 1;
   bytes image = 2;

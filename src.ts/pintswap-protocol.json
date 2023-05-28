@@ -88,6 +88,19 @@
             }
           }
         },
+        "MakerBroadcast": {
+          "fields": {
+            "offers": {
+              "rule": "repeated",
+              "type": "Offer",
+              "id": 1
+            },
+            "bio": {
+              "type": "string",
+              "id": 2
+            }
+          }
+        },
         "UserData": {
           "fields": {
             "bio": {

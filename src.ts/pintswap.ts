@@ -321,8 +321,8 @@ export class Pintswap extends PintP2P {
   }
   async publishOffers() {
     await this.pubsub.publish(
-      "/pintswap/0.1.0/publish-orders",
-      ethers.toBeArray(ethers.hexlify(this._encodeOffers()))
+      "/pintswap/0.1.1/publish-orders",
+      ethers.toBeArray(ethers.hexlify(this._encodeMakerBroadcast()))
     );
   }
   startPublishingOffers(ms: number) {
@@ -348,16 +348,17 @@ export class Pintswap extends PintP2P {
     };
   }
   async subscribeOffers() {
-    this.pubsub.on("/pintswap/0.1.0/publish-orders", (message) => {
+    this.pubsub.on("/pintswap/0.1.1/publish-orders", (message) => {
       try {
         this.logger.debug(
           `\n PUBSUB: TOPIC-${message.topicIDs[0]} \n FROM: PEER-${message.from}`
         );
         this.logger.info(message.data);
-        const offers = this._decodeOffers(message.data).offers;
+        const { offers, bio } = this._decodeMakerBroadcast(message.data);
         let _offerhash = ethers.keccak256(message.data);
         const pair: [string, IOffer] = [_offerhash, offers];
         this.logger.info(pair);
+	this.peers.set(message.from + '::bio', bio);
         if (this.peers.has(message.from)) {
           if (this.peers.get(message.from)[0] == _offerhash) return;
           this.peers.set(message.from, pair);
@@ -413,6 +414,24 @@ export class Pintswap extends PintP2P {
       signer,
     };
     return new Pintswap(initArg);
+  }
+  _offersAsProtobufStruct() {
+    return [...this.offers.values()].map((v) =>
+        Object.fromEntries(
+          Object.entries(v).map(([key, value]) => [
+            key,
+            toTypedTransfer(
+              mapValues(value, (v) => Buffer.from(ethers.toBeArray(v)))
+            ),
+          ])
+        )
+      );
+  }
+  _encodeMakerBroadcast() {
+    return protocol.MakerBroadcast.encode({
+      offers: this._offersAsProtobufStruct(),
+      bio: this.userData.bio
+    });
   }
   _encodeOffers() {
     return protocol.OfferList.encode({
@@ -716,6 +735,24 @@ export class Pintswap extends PintP2P {
     const offerList = this._decodeOffers(result);
     this.emit("pintswap/trade/peer", 3); // offers decoded and returning
     return offerList;
+  }
+  _decodeMakerBroadcast(data: Buffer) {
+    let offerList = protocol.OfferList.toObject(
+      protocol.OfferList.decode(data),
+      {
+        enums: String,
+        longs: String,
+        bytes: String,
+        defaults: true,
+        arrays: true,
+        objects: true,
+        oneofs: true,
+      }
+    );
+
+    const offers = protobufOffersToHex(offerList.offers);
+    const bio = offerList.bio;
+    return { offers, bio };
   }
   _decodeOffers(data: Buffer) {
     let offerList = protocol.OfferList.toObject(

@@ -62,6 +62,12 @@ export declare class Pintswap extends PintP2P {
         offers: IOffer[];
     };
     static fromObject(o: any, signer: any): Promise<Pintswap>;
+    _offersAsProtobufStruct(): {
+        [k: string]: {
+            [k: string]: any;
+        };
+    }[];
+    _encodeMakerBroadcast(): any;
     _encodeOffers(): any;
     _encodeUserData(): any;
     handleUserData(): Promise<void>;
@@ -73,6 +79,10 @@ export declare class Pintswap extends PintP2P {
         bio: any;
     }>;
     getTradesByPeerId(peerId: string): Promise<any>;
+    _decodeMakerBroadcast(data: Buffer): {
+        offers: any;
+        bio: any;
+    };
     _decodeOffers(data: Buffer): any;
     _decodeUserData(data: Buffer): {
         offers: any;

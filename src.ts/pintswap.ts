@@ -737,8 +737,8 @@ export class Pintswap extends PintP2P {
     return offerList;
   }
   _decodeMakerBroadcast(data: Buffer) {
-    let offerList = protocol.OfferList.toObject(
-      protocol.OfferList.decode(data),
+    let offerList = protocol.MakerBroadcast.toObject(
+      protocol.MakerBroadcast.decode(data),
       {
         enums: String,
         longs: String,

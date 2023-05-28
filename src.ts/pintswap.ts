@@ -431,7 +431,7 @@ export class Pintswap extends PintP2P {
     return protocol.MakerBroadcast.encode({
       offers: this._offersAsProtobufStruct(),
       bio: this.userData.bio
-    });
+    }).finish();
   }
   _encodeOffers() {
     return protocol.OfferList.encode({

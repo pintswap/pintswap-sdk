@@ -371,7 +371,7 @@ export class Pintswap extends PintP2P {
         this.logger.error(e);
       }
     });
-    this.pubsub.subscribe("/pintswap/0.1.0/publish-orders");
+    this.pubsub.subscribe("/pintswap/0.1.1/publish-orders");
   }
   async startNode() {
     await this.handleBroadcastedOffers();

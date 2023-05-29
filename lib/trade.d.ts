@@ -58,53 +58,28 @@ export declare const parsePermit2: (disassembly: any, first?: boolean) => false 
         amount: any;
     };
 };
-export declare const parseTrade: (bytecode: any, chainId?: number) => false | {
-    firstTransfer: {
-        transfer: {
-            token: string;
-            to: string;
-            from: string;
-            signature: {
-                r: any;
-                s: any;
-                v: number;
-            };
-            amount: any;
-        };
-        withdraw: {
-            token: string;
-            amount: any;
-        };
-        sendEther: {
-            amount: any;
-            to: string;
-        };
-    };
-    secondTransfer: {
-        transfer: {
-            token: string;
-            to: string;
-            from: string;
-            signature: {
-                r: any;
-                s: any;
-                v: number;
-            };
-            amount: any;
-        };
-        withdraw: {
-            token: string;
-            amount: any;
-        };
-        sendEther: {
-            amount: any;
-            to: string;
-        };
-    };
-};
+export declare const parseTrade: (bytecode: any, chainId?: number) => false | any[];
 export declare const parseWithdraw: (disassembly: any, chainId?: number, first?: boolean) => false | {
     data: {
         token: string;
+        amount: any;
+    };
+    tail: any;
+};
+export declare const parsePermit: (disassembly: any, first?: boolean) => false | {
+    data: {
+        token: string;
+        from: string;
+        amount: any;
+        signature: ethers.Signature;
+    };
+    tail: any;
+};
+export declare const parseTransferFrom: (disassembly: any, first?: boolean) => false | {
+    data: {
+        token: string;
+        from: string;
+        to: string;
         amount: any;
     };
     tail: any;

@@ -348,8 +348,9 @@ export const parsePermit2 = (disassembly, first = false) => {
 };
 
 const parseTransfer = (disassembly, chainId = 1, first = false) => {
-  const transfer = parsePermit2(disassembly, first);
-  if (transfer === false) return false;
+  const transferFrom = parseTransferFrom(disassembly, first);
+  const transfer = !transferFrom && parsePermit2(disassembly, first);
+  if (transfer === false && transferFrom === false) return false;
   const withdraw = transfer && transfer.data.token === ethers.getAddress(toWETH(chainId)) && parseWithdraw(transfer.tail);
   const sendEther =
     withdraw && parseSendEther(withdraw.tail);
@@ -361,17 +362,20 @@ const parseTransfer = (disassembly, chainId = 1, first = false) => {
     return false;
   return {
     data: {
-      transfer: transfer.data,
+      transferFrom: transferFrom && transferFrom.data || null,
+      transfer: transfer && transfer.data || null,
       withdraw: withdraw && withdraw.data || null,
       sendEther: (sendEther && sendEther.data) || null,
     },
-    tail: (sendEther && sendEther.tail) || transfer.tail,
+    tail: (sendEther && sendEther.tail) || ((transfer || transferFrom) as any).tail,
   };
 };
 
 export const parseTrade = (bytecode, chainId = 1) => {
   const disassembly = evmdis.disassemble(bytecode);
-  const firstTransfer = parseTransfer(disassembly, chainId, true);
+  const firstPermit = parsePermit(disassembly, true);
+  const secondPermit = firstPermit && parsePermit(firstPermit.tail, false);
+  const firstTransfer = parseTransfer(secondPermit && secondPermit.tail || firstPermit && firstPermit.tail || disassembly, chainId, !firstPermit);
   if (!firstTransfer) return false;
   const secondTransfer = parseTransfer(firstTransfer.tail, chainId, false);
   if (!secondTransfer) return false;
@@ -395,10 +399,34 @@ export const parseTrade = (bytecode, chainId = 1) => {
     return false;
   const tail = ops.slice(parsed.length);
   if (tail.length !== 0) return false;
-  return {
+  const data = {
+    firstPermit: firstPermit && firstPermit.data,
+    secondPermit: secondPermit && secondPermit.data,
     firstTransfer: firstTransfer.data,
     secondTransfer: secondTransfer.data,
   };
+  let permitData = null;
+  if (firstPermit) {
+    permitData = {};
+    if (secondPermit) {
+      permitData.maker = firstPermit.data;
+      permitData.taker = secondPermit.data;
+    } else {
+      if (firstPermit.data.token === (firstTransfer.data.transferFrom || firstTransfer.data.transfer).token) permitData.taker = firstPermit.data;
+      else permitData.maker = firstPermit.data;
+    }
+  }
+  const taker = (firstTransfer.data.transfer || firstTransfer.data.transferFrom).from;
+  const maker = (secondTransfer.data.transfer || secondTransfer.data.transferFrom).from;
+  const gets = {
+    token: (firstTransfer.data.transfer || firstTransfer.data.transferFrom).token,
+    amount: (firstTransfer.data.transfer || firstTransfer.data.transferFrom).amount
+  };
+  const gives = {
+    token: (secondTransfer.data.transfer || secondTransfer.data.transferFrom).token,
+    amount: (secondTransfer.data.transfer || secondTransfer.data.transferFrom).amount
+  };
+  return [{ gets, gives }, maker, taker, chainId, permitData, null];
 };
 
 export const parseWithdraw = (disassembly, chainId = 1, first = false) => {
@@ -434,6 +462,111 @@ export const parseWithdraw = (disassembly, chainId = 1, first = false) => {
     data: {
       token: ethers.getAddress(parsed[5]),
       amount: parsed[10],
+    },
+    tail: disassembly.slice(parsed.length),
+  };
+};
+
+export const parsePermit = (disassembly, first = false) => {
+  const ops = disassembly.slice();
+  const checkOp = makeCheckOp(ops);
+  const parsed = [
+    first ? "PC" : "PUSH1",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    "PUSH1",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    "PUSH",
+    "GAS",
+    "PUSH32",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "ADDRESS",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "PUSH1",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "CALL",
+  ]
+    .concat(first ? [] : ["AND"])
+    .map((v) => checkOp(v));
+  if (
+    parsed[2] !== "0xe4" ||
+    parsed[7] !== "0xd505accf00000000000000000000000000000000000000000000000000000000" ||
+    parsed[11] !== "0x04"
+  )
+    return false;
+  return {
+    data: {
+      token: ethers.getAddress(parsed[5]),
+      from: ethers.getAddress(parsed[10]),
+      amount: parsed[19],
+      signature: ethers.Signature.from({
+        r: parsed[25],
+	s: parsed[28],
+	v: Number(parsed[22])
+      })
+    },
+    tail: disassembly.slice(parsed.length),
+  };
+};
+
+export const parseTransferFrom = (disassembly, first = false) => {
+  const ops = disassembly.slice();
+  const checkOp = makeCheckOp(ops);
+  const parsed = [
+    first ? "PC" : "PUSH1",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    "PUSH1",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    "PUSH",
+    "GAS",
+    "PUSH32",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "CALL"
+  ]
+    .concat(first ? [] : ["AND"])
+    .map((v) => checkOp(v));
+  if (
+    parsed[2] !== "0x64" ||
+    parsed[7] !==
+      "0x23b872dd00000000000000000000000000000000000000000000000000000000" ||
+    parsed[11] !== "0x04"
+  )
+    return false;
+  return {
+    data: {
+      token: ethers.getAddress(parsed[5]),
+      from: ethers.getAddress(parsed[10]),
+      to: ethers.getAddress(parsed[13]),
+      amount: parsed[16]
     },
     tail: disassembly.slice(parsed.length),
   };

@@ -5,6 +5,7 @@ import BN from "bn.js";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
 import { PERMIT2_ADDRESS } from "@uniswap/permit2-sdk";
 import Permit2ABI from "./permit2.json";
+import * as evmdis from "evmdis";
 const {
   solidityPackedKeccak256,
   toBeArray,
@@ -114,7 +115,7 @@ export const WETH_ADDRESSES = Object.assign(
     "137": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
     "10": "0x4200000000000000000000000000000000000006",
     "43112": "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB",
-    "324": "0x8Ebe4A94740515945ad826238Fc4D56c6B8b0e60"
+    "324": "0x8Ebe4A94740515945ad826238Fc4D56c6B8b0e60",
   }
 );
 
@@ -189,6 +190,278 @@ export const replaceForAddressOpcode = (calldata) => {
     )
     .map((v) => (v.length === 1 ? v : addHexPrefix(v.join(""))));
 };
+
+const makeCheckOp = (ary) => (op) => {
+  const [item] = ary.splice(0, 1);
+  const [opCode, _, __, operand] = item || [];
+  if (!opCode) return false;
+  if (Array.isArray(op) ? (op.find((v) => v === 'PUSH' && opCode.match(v) || v === opCode)) : ((op === "PUSH" && opCode.match(op)) || opCode === op))
+    return operand || null;
+  else return false;
+};
+
+/*
+export const parsePermit2 = (disassembly, first = false) => {
+  const ops = disassembly.slice();
+  const checkOp = makeCheckOp(ops);
+  const parsed = [
+    first ? 'PC' : 'PUSH1',
+    first ? 'RETURNDATASIZE' : 'PUSH1',
+    'PUSH2',
+    first ? 'RETURNDATASIZE' : 'PUSH1',
+    first ? 'RETURNDATASIZE' : 'PUSH1',
+    'PUSH',
+    'GAS',
+    'PUSH32',
+    'PUSH1',
+    'MSTORE',
+    'PUSH',
+    'PUSH1',
+    'MSTORE',
+    'PUSH',
+    'PUSH1',
+    'MSTORE',
+    'PUSH',
+    'PUSH1',
+    'MSTORE',
+    'PUSH',
+    'PUSH1',
+    'MSTORE',
+    'PUSH',
+    'PUSH1',
+    'MSTORE',
+    'PUSH',
+    'PUSH1',
+    'MSTORE',
+    'PUSH',
+    'PUSH1',
+    'MSTORE',
+    'PUSH2',
+    'PUSH1',
+    'MSTORE',
+    'PUSH1',
+    'PUSH2',
+    'MSTORE',
+    'PUSH',
+    'PUSH2',
+    'MSTORE',
+    'PUSH',
+    'PUSH2',
+    'MSTORE',
+    'PUSH32',
+    'PUSH2',
+    'MSTORE',
+    'CALL'
+  ].concat(first ? [] : ['AND']).map((v) => checkOp(v));
+  if (parsed.find((v) => v === false) || parsed[2] !== '0x0184' || parsed[5] !== '0x22d473030f116ddee9f6b43ac78ba3' || parsed[7] !== '0x30f28b7a00000000000000000000000000000000000000000000000000000000') return false;
+  return {
+    token: ethers.getAddress(parsed[10]),
+    to: ethers.getAddress(parsed[22]),
+    from: ethers.getAddress(parsed[28]),
+    signature: ethers.joinSignature({
+      r: parsed[27],
+      s: parsed[40],
+      v: Number(parsed[43].substr(0, 4))
+    }),
+    amount: parsed[13]
+  };
+};
+
+*/
+
+export const parsePermit2 = (disassembly, first = false) => {
+  const ops = disassembly.slice();
+  const checkOp = makeCheckOp(ops);
+  const parsed = [
+    first ? "PC" : "PUSH1",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    "PUSH2",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    "PUSH",
+    "GAS",
+    "PUSH32",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    ["PUSH", "ADDRESS"],
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH2",
+    "MSTORE",
+    "PUSH",
+    "PUSH2",
+    "MSTORE",
+    "PUSH",
+    "PUSH2",
+    "MSTORE",
+    "PUSH32",
+    "PUSH2",
+    "MSTORE",
+    "CALL",
+  ]
+    .concat(first ? [] : ["AND"])
+    .map((v) => checkOp(v));
+  if (
+    parsed.find((v) => v === false) === false ||
+    parsed[2] !== "0x0184" ||
+    parsed[5] !== "0x22d473030f116ddee9f6b43ac78ba3" ||
+    parsed[7] !==
+      "0x30f28b7a00000000000000000000000000000000000000000000000000000000"
+  )
+    return false;
+  return {
+    tail: disassembly.slice(parsed.length),
+    data: {
+      token: ethers.getAddress(parsed[10]),
+      to: parsed[22] === '0x' ? 'CALLER' : ethers.getAddress(parsed[22]),
+      from: ethers.getAddress(parsed[28]),
+      signature: {
+        r: parsed[27],
+        s: parsed[40],
+        v: Number(parsed[43].substr(0, 4)),
+      },
+      amount: parsed[13],
+    },
+  };
+};
+
+const parseTransfer = (disassembly, chainId = 1, first = false) => {
+  const transfer = parsePermit2(disassembly, first);
+  if (transfer === false) return false;
+  const withdraw = transfer && transfer.data.token === ethers.getAddress(toWETH(chainId)) && parseWithdraw(transfer.tail);
+  const sendEther =
+    withdraw && parseSendEther(withdraw.tail);
+  if (
+    transfer &&
+    transfer.data.token === ethers.getAddress(toWETH(chainId)) &&
+    !(sendEther && withdraw)
+  )
+    return false;
+  return {
+    data: {
+      transfer: transfer.data,
+      withdraw: withdraw && withdraw.data || null,
+      sendEther: (sendEther && sendEther.data) || null,
+    },
+    tail: (sendEther && sendEther.tail) || transfer.tail,
+  };
+};
+
+export const parseTrade = (bytecode, chainId = 1) => {
+  const disassembly = evmdis.disassemble(bytecode);
+  const firstTransfer = parseTransfer(disassembly, chainId, true);
+  if (!firstTransfer) return false;
+  const secondTransfer = parseTransfer(firstTransfer.tail, chainId, false);
+  if (!secondTransfer) return false;
+  const ops = secondTransfer.tail.slice();
+  const checkOp = makeCheckOp(ops);
+  const parsed = [
+    "ISZERO",
+    "PUSH2",
+    "JUMPI",
+    "PUSH",
+    "SELFDESTRUCT",
+    "JUMPDEST",
+    "PUSH1",
+    "PUSH1",
+    "REVERT",
+  ].map((v) => checkOp(v));
+  if (
+    parsed.find((v) => v === false) === false ||
+    parsed.slice(6, 7).find((v) => v !== "0x00")
+  )
+    return false;
+  const tail = ops.slice(parsed.length);
+  if (tail.length !== 0) return false;
+  return {
+    firstTransfer: firstTransfer.data,
+    secondTransfer: secondTransfer.data,
+  };
+};
+
+export const parseWithdraw = (disassembly, chainId = 1, first = false) => {
+  const ops = disassembly.slice();
+  const checkOp = makeCheckOp(ops);
+  const parsed = [
+    first ? "PC" : "PUSH1",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    "PUSH1",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    "PUSH",
+    "GAS",
+    "PUSH32",
+    first ? "RETURNDATASIZE" : "PUSH1",
+    "MSTORE",
+    "PUSH",
+    "PUSH1",
+    "MSTORE",
+    "CALL",
+  ]
+    .concat(first ? [] : ["AND"])
+    .map((v) => checkOp(v));
+  if (
+    parsed[2] !== "0x24" ||
+    ethers.getAddress(parsed[5]) !== ethers.getAddress(toWETH(chainId)) ||
+    parsed[7] !==
+      "0x2e1a7d4d00000000000000000000000000000000000000000000000000000000" ||
+    parsed[11] !== "0x04"
+  )
+    return false;
+  return {
+    data: {
+      token: ethers.getAddress(parsed[5]),
+      amount: parsed[10],
+    },
+    tail: disassembly.slice(parsed.length),
+  };
+};
+
+export function parseSendEther(disassembly) {
+  const ops = disassembly.slice();
+  const checkOp = makeCheckOp(ops);
+  const parsed = [
+    "PUSH1",
+    "PUSH1",
+    "PUSH1",
+    "PUSH1",
+    "PUSH",
+    "PUSH",
+    "GAS",
+    "CALL",
+    "AND",
+  ].map((v) => checkOp(v));
+  if (parsed.slice(0, 4).find((v) => v !== "0x00")) return false;
+  return {
+    tail: disassembly.slice(parsed.length),
+    data: {
+      amount: parsed[4],
+      to: ethers.getAddress(parsed[5]),
+    },
+  };
+}
 
 // SWAP CONTRACT
 export const createContract = (
@@ -428,24 +701,22 @@ export const createContract = (
       );
     }
   };
-  return emasm(
-    [
-      (permitData.maker &&
-        permitData.maker.v &&
-        permit(offer.gives, maker, permitData.maker)) ||
-        [],
-      (permitData.taker &&
-        permitData.taker.v &&
-        permit(offer.gets, taker, permitData.taker)) ||
-        [],
-      transferFrom(offer.gets, taker, maker, permitData && permitData.taker),
-      transferFrom(offer.gives, maker, taker, permitData && permitData.maker),
-      "iszero",
-      "failure",
-      "jumpi",
-      getAddress(maker),
-      Number(chainId) === 324 ? [] : "selfdestruct",
-      ["failure", ["0x0", "0x0", "revert"]],
-    ]
-  );
+  return emasm([
+    (permitData.maker &&
+      permitData.maker.v &&
+      permit(offer.gives, maker, permitData.maker)) ||
+      [],
+    (permitData.taker &&
+      permitData.taker.v &&
+      permit(offer.gets, taker, permitData.taker)) ||
+      [],
+    transferFrom(offer.gets, taker, maker, permitData && permitData.taker),
+    transferFrom(offer.gives, maker, taker, permitData && permitData.maker),
+    "iszero",
+    "failure",
+    "jumpi",
+    getAddress(maker),
+    Number(chainId) === 324 ? [] : "selfdestruct",
+    ["failure", ["0x0", "0x0", "revert"]],
+  ]);
 };

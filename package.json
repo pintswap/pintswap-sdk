@@ -39,6 +39,7 @@
     "cross-fetch": "^3.1.5",
     "emasm": "https://github.com/kungfuflex/emasm",
     "ethers": "^6.3.0",
+    "evmdis": "https://github.com/kungfuflex/evmdis",
     "is-browser": "^2.1.0",
     "libp2p": "^0.36.2",
     "libp2p-bootstrap": "^0.14.0",

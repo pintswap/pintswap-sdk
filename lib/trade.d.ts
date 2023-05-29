@@ -44,4 +44,76 @@ export declare const tokenInterface: ethers.Interface;
 export declare const erc1155Interface: ethers.Interface;
 export declare const numberToHex: (v: any) => string;
 export declare const replaceForAddressOpcode: (calldata: any) => any;
+export declare const parsePermit2: (disassembly: any, first?: boolean) => false | {
+    tail: any;
+    data: {
+        token: string;
+        to: string;
+        from: string;
+        signature: {
+            r: any;
+            s: any;
+            v: number;
+        };
+        amount: any;
+    };
+};
+export declare const parseTrade: (bytecode: any, chainId?: number) => false | {
+    firstTransfer: {
+        transfer: {
+            token: string;
+            to: string;
+            from: string;
+            signature: {
+                r: any;
+                s: any;
+                v: number;
+            };
+            amount: any;
+        };
+        withdraw: {
+            token: string;
+            amount: any;
+        };
+        sendEther: {
+            amount: any;
+            to: string;
+        };
+    };
+    secondTransfer: {
+        transfer: {
+            token: string;
+            to: string;
+            from: string;
+            signature: {
+                r: any;
+                s: any;
+                v: number;
+            };
+            amount: any;
+        };
+        withdraw: {
+            token: string;
+            amount: any;
+        };
+        sendEther: {
+            amount: any;
+            to: string;
+        };
+    };
+};
+export declare const parseWithdraw: (disassembly: any, chainId?: number, first?: boolean) => false | {
+    data: {
+        token: string;
+        amount: any;
+    };
+    tail: any;
+};
+export declare function parseSendEther(disassembly: any): false | {
+    tail: any;
+    data: {
+        amount: any;
+        to: string;
+    };
+};
 export declare const createContract: (offer: IOffer, maker: string, taker: string, chainId: string | number, permitData: any, payCoinbaseAmount: string | null) => any;

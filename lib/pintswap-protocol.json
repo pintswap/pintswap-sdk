@@ -98,23 +98,39 @@
                         "bio": {
                             "type": "string",
                             "id": 2
+                        },
+                        "pfp": {
+                            "type": "ERC721Transfer",
+                            "id": 3
                         }
                     }
                 },
                 "UserData": {
+                    "oneofs": {
+                        "pfp": {
+                            "oneof": [
+                                "file",
+                                "nft"
+                            ]
+                        }
+                    },
                     "fields": {
                         "bio": {
                             "type": "string",
                             "id": 1
                         },
-                        "image": {
-                            "type": "bytes",
-                            "id": 2
-                        },
                         "offers": {
                             "rule": "repeated",
                             "type": "Offer",
                             "id": 3
+                        },
+                        "file": {
+                            "type": "bytes",
+                            "id": 4
+                        },
+                        "nft": {
+                            "type": "ERC721Transfer",
+                            "id": 5
                         }
                     }
                 },

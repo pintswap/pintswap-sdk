@@ -37,12 +37,16 @@ message OfferList {
 message MakerBroadcast {
   repeated Offer offers = 1;
   string bio = 2;
+  ERC721Transfer pfp = 3;
 }
 
 message UserData {
   string bio = 1;
-  bytes image = 2;
   repeated Offer offers = 3;
+  oneof pfp {
+    bytes file = 4;
+    ERC721Transfer nft = 5;
+  }
 }
   
 

@@ -36,6 +36,13 @@ import fetch from "cross-fetch";
 
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
+const base64ToValue = (data) => ethers.hexlify(ethers.decodeBase64(data));
+
+const base64ToAddress = (data) => {
+  return ethers.getAddress(ethers.zeroPadValue(base64ToValue(data), 20));
+};
+
+
 const logger = createLogger("pintswap");
 
 const toTypedTransfer = (transfer) =>
@@ -221,9 +228,14 @@ export const NS_MULTIADDRS = {
   DRIP: ["QmUtvU33iaHun99yD9HgiyLSrmPhWUbXVX2hAZRY4AEV2d"],
 };
 
+export interface NFTPFP {
+  token: string;
+  tokenId: string;
+}
+
 export interface IUserData {
   bio: string;
-  image: Buffer;
+  image: Buffer | NFTPFP;
 }
 
 export class Pintswap extends PintP2P {
@@ -321,7 +333,7 @@ export class Pintswap extends PintP2P {
   }
   async publishOffers() {
     await this.pubsub.publish(
-      "/pintswap/0.1.1/publish-orders",
+      "/pintswap/0.1.2/publish-orders",
       ethers.toBeArray(ethers.hexlify(this._encodeMakerBroadcast()))
     );
   }
@@ -348,7 +360,7 @@ export class Pintswap extends PintP2P {
     };
   }
   async subscribeOffers() {
-    this.pubsub.on("/pintswap/0.1.1/publish-orders", (message) => {
+    this.pubsub.on("/pintswap/0.1.2/publish-orders", (message) => {
       try {
         this.logger.debug(
           `\n PUBSUB: TOPIC-${message.topicIDs[0]} \n FROM: PEER-${message.from}`
@@ -371,7 +383,7 @@ export class Pintswap extends PintP2P {
         this.logger.error(e);
       }
     });
-    this.pubsub.subscribe("/pintswap/0.1.1/publish-orders");
+    this.pubsub.subscribe("/pintswap/0.1.2/publish-orders");
   }
   async startNode() {
     await this.handleBroadcastedOffers();
@@ -459,12 +471,16 @@ export class Pintswap extends PintP2P {
           ])
         )
       ),
-      image: this.userData.image,
+      pfp: Buffer.isBuffer(this.userData.image) ? {
+        file: this.userData.image
+      } : {
+        nft: this.userData.image
+      },
       bio: this.userData.bio,
     }).finish();
   }
   async handleUserData() {
-    await this.handle("/pintswap/0.1.0/userdata", ({ stream }) => {
+    await this.handle("/pintswap/0.1.2/userdata", ({ stream }) => {
       try {
         this.logger.debug("handling userdata request");
         this.emit("pintswap/trade/peer", 2);
@@ -702,7 +718,7 @@ export class Pintswap extends PintP2P {
       }
     }
     this.emit("pintswap/trade/peer", 0); // start finding peer's orders
-    const { stream } = await this.dialProtocol(pid, "/pintswap/0.1.0/userdata");
+    const { stream } = await this.dialProtocol(pid, "/pintswap/0.1.2/userdata");
     this.emit("pintswap/trade/peer", 1); // peer found
     const decoded = pipe(stream.source, lp.decode());
     const { value: userDataBufferList } = await decoded.next();
@@ -785,7 +801,10 @@ export class Pintswap extends PintP2P {
     const offers = protobufOffersToHex(userData.offers);
     return {
       offers,
-      image: Buffer.from(ethers.decodeBase64(userData.image)),
+      image: userData.pfp === 'file' ? Buffer.from(ethers.decodeBase64(userData.file)) : {
+        token: base64ToAddress(userData.nft.token),
+	tokenId: base64ToValue(userData.nft.tokenId)
+      },
       bio: userData.bio,
     };
   }

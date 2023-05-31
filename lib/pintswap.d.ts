@@ -25,9 +25,13 @@ export declare function sumOffers(offers: any[]): any;
 export declare const NS_MULTIADDRS: {
     DRIP: string[];
 };
+export interface NFTPFP {
+    token: string;
+    tokenId: string;
+}
 export interface IUserData {
     bio: string;
-    image: Buffer;
+    image: Buffer | NFTPFP;
 }
 export declare class Pintswap extends PintP2P {
     signer: any;
@@ -75,7 +79,10 @@ export declare class Pintswap extends PintP2P {
     broadcastOffer(_offer: IOffer): void;
     getUserDataByPeerId(peerId: string): Promise<{
         offers: any;
-        image: Buffer;
+        image: Buffer | {
+            token: string;
+            tokenId: string;
+        };
         bio: any;
     }>;
     getTradesByPeerId(peerId: string): Promise<any>;
@@ -86,7 +93,10 @@ export declare class Pintswap extends PintP2P {
     _decodeOffers(data: Buffer): any;
     _decodeUserData(data: Buffer): {
         offers: any;
-        image: Buffer;
+        image: Buffer | {
+            token: string;
+            tokenId: string;
+        };
         bio: any;
     };
     getTradeAddress(sharedAddress: string): Promise<string>;

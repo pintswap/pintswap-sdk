@@ -37,7 +37,7 @@ export declare class Pintswap extends PintP2P {
     signer: any;
     offers: Map<string, IOffer>;
     logger: ReturnType<typeof createLogger>;
-    peers: Map<string, [string, IOffer]>;
+    peers: Map<string, any>;
     userData: IUserData;
     _awaitReceipts: boolean;
     static initialize({ awaitReceipts, signer }: {
@@ -89,6 +89,10 @@ export declare class Pintswap extends PintP2P {
     _decodeMakerBroadcast(data: Buffer): {
         offers: any;
         bio: any;
+        pfp: {
+            token: string;
+            tokenId: string;
+        };
     };
     _decodeOffers(data: Buffer): any;
     _decodeUserData(data: Buffer): {

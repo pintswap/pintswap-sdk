@@ -42,7 +42,6 @@ const base64ToAddress = (data) => {
   return ethers.getAddress(ethers.zeroPadValue(base64ToValue(data), 20));
 };
 
-
 const logger = createLogger("pintswap");
 
 const toTypedTransfer = (transfer) =>
@@ -158,7 +157,10 @@ export function decodeBatchFill(data) {
     }
   );
   return fills.map((v) => ({
-    offerHash: ethers.zeroPadValue(ethers.hexlify(ethers.decodeBase64(v.offerHash)), 32),
+    offerHash: ethers.zeroPadValue(
+      ethers.hexlify(ethers.decodeBase64(v.offerHash)),
+      32
+    ),
     amount: ethers.getUint(ethers.hexlify(ethers.decodeBase64(v.amount))),
   }));
 }
@@ -175,9 +177,7 @@ export function scaleOffer(offer: IOffer, amount: BigNumberish) {
       tokenId: offer.gives.tokenId,
       token: offer.gives.token,
       amount: ethers.hexlify(
-        ethers.toBeArray(
-          (ethers.getUint(offer.gives.amount) * n) / d
-        )
+        ethers.toBeArray((ethers.getUint(offer.gives.amount) * n) / d)
       ),
     },
     gets: {
@@ -242,7 +242,7 @@ export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
   public logger: ReturnType<typeof createLogger>;
-  public peers: Map<string, [string, IOffer]>;
+  public peers: Map<string, any>;
   public userData: IUserData;
   public _awaitReceipts: boolean;
 
@@ -366,11 +366,12 @@ export class Pintswap extends PintP2P {
           `\n PUBSUB: TOPIC-${message.topicIDs[0]} \n FROM: PEER-${message.from}`
         );
         this.logger.info(message.data);
-        const { offers, bio } = this._decodeMakerBroadcast(message.data);
+        const { offers, bio, pfp } = this._decodeMakerBroadcast(message.data);
         let _offerhash = ethers.keccak256(message.data);
         const pair: [string, IOffer] = [_offerhash, offers];
         this.logger.info(pair);
-	this.peers.set(message.from + '::bio', bio);
+        this.peers.set(message.from + "::bio", bio);
+        this.peers.set(message.from + "::pfp", pfp as any);
         if (this.peers.has(message.from)) {
           if (this.peers.get(message.from)[0] == _offerhash) return;
           this.peers.set(message.from, pair);
@@ -429,20 +430,20 @@ export class Pintswap extends PintP2P {
   }
   _offersAsProtobufStruct() {
     return [...this.offers.values()].map((v) =>
-        Object.fromEntries(
-          Object.entries(v).map(([key, value]) => [
-            key,
-            toTypedTransfer(
-              mapValues(value, (v) => Buffer.from(ethers.toBeArray(v)))
-            ),
-          ])
-        )
-      );
+      Object.fromEntries(
+        Object.entries(v).map(([key, value]) => [
+          key,
+          toTypedTransfer(
+            mapValues(value, (v) => Buffer.from(ethers.toBeArray(v)))
+          ),
+        ])
+      )
+    );
   }
   _encodeMakerBroadcast() {
     return protocol.MakerBroadcast.encode({
       offers: this._offersAsProtobufStruct(),
-      bio: this.userData.bio
+      bio: this.userData.bio,
     }).finish();
   }
   _encodeOffers() {
@@ -471,11 +472,13 @@ export class Pintswap extends PintP2P {
           ])
         )
       ),
-      pfp: Buffer.isBuffer(this.userData.image) ? {
-        file: this.userData.image
-      } : {
-        nft: this.userData.image
-      },
+      pfp: Buffer.isBuffer(this.userData.image)
+        ? {
+            file: this.userData.image,
+          }
+        : {
+            nft: this.userData.image,
+          },
       bio: this.userData.bio,
     }).finish();
   }
@@ -768,7 +771,17 @@ export class Pintswap extends PintP2P {
 
     const offers = protobufOffersToHex(offerList.offers);
     const bio = offerList.bio;
-    return { offers, bio };
+    const pfp = offerList.pfp;
+    return {
+      offers,
+      bio,
+      pfp:
+        (pfp && {
+          token: base64ToAddress(pfp.token),
+          tokenId: base64ToValue(pfp.tokenId),
+        }) ||
+        null,
+    };
   }
   _decodeOffers(data: Buffer) {
     let offerList = protocol.OfferList.toObject(
@@ -801,10 +814,13 @@ export class Pintswap extends PintP2P {
     const offers = protobufOffersToHex(userData.offers);
     return {
       offers,
-      image: userData.pfp === 'file' ? Buffer.from(ethers.decodeBase64(userData.file)) : {
-        token: base64ToAddress(userData.nft.token),
-	tokenId: base64ToValue(userData.nft.tokenId)
-      },
+      image:
+        userData.pfp === "file"
+          ? Buffer.from(ethers.decodeBase64(userData.file))
+          : {
+              token: base64ToAddress(userData.nft.token),
+              tokenId: base64ToValue(userData.nft.tokenId),
+            },
       bio: userData.bio,
     };
   }
@@ -819,7 +835,6 @@ export class Pintswap extends PintP2P {
   async approveTrade(transfer: ITransfer, sharedAddress: string) {
     const tradeAddress = await this.getTradeAddress(sharedAddress);
     if (isERC721Transfer(transfer) || isERC1155Transfer(transfer)) {
-
       if (await detectERC721Permit(transfer.token, this.signer)) {
         const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
         const permitData = await erc721Permit.signAndMergeERC721(
@@ -883,9 +898,13 @@ export class Pintswap extends PintP2P {
         ],
         this.signer
       );
-      const wethBalance = ethers.toBigInt(await weth.balanceOf(await this.signer.getAddress()));
+      const wethBalance = ethers.toBigInt(
+        await weth.balanceOf(await this.signer.getAddress())
+      );
       if (wethBalance < ethers.toBigInt(transfer.amount)) {
-        const depositTx = await weth.deposit({ value: ethers.toBigInt(transfer.amount) - wethBalance });
+        const depositTx = await weth.deposit({
+          value: ethers.toBigInt(transfer.amount) - wethBalance,
+        });
         if (this._awaitReceipts)
           await this.signer.provider.waitForTransaction(depositTx.hash);
       }
@@ -989,8 +1008,8 @@ export class Pintswap extends PintP2P {
     );
     if (ethers.getUint(allowance) < ethers.getUint("0x0" + "f".repeat(63))) {
       if (ethers.getUint(allowance) !== BigInt(0)) {
-        const tx = await token.approve(PERMIT2_ADDRESS, '0x00');
-  	await this.signer.provider.waitForTransaction(tx.hash);
+        const tx = await token.approve(PERMIT2_ADDRESS, "0x00");
+        await this.signer.provider.waitForTransaction(tx.hash);
       }
       return await token.approve(PERMIT2_ADDRESS, ethers.MaxUint256);
     }
@@ -1024,17 +1043,18 @@ export class Pintswap extends PintP2P {
     const gasLimit = await (async () => {
       do {
         try {
-          const estimate = (
+          const estimate =
             toBigInt(
               await this.signer.provider.estimateGas({
                 data: contract,
                 from: sharedAddress,
                 //          gasPrice,
               })
-            ) + BigInt(26000)
-          );
-	  if (estimate > BigInt(10e6)) { throw Error('gas estimate too high -- revert'); }
-	  return estimate;
+            ) + BigInt(26000);
+          if (estimate > BigInt(10e6)) {
+            throw Error("gas estimate too high -- revert");
+          }
+          return estimate;
         } catch (e) {
           this.logger.error(e);
           await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -1131,9 +1151,11 @@ export class Pintswap extends PintP2P {
               }))
             )
           );
-          const offer = sumOffers(batchFill.map((v) => ({
-             ...scaleOffer(v.offer, v.amount)
-          })));
+          const offer = sumOffers(
+            batchFill.map((v) => ({
+              ...scaleOffer(v.offer, v.amount),
+            }))
+          );
           messages.push(message1); // message 1
           const { value: keygenMessage2BufList } = await source.next(); // message 2
           const keygenMessage2 = keygenMessage2BufList.slice();

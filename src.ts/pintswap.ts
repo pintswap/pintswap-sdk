@@ -468,13 +468,13 @@ export class Pintswap extends PintP2P {
           ])
         )
       ),
-      pfp: Buffer.isBuffer(this.userData.image)
+      ...(Buffer.isBuffer(this.userData.image)
         ? {
             file: this.userData.image,
           }
         : {
             nft: this.userData.image,
-          },
+          }),
       bio: this.userData.bio,
     }).finish();
   }

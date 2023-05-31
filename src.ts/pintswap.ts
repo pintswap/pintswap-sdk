@@ -362,14 +362,9 @@ export class Pintswap extends PintP2P {
   async subscribeOffers() {
     this.pubsub.on("/pintswap/0.1.2/publish-orders", (message) => {
       try {
-        this.logger.debug(
-          `\n PUBSUB: TOPIC-${message.topicIDs[0]} \n FROM: PEER-${message.from}`
-        );
-        this.logger.info(message.data);
         const { offers, bio, pfp } = this._decodeMakerBroadcast(message.data);
         let _offerhash = ethers.keccak256(message.data);
         const pair: [string, IOffer] = [_offerhash, offers];
-        this.logger.info(pair);
         this.peers.set(message.from + "::bio", bio);
         this.peers.set(message.from + "::pfp", pfp as any);
         if (this.peers.has(message.from)) {
@@ -444,7 +439,7 @@ export class Pintswap extends PintP2P {
     return protocol.MakerBroadcast.encode({
       offers: this._offersAsProtobufStruct(),
       bio: this.userData.bio,
-      pfp: (this.userData.image as any).token && this.userData.image
+      pfp: (this.userData.image as any).token && this.userData.image,
     }).finish();
   }
   _encodeOffers() {

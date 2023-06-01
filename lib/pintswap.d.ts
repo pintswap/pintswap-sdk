@@ -48,7 +48,7 @@ export declare class Pintswap extends PintP2P {
     registerName(name: any): Promise<unknown>;
     constructor({ awaitReceipts, signer, peerId, userData, offers }: any);
     setBio(s: string): void;
-    setImage(b: Buffer): void;
+    setImage(b: Buffer | NFTPFP): void;
     publishOffers(): Promise<void>;
     startPublishingOffers(ms: number): {
         setInterval(_ms: any): void;
@@ -61,7 +61,7 @@ export declare class Pintswap extends PintP2P {
         peerId: PeerId.JSONPeerId;
         userData: {
             bio: string;
-            image: string;
+            image: string | NFTPFP;
         };
         offers: IOffer[];
     };

@@ -328,7 +328,7 @@ export class Pintswap extends PintP2P {
   setBio(s: string) {
     this.userData.bio = s;
   }
-  setImage(b: Buffer) {
+  setImage(b: Buffer | NFTPFP) {
     this.userData.image = b;
   }
   async publishOffers() {
@@ -403,7 +403,7 @@ export class Pintswap extends PintP2P {
       peerId: this.peerId.toJSON(),
       userData: {
         bio: this.userData.bio,
-        image: this.userData.image.toString("base64"),
+        image: Buffer.isBuffer(this.userData.image) ? this.userData.image.toString("base64") : this.userData.image
       },
       offers: [...this.offers.values()],
     };
@@ -413,7 +413,7 @@ export class Pintswap extends PintP2P {
       ...o,
       userData: o.userData && {
         bio: o.userData.bio,
-        image: Buffer.from(o.userData.image, "base64"),
+        image: o.userData.image.token ? o.userData.image : Buffer.from(o.userData.image, "base64"),
       },
       offers:
         o.offers &&

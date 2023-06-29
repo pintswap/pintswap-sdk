@@ -225,7 +225,7 @@ export function sumOffers(offers: any[]) {
 }
 
 export const NS_MULTIADDRS = {
-  DRIP: ["QmUtvU33iaHun99yD9HgiyLSrmPhWUbXVX2hAZRY4AEV2d"],
+  DRIP: ["QmRQLTzWYW22pZsB1cAv4UfPgU7Ui8XZT2TsLh5HNLqCYk"]
 };
 
 export interface NFTPFP {

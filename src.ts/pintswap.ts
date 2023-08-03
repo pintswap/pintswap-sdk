@@ -238,6 +238,10 @@ export interface IUserData {
   image: Buffer | NFTPFP;
 }
 
+const mapObjectStripNullAndUndefined = (o) => {
+  return Object.fromEntries(Object.entries(o).filter(([key, value]) => value != null));
+};
+
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
@@ -429,7 +433,7 @@ export class Pintswap extends PintP2P {
         Object.entries(v).map(([key, value]) => [
           key,
           toTypedTransfer(
-            mapValues(value, (v) => Buffer.from(ethers.toBeArray(v)))
+            mapValues(mapObjectStripNullAndUndefined(value), (v) => Buffer.from(ethers.toBeArray(v)))
           ),
         ])
       )
@@ -463,7 +467,7 @@ export class Pintswap extends PintP2P {
           Object.entries(v).map(([key, value]) => [
             key,
             toTypedTransfer(
-              mapValues(value, (v) => Buffer.from(ethers.toBeArray(v)))
+              mapValues(mapObjectStripNullAndUndefined(value), (v) => Buffer.from(ethers.toBeArray(v)))
             ),
           ])
         )

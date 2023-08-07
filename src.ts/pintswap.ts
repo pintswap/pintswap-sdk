@@ -542,7 +542,7 @@ export class Pintswap extends PintP2P {
             offerHashHex = ethers.hexlify(batchFillBufList.slice());
             offer = sumOffers(offers);
             offers.forEach((v, i) => {
-              self.offers.delete(batchFill[i].offerHash);
+              if (!self.offers.delete(batchFill[i].offerHash)) throw Error('duplicate order in fill');
             });
             batchFill.forEach((v) => trade.emit("hash", v.offerHash));
             trade.hashes = batchFill.map((v) => v.offerHash);

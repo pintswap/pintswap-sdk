@@ -17,8 +17,10 @@ import globalObject from 'the-global-object';
 import { Buffer } from 'buffer';
 import { mapValues } from 'lodash';
 import base64url from 'base64url';
-import { VERSION } from "./utils";
+import { bech32 } from "bech32";
+import { toB58String, fromB58String } from "multihashes";
 
+export const VERSION = "1.0.0";
 
 export function bufferToString(buf: Uint8Array): string {
     return new TextDecoder().decode(buf)
@@ -115,6 +117,20 @@ export class PintP2P extends Libp2p {
       multiaddr,
       seed: await signer.signMessage(this.toMessage(password)),
     });
+  }
+  static PREFIX = 'pint';
+
+  static toAddress(bufferOrB58) {
+    let buf;
+    if (typeof bufferOrB58 === 'string') {
+      if (bufferOrB58.substr(0, this.PREFIX.length) === this.PREFIX) return bufferOrB58;
+      else buf = fromB58String(bufferOrB58);
+    } else buf = bufferOrB58;
+    return bech32.encode(this.PREFIX, bech32.toWords(buf));
+  }
+  static fromAddress(address) {
+    if (typeof address === 'string' && address.substr(0, this.PREFIX.length) === this.PREFIX) return toB58String(Buffer.from(bech32.fromWords(bech32.decode(address).words)));
+    throw Error('not a PintSwap address');
   }
   async start() {
     await super.start();

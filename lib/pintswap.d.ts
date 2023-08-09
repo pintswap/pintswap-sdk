@@ -44,6 +44,7 @@ export declare class Pintswap extends PintP2P {
         awaitReceipts: any;
         signer: any;
     }): Promise<Pintswap>;
+    dialPeer(...args: any[]): Promise<any>;
     resolveName(name: any): Promise<string>;
     registerName(name: any): Promise<unknown>;
     constructor({ awaitReceipts, signer, peerId, userData, offers }: any);
@@ -77,7 +78,11 @@ export declare class Pintswap extends PintP2P {
     handleUserData(): Promise<void>;
     handleBroadcastedOffers(): Promise<void>;
     broadcastOffer(_offer: IOffer): void;
-    getUserDataByPeerId(peerId: string): Promise<{
+    findPeer(pintSwapAddress: string): Promise<{
+        id: PeerId;
+        multiaddrs: import("multiaddr").Multiaddr[];
+    }>;
+    getUserData(pintSwapAddress: string): Promise<{
         offers: any;
         image: Buffer | {
             token: string;
@@ -85,7 +90,7 @@ export declare class Pintswap extends PintP2P {
         };
         bio: any;
     }>;
-    getTradesByPeerId(peerId: string): Promise<any>;
+    getTrades(pintSwapAddress: string): Promise<any>;
     _decodeMakerBroadcast(data: Buffer): {
         offers: any;
         bio: any;

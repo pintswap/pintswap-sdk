@@ -1,6 +1,7 @@
 import PeerId from "peer-id";
 import { VoidSigner } from "ethers";
 import Libp2p from "libp2p";
+export declare const VERSION = "1.0.0";
 export declare function bufferToString(buf: Uint8Array): string;
 export declare function stringToBuffer(text: string): Uint8Array;
 export declare function fromBufferToJSON(buf: Uint8Array): any;
@@ -25,6 +26,9 @@ export declare class PintP2P extends Libp2p {
         multiaddr: any;
         password: any;
     }): Promise<PintP2P>;
+    static PREFIX: string;
+    static toAddress(bufferOrB58: any): string;
+    static fromAddress(address: any): any;
     start(): Promise<void>;
     setSigner(signer: any): void;
     constructor(options: any);

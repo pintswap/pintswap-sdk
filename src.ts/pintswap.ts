@@ -33,7 +33,6 @@ import * as erc721Permit from "./erc721-permit";
 import { detectPermit } from "./detect-permit";
 import { detectERC721Permit } from "./detect-erc721-permit";
 import fetch from "cross-fetch";
-
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
 const base64ToValue = (data) => ethers.hexlify(ethers.decodeBase64(data));
@@ -225,7 +224,7 @@ export function sumOffers(offers: any[]) {
 }
 
 export const NS_MULTIADDRS = {
-  DRIP: ["QmYp9YGmiS7wchajNwfbnqCp6xrP1ktynytwfAwS2kpr4B"]
+  DRIP: ["pint1zgsfhgpxt9kmeyxl2lm08l9nr2233gcahzhyllrfre7k4ce9vjywrpqxv2kgc"]
 };
 
 export interface NFTPFP {
@@ -254,6 +253,10 @@ export class Pintswap extends PintP2P {
     const peerId = await PeerId.create();
     return new Pintswap({ signer, awaitReceipts, peerId });
   }
+  async dialPeer(...args) {
+    const [ peerId, ...rest ] = args;
+    return await this.dialProtocol.apply(this, [PeerId.createFromB58String((this.constructor as any).fromAddress(peerId)), ...rest]);
+  }
 
   async resolveName(name) {
     const parts = name.split(".");
@@ -263,12 +266,7 @@ export class Pintswap extends PintP2P {
     const response: any = await new Promise((resolve, reject) => {
       (async () => {
         const nsHosts = NS_MULTIADDRS[tld.toUpperCase()];
-        const { stream } = await this.dialProtocol(
-          PeerId.createFromB58String(
-            nsHosts[Math.floor(nsHosts.length * Math.random())]
-          ),
-          "/pintswap/0.1.0/ns/query"
-        );
+        const { stream } = await this.dialPeer(nsHosts[Math.floor(nsHosts.length * Math.random())], "/pintswap/0.1.0/ns/query");
         pipe(messages, lp.encode(), stream.sink);
         messages.push(
           protocol.NameQuery.encode({
@@ -297,12 +295,7 @@ export class Pintswap extends PintP2P {
     const response = await new Promise((resolve, reject) => {
       (async () => {
         const nsHosts = NS_MULTIADDRS[tld.toUpperCase()];
-        const { stream } = await this.dialProtocol(
-          PeerId.createFromB58String(
-            nsHosts[Math.floor(nsHosts.length * Math.random())]
-          ),
-          "/pintswap/0.1.0/ns/register"
-        );
+        const { stream } = await this.dialPeer(nsHosts[Math.floor(nsHosts.length * Math.random())], "/pintswap/0.1.0/ns/register");
         pipe(messages, lp.encode(), stream.sink);
         messages.push(Buffer.from(query));
         messages.end();
@@ -367,17 +360,18 @@ export class Pintswap extends PintP2P {
     this.pubsub.on("/pintswap/0.1.2/publish-orders", (message) => {
       try {
         const { offers, bio, pfp } = this._decodeMakerBroadcast(message.data);
+	const from = (this.constructor as any).toAddress(message.from);
         let _offerhash = ethers.keccak256(message.data);
         const pair: [string, IOffer] = [_offerhash, offers];
-        this.peers.set(message.from + "::bio", bio);
-        this.peers.set(message.from + "::pfp", pfp as any);
-        if (this.peers.has(message.from)) {
-          if (this.peers.get(message.from)[0] == _offerhash) return;
-          this.peers.set(message.from, pair);
+        this.peers.set(from + "::bio", bio);
+        this.peers.set(from + "::pfp", pfp as any);
+        if (this.peers.has(from)) {
+          if (this.peers.get(from)[0] == _offerhash) return;
+          this.peers.set(from, pair);
           this.emit("/pubsub/orderbook-update");
           return;
         }
-        this.peers.set(message.from, pair);
+        this.peers.set(from, pair);
         this.emit("/pubsub/orderbook-update");
       } catch (e) {
         this.logger.error(e);
@@ -709,11 +703,13 @@ export class Pintswap extends PintP2P {
     this.offers.set(hash, _offer);
     this.emit("pintswap/trade/broadcast", hash);
   }
-  async getUserDataByPeerId(peerId: string) {
-    let pid = PeerId.createFromB58String(peerId);
+  async findPeer(pintSwapAddress: string) {
+    return await this.peerRouting.findPeer(PeerId.createFromB58String((this.constructor as any).fromAddress(pintSwapAddress)));
+  }
+  async getUserData(pintSwapAddress: string) {
     while (true) {
       try {
-        await this.peerRouting.findPeer(pid);
+        await this.findPeer(pintSwapAddress);
         break;
       } catch (e) {
         this.logger.error(e);
@@ -721,7 +717,7 @@ export class Pintswap extends PintP2P {
       }
     }
     this.emit("pintswap/trade/peer", 0); // start finding peer's orders
-    const { stream } = await this.dialProtocol(pid, "/pintswap/0.1.2/userdata");
+    const { stream } = await this.dialPeer(pintSwapAddress, "/pintswap/0.1.2/userdata");
     this.emit("pintswap/trade/peer", 1); // peer found
     const decoded = pipe(stream.source, lp.decode());
     const { value: userDataBufferList } = await decoded.next();
@@ -733,11 +729,10 @@ export class Pintswap extends PintP2P {
   }
 
   // Takes in a peerId and returns a list of exisiting trades
-  async getTradesByPeerId(peerId: string) {
-    let pid = PeerId.createFromB58String(peerId);
+  async getTrades(pintSwapAddress: string) {
     while (true) {
       try {
-        await this.peerRouting.findPeer(pid);
+        await this.findPeer(pintSwapAddress);
         break;
       } catch (e) {
         this.logger.error(e);
@@ -745,7 +740,7 @@ export class Pintswap extends PintP2P {
       }
     }
     this.emit("pintswap/trade/peer", 0); // start finding peer's orders
-    const { stream } = await this.dialProtocol(pid, "/pintswap/0.1.0/orders");
+    const { stream } = await this.dialPeer(pintSwapAddress, "/pintswap/0.1.0/orders");
     this.emit("pintswap/trade/peer", 1); // peer found
     const decoded = pipe(stream.source, lp.decode());
     const { value: offerListBufferList } = await decoded.next();
@@ -1128,7 +1123,7 @@ export class Pintswap extends PintP2P {
     (async () => {
       this.logger.debug(`Acting on offer ${trade.hashes} with peer ${peer}`);
       this.emit("pintswap/trade/taker", 0); // start fulfilling trade
-      const { stream } = await this.dialProtocol(peer, [
+      const { stream } = await this.dialPeer(peer, [
         "/pintswap/0.1.0/create-trade",
       ]);
 

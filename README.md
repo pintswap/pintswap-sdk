@@ -32,7 +32,15 @@ import { ethers } from "ethers";
 It is also possible to instantiate a Pintswap instance with a deterministically generated PeerId, using the provided signer object and a saltphrase. The signer provided via a call to `Pintswap.fromPassword({ signer, password })` will be used to sign a message of the following structure:
 
 ```
-/pintp2p/1.0.0/your-password
+Welcome to PintSwap!
+PintP2P v1.0.0
+0x3890267d5092ba03d86870b24061b034d41617b0f6e9f024bce2680884a959e9
+```
+
+The third line of this message is computed as:
+
+```
+keccak(/pintp2p/1.0.0/your-password/)
 ```
 
 Where `your-password` is the password supplied to the function.
@@ -54,7 +62,23 @@ import { ethers } from "ethers";
 
 Note that a PeerId cannot be shared between two actively running peers on the network. The PeerId is integral to the way libp2p routes webRTC traffic, but it is also used as your identity on PintSwap.
 
-### resolveName(nameOrMultiaddr)
+### address (getter)
+
+Returns the pint address for the Pintswap PeerId
+
+A pint address is an encoding of the underlying libp2p multihash, converted to bech32 with a `pint` prefix.
+
+```js
+const pintAddress = pintswap.address;
+console.log(pintAddress);
+// pint1zgsw52stcg9kgy4y6qvl3rpu0dzwzdcy9m3yy4mdnfm22c5ht90jh8qtvlwzh
+```
+
+### dialPeer(pintAddress, protocols)
+
+Calls the underlying libp2p `dialProtocol` method but converts the `pintAddress` to a PeerId instance. This method has the same return signature as `Libp2p#dialProtocol(peerId, protocols)`
+
+### resolveName(nameOrAddress)
 
 Uses the `/pintswap/0.1.0/ns/query` protocol handler.
 
@@ -62,11 +86,11 @@ This function will either perform a lookup or a reverse lookup depending on the 
 
 ```js
 
-const multiaddr = await pintswap.resolveName('wock.drip');
-const dripName = await pintswap.resolveName(multiaddr);
+const pintAddress = await pintswap.resolveName('wock.drip');
+const dripName = await pintswap.resolveName(pintAddress);
 ```
 
-In your code, take care to check that you pass in a string and check if it contains a `.` character to determine if is a name or if it is a multiaddr.
+In your code, take care to check that you pass in a string and check if it contains a `.` character to determine if is a name or if it is a pint address.
 
 The PintSwap protocol handles tlds other than `.drip` via separate nameserver peers. It is possible to add your own tlds by hosting a `pintswap-ns` process then in your PintSwap client mutate the `NS_MULTIADDRS` object exported by @pintswap/sdk to include the tld you want to host a registry for and a list of the multiaddrs for your nameservers that can resolve those names.
 
@@ -137,7 +161,7 @@ pintswap.broadcastOffer({
 
 For NFT trades it is possible to use a field similar to `tokenId: '0x01'` instead of the `amount` field in either the `gets` or `gives` field of the offer.
 
-### getUserDataByPeerId(peerId)
+### getUserData(pintAddress)
 
 Returns a structure of the form
 
@@ -149,9 +173,9 @@ Returns a structure of the form
 }
 ```
 
-### createBatchTrade(peerId, fill)
+### createBatchTrade(pintAddress, fill)
 
-Requires a PeerId instance as first argument followed by an array of order fills of the structure
+Requires a pint address as first argument followed by an array of order fills of the structure
 
 ```js
 const trade = pintswap.createBatchTrade(PeerId.createFromB58String(await pintswap.resolveName('wock.drip')), [{

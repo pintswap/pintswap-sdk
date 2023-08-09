@@ -119,7 +119,9 @@ export class PintP2P extends Libp2p {
     });
   }
   static PREFIX = 'pint';
-
+  get address() {
+    return (this.constructor as any).toAddress(this.peerId.toB58String());
+  }
   static toAddress(bufferOrB58) {
     let buf;
     if (typeof bufferOrB58 === 'string') {

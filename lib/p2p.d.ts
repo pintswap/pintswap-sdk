@@ -27,6 +27,7 @@ export declare class PintP2P extends Libp2p {
         password: any;
     }): Promise<PintP2P>;
     static PREFIX: string;
+    get address(): any;
     static toAddress(bufferOrB58: any): string;
     static fromAddress(address: any): any;
     start(): Promise<void>;

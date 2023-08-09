@@ -45,7 +45,7 @@ export declare class Pintswap extends PintP2P {
         signer: any;
     }): Promise<Pintswap>;
     dialPeer(...args: any[]): Promise<any>;
-    resolveName(name: any): Promise<string>;
+    resolveName(name: any): Promise<any>;
     registerName(name: any): Promise<unknown>;
     constructor({ awaitReceipts, signer, peerId, userData, offers }: any);
     setBio(s: string): void;

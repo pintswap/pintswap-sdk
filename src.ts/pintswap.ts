@@ -241,6 +241,16 @@ const mapObjectStripNullAndUndefined = (o) => {
   return Object.fromEntries(Object.entries(o).filter(([key, value]) => value != null));
 };
 
+const maybeConvertName = (s) => {
+  if (s.indexOf('.') !== -1 || s.substr(0, PintP2P.PREFIX.length) === PintP2P.PREFIX) return s;
+  return PintP2P.toAddress(s);
+};
+
+const maybeFromName = (s) => {
+  if (s.substr(0, PintP2P.PREFIX.length) === PintP2P.PREFIX) return PintP2P.fromAddress(s);
+  return s;
+};
+
 export class Pintswap extends PintP2P {
   public signer: any;
   public offers: Map<string, IOffer> = new Map();
@@ -257,7 +267,6 @@ export class Pintswap extends PintP2P {
     const [ peerId, ...rest ] = args;
     return await this.dialProtocol.apply(this, [PeerId.createFromB58String((this.constructor as any).fromAddress(peerId)), ...rest]);
   }
-
   async resolveName(name) {
     const parts = name.split(".");
     const query = parts.slice(0, Math.max(parts.length - 1, 1)).join(".");
@@ -270,7 +279,7 @@ export class Pintswap extends PintP2P {
         pipe(messages, lp.encode(), stream.sink);
         messages.push(
           protocol.NameQuery.encode({
-            name: query,
+            name: maybeFromName(query),
           }).finish()
         );
         messages.end();
@@ -285,7 +294,9 @@ export class Pintswap extends PintP2P {
       })().catch(reject);
     });
     if (response.status === 0) throw Error("no name registered");
-    return response.result + (parts.length > 1 ? "" : "." + tld);
+    const result = response.result + (parts.length > 1 ? "" : "." + tld);
+    if (result.indexOf('.') === -1) return maybeConvertName(result);
+    else return result;
   }
   async registerName(name) {
     let parts = name.split(".");

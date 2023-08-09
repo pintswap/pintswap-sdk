@@ -130,7 +130,7 @@ export class PintP2P extends Libp2p {
   }
   static fromAddress(address) {
     if (typeof address === 'string' && address.substr(0, this.PREFIX.length) === this.PREFIX) return toB58String(Buffer.from(bech32.fromWords(bech32.decode(address).words)));
-    throw Error('not a PintSwap address');
+    return address;
   }
   async start() {
     await super.start();

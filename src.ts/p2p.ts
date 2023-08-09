@@ -17,6 +17,7 @@ import globalObject from 'the-global-object';
 import { Buffer } from 'buffer';
 import { mapValues } from 'lodash';
 import base64url from 'base64url';
+import { VERSION } from "./utils";
 
 
 export function bufferToString(buf: Uint8Array): string {
@@ -95,10 +96,7 @@ export class PintP2P extends Libp2p {
     return this.PRESETS[(multiaddr || '').toUpperCase() || 'MAINNET'] || multiaddr;
   }
   static toMessage(password) {
-    return (
-      "/pintp2p/1.0.0/" +
-      solidityPackedKeccak256(["string"], ["/pintp2p/1.0.0/" + password])
-    );
+    return `Welcome to PintSwap!\n\nPintP2P v${VERSION}\n${solidityPackedKeccak256(["string"], [`/pintp2p/${VERSION}/` + password])}`;
   }
   static async peerIdFromSeed(seed) {
     const marshalled = await cryptoFromSeed(seed);

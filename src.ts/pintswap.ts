@@ -715,7 +715,9 @@ export class Pintswap extends PintP2P {
     this.emit("pintswap/trade/broadcast", hash);
   }
   async findPeer(pintSwapAddress: string) {
-    return await this.peerRouting.findPeer(PeerId.createFromB58String((this.constructor as any).fromAddress(pintSwapAddress)));
+    console.log(pintSwapAddress)
+    const resolved = (this.constructor as any).fromAddress(pintSwapAddress.indexOf('.') !== -1 ? await this.resolveName(pintSwapAddress) : pintSwapAddress);
+    return await this.peerRouting.findPeer(PeerId.createFromB58String(resolved));
   }
   async getUserData(pintSwapAddress: string) {
     while (true) {

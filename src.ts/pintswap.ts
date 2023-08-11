@@ -841,6 +841,7 @@ export class Pintswap extends PintP2P {
     return address;
   }
   async approveTrade(transfer: ITransfer, sharedAddress: string) {
+    const { chainId } = await this.signer.provider.getNetwork();
     const tradeAddress = await this.getTradeAddress(sharedAddress);
     if (isERC721Transfer(transfer) || isERC1155Transfer(transfer)) {
       if (await detectERC721Permit(transfer.token, this.signer)) {
@@ -897,7 +898,6 @@ export class Pintswap extends PintP2P {
         )
     );
     if (transfer.token === ethers.ZeroAddress) {
-      const { chainId } = await this.signer.provider.getNetwork();
       const weth = new ethers.Contract(
         toWETH(Number(chainId)),
         [
@@ -942,7 +942,7 @@ export class Pintswap extends PintP2P {
         },
       };
     } else if (
-      Number((await this.signer.provider.getNetwork()).chainId) === 1
+      [42220, 42161, 137, 10, 1].includes(Number(chainId))
     ) {
       const tx = await this.approvePermit2(transfer.token);
       if (tx && this._awaitReceipts)
@@ -965,7 +965,7 @@ export class Pintswap extends PintP2P {
           ),
         },
         permit2Address: PERMIT2_ADDRESS,
-        chainId: 1,
+        chainId
       };
       const signature = await signTypedData(
         this.signer,

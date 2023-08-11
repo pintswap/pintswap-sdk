@@ -32,7 +32,7 @@ export declare function getPermitStructure(asset: any): {
     name: string;
     type: string;
 }[];
-export declare function toChainId(network: any): 1 | 137 | 43114 | 42161 | 10;
+export declare function toChainId(network: any): 1 | 10 | 137 | 42161 | 43114;
 export declare function toNetwork(asset: any): string;
 export declare function getVersion(contract: any): Promise<any>;
 export declare function getDomain(o: any): {

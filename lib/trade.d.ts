@@ -27,14 +27,6 @@ export declare const transactionToObject: (tx: any) => {
     maxFeePerGas: any;
     maxPriorityFeePerGas: any;
 };
-export declare const WETH_ADDRESSES: {
-    "42161": string;
-    "137": string;
-    "10": string;
-    "43112": string;
-    "324": string;
-    "42220": string;
-};
 export declare const setFallbackWETH: (address: any) => void;
 export declare const coerceToWeth: (address: any, signer: any) => Promise<any>;
 export declare const toWETH: (chainId?: number | string) => any;

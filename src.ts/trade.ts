@@ -2,10 +2,10 @@ import { IOffer } from "./types";
 import { BigNumberish, ethers, Signer } from "ethers";
 import { emasm } from "emasm";
 import BN from "bn.js";
-import WETH9 from "canonical-weth/build/contracts/WETH9.json";
 import { PERMIT2_ADDRESS } from "@uniswap/permit2-sdk";
 import Permit2ABI from "./permit2.json";
 import * as evmdis from "evmdis";
+import { WETH_ADDRESSES } from "./chains";
 const {
   solidityPackedKeccak256,
   toBeArray,
@@ -104,21 +104,6 @@ export const transactionToObject = (tx) => ({
   maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
 });
 
-// ETH/WETH
-export const WETH_ADDRESSES = Object.assign(
-  Object.entries(WETH9.networks).reduce((r, [chainId, { address }]: any) => {
-    r[chainId] = address;
-    return r;
-  }, {}),
-  {
-    "42161": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
-    "137": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
-    "10": "0x4200000000000000000000000000000000000006",
-    "43112": "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB",
-    "324": "0x8Ebe4A94740515945ad826238Fc4D56c6B8b0e60",
-    "42220": "0x122013fd7dF1C6F636a5bb8f03108E876548b455"
-  }
-);
 
 let fallbackWETH = null;
 export const setFallbackWETH = (address) => {

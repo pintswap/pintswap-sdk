@@ -59,6 +59,8 @@ const toTypedTransfer = (transfer) =>
     ],
   ]);
 
+const NFT_WILDCARD = '0xf00000000000000000000000000000000000000000000000000000000000000000';
+
 export const protobufOffersToHex = (offers) =>
   offers.map((v) => {
     return mapValues(v, (v) => {

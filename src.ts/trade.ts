@@ -42,21 +42,26 @@ export const isERC721Transfer = (o) =>
 export const isERC1155Transfer = (o) =>
   Boolean(o.tokenId && o.token && o.amount !== undefined);
 
+export const expandNullHexValueToZero = (value) => {
+  if (value === '0x') return '0x00';
+  return value;
+};
+
 export const hashTransfer = (o) => {
   if (isERC20Transfer(o))
     return solidityPackedKeccak256(
       ["string", "address", "uint256"],
-      ["/pintswap/erc20", o.token, o.amount]
+      ["/pintswap/erc20", o.token, expandNullHexValueToZero(o.amount)]
     );
   if (isERC721Transfer(o))
     return solidityPackedKeccak256(
       ["string", "address", "uint256"],
-      ["/pintswap/erc721", o.token, o.tokenId]
+      ["/pintswap/erc721", o.token, expandNullHexValueToZero(o.tokenId)]
     );
   if (isERC1155Transfer(o))
     return solidityPackedKeccak256(
       ["string", "address", "uint256", "uint256"],
-      ["/pintswap/erc1155", o.token, o.tokenId, o.amount]
+      ["/pintswap/erc1155", o.token, expandNullHexValueToZero(o.tokenId), expandNullHexValueToZero(o.amount)]
     );
   throw Error("no matching token structure");
 };

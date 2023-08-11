@@ -7,6 +7,7 @@ export declare function keyshareToAddress(keyshareJsonObject: any): string;
 export declare const isERC20Transfer: (o: any) => boolean;
 export declare const isERC721Transfer: (o: any) => boolean;
 export declare const isERC1155Transfer: (o: any) => boolean;
+export declare const expandNullHexValueToZero: (value: any) => any;
 export declare const hashTransfer: (o: any) => string;
 export declare const hashOffer: (o: any) => string;
 export declare function leftZeroPad(s: any, n: any): string;

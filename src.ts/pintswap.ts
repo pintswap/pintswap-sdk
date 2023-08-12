@@ -553,21 +553,17 @@ export class Pintswap extends PintP2P {
             });
             batchFill.forEach((v) => trade.emit("hash", v.offerHash));
             trade.hashes = batchFill.map((v) => v.offerHash);
+	    self.logger.debug('keygen1::wait');
             const { value: keygenMessage1 } = await source.next();
             self.emit("pintswap/trade/maker", 0); // maker sees that taker clicked "fulfill trade"
             trade.emit("progress", 0);
-            self.logger.debug(
-              `MAKER:: /event/ecdsa-keygen/party/2 handling message: 1`
-            );
+            self.logger.debug('keygen::step1::push');
             messages.push(context2.step1(keygenMessage1.slice()));
+	    self.logger.debug('address::push');
             messages.push(Buffer.from(address.substr(2), "hex"));
-            self.logger.debug(
-              "MAKER: pushed context2.step1(message) + address"
-            );
+            self.logger.debug('keygen::step2::wait');
             const { value: keygenMessage3 } = await source.next();
-            self.logger.debug(
-              `MAKER:: /event/ecdsa-keygen/party/2 handling message: 3`
-            );
+	    self.logger.debug('keygen::step2::push');
             context2.step2(keygenMessage3.slice());
             // set keyshare and shared address
             const keyshareJson = context2.exportKeyShare().toJsonObject();
@@ -581,6 +577,7 @@ export class Pintswap extends PintP2P {
               hash: offerHashHex,
               offer,
             });
+	    self.logger.debug('approve::dispatch');
             const tx = await self.approveTradeAsMaker(
               offer,
               sharedAddress as string
@@ -589,31 +586,26 @@ export class Pintswap extends PintP2P {
               const encoded = permit.encode(tx.permitData);
               messages.push(encoded);
             } else {
+              self.logger.debug('approve::wait');
               await self.signer.provider.waitForTransaction(tx.hash);
               messages.push(Buffer.from([]));
             }
             self.emit("pintswap/trade/maker", 1); // maker sees the taker signed tx
             trade.emit("progress", 1);
-            self.logger.debug(
-              `MAKER:: /event/approve-contract approved offer with offer hash: ${offerHashHex}`
-            );
-            self.logger.debug("MAKER: WAITING FOR APPROVE");
-            self.logger.debug("MAKER: GOT APPROVE");
-
-            self.logger.debug("SHOULD RECEIVE PERMITDATA");
+            self.logger.debug('approve::complete');
+	    self.logger.debug('taker-permit::wait');
             const { value: takerPermitDataBytes } = await source.next();
+	    self.logger.debug('taker-permit::complete');
             const takerPermitDataSlice = takerPermitDataBytes.slice();
             const takerPermitData =
               takerPermitDataSlice.length &&
               permit.decode(takerPermitDataSlice);
-            self.logger.debug(
-              "TAKERPERMITDATA: " + ethers.hexlify(takerPermitDataSlice)
-            );
-            self.logger.debug("SHOULD RECEIVE SERIALIZED");
+            self.logger.debug("serialized::wait");
             const { value: serializedTxBufList } = await source.next();
-            self.logger.debug("MAKER: RECEIVED SERIALIZED");
+            self.logger.debug("serialized::complete");
+	    self.logger.debug("pay-coinbase::wait");
             const { value: payCoinbaseAmountBufList } = await source.next();
-            self.logger.debug("MAKER: RECEIVED PAYCOINBASEAMOUNT");
+            self.logger.debug("pay-coinbase::complete");
             const payCoinbaseAmountBuffer = payCoinbaseAmountBufList.slice();
             const payCoinbaseAmount = payCoinbaseAmountBuffer.length
               ? ethers.hexlify(
@@ -622,20 +614,16 @@ export class Pintswap extends PintP2P {
                   )
                 )
               : null;
-            self.logger.debug("MAKER: pay coinbase " + payCoinbaseAmount);
-
             const serializedTx = serializedTxBufList.slice();
-            self.logger.debug("RECEIVED SERIALIZED");
-            self.logger.debug(ethers.hexlify(serializedTx.slice()));
+            const serialized = ethers.hexlify(serializedTx);
+	    self.logger.debug("serialized::bytes::" + serialized);
+	    self.logger.debug('taker-address::wait');
             const { value: _takerAddress } = await source.next();
             const takerAddress = ethers.getAddress(
               ethers.hexlify(_takerAddress.slice())
             );
-            self.logger.debug("RECEIVED TAKERADDRESS", takerAddress);
-            const serialized = ethers.hexlify(serializedTx);
-            self.logger.debug(
-              `MAKER:: /event/ecdsa-sign/party/2/init received transaction: ${serialized}`
-            );
+	    self.logger.debug('taker-address::complete::' + takerAddress);
+            self.logger.debug('sign::step1::' + serialized);
             const transaction = ethers.Transaction.from(serialized);
             if (transaction.to) {
               throw Error("transaction must not have a recipient");
@@ -648,7 +636,7 @@ export class Pintswap extends PintP2P {
               throw Error("transaction.gasPrice is unrealistically high");
             }
      */
-            self.logger.debug("comparing contract");
+            self.logger.debug("contract-assemble::wait");
 
             let contractPermitData = {} as any;
             if (takerPermitData) contractPermitData.taker = takerPermitData;
@@ -667,27 +655,27 @@ export class Pintswap extends PintP2P {
               )
             )
               throw Error("transaction data is not a pintswap");
-            self.logger.debug("MAKER: making signContext");
+	    self.logger.debug('contract-assemble::complete');
+            self.logger.debug("sign-context::wait");
             const signContext = await TPCsign.P2Context.createContext(
               JSON.stringify(keyshareJson, null, 4),
               new BN(transaction.unsignedHash.substr(2), 16)
             );
+	    self.logger.debug('sign-context::complete');
 
+	    self.logger.debug("sign::step1::wait");
             const { value: signMessage1BufList } = await source.next();
             const signMessage1 = signMessage1BufList.slice();
-            self.logger.debug("MAKER: received signMessage1");
-            self.logger.debug(
-              `MAKER:: /event/ecdsa-sign/party/2 handling message: 1`
-            );
+	    self.logger.debug("sign::step1::compute");
             messages.push(signContext.step1(signMessage1));
-            self.logger.debug("MAKER: pushed signContext.step1(message)");
+	    self.logger.debug("sign::step1::complete");
+	    self.logger.debug("sign::step2::wait");
             const { value: signMessage3BufList } = await source.next();
             const signMessage3 = signMessage3BufList.slice();
-            self.logger.debug(
-              `MAKER:: /event/ecdsa-sign/party/2 handling message 2`
-            );
             self.emit("pintswap/trade/maker", 2); // maker: swap is complete
+	    self.logger.debug("sign::step2::compute");
             messages.push(signContext.step2(signMessage3));
+	    self.logger.debug("sign::step2::complete");
             messages.end();
             trade.resolve();
           } catch (e) {
@@ -839,7 +827,7 @@ export class Pintswap extends PintP2P {
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),
       from: sharedAddress,
     });
-    this.logger.debug("TRADE ADDRESS: " + address);
+    this.logger.debug("trade-address::" + address);
     return address;
   }
   async approveTrade(transfer: ITransfer, sharedAddress: string) {
@@ -892,13 +880,8 @@ export class Pintswap extends PintP2P {
       genericAbi,
       this.signer
     );
-    this.logger.debug("ADDRESS", await this.signer.getAddress());
-    this.logger.debug(
-      "BALANCE BEFORE APPROVING " +
-        ethers.formatEther(
-          await token.balanceOf(await this.signer.getAddress())
-        )
-    );
+    this.logger.debug("address::" + (await this.signer.getAddress()));
+    this.logger.debug("balance::" + ethers.formatEther(await token.balanceOf(await this.signer.getAddress())));
     if (transfer.token === ethers.ZeroAddress) {
       const weth = new ethers.Contract(
         toWETH(Number(chainId)),
@@ -918,12 +901,7 @@ export class Pintswap extends PintP2P {
         if (this._awaitReceipts)
           await this.signer.provider.waitForTransaction(depositTx.hash);
       }
-      this.logger.debug(
-        "WETH BALANCE " +
-          ethers.formatEther(
-            await weth.balanceOf(await this.signer.getAddress())
-          )
-      );
+      this.logger.debug("weth-balance::" + ethers.formatEther(await weth.balanceOf(await this.signer.getAddress())));
     }
     if (await detectPermit(transfer.token, this.signer)) {
       const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
@@ -984,19 +962,9 @@ export class Pintswap extends PintP2P {
       };
     } else {
       const tx = await token.approve(tradeAddress, transfer.amount);
-      this.logger.debug("TRADE ADDRESS", tradeAddress);
-      this.logger.debug(
-        "BALANCE AFTER APPROVING " +
-          ethers.formatEther(
-            await token.balanceOf(await this.signer.getAddress())
-          )
-      );
-      this.logger.debug(
-        "ALLOWANCE AFTER APPROVING " +
-          ethers.formatEther(
-            await token.allowance(await this.signer.getAddress(), tradeAddress)
-          )
-      );
+      this.logger.debug("trade-address::" + tradeAddress);
+      this.logger.debug("balance::after-approve::" + ethers.formatEther(await token.balanceOf(await this.signer.getAddress())));
+      this.logger.debug("allowance::after-approve::" + ethers.formatEther(await token.allowance(await this.signer.getAddress(), tradeAddress)));
       return tx;
     }
   }
@@ -1074,7 +1042,7 @@ export class Pintswap extends PintP2P {
     const payCoinbaseAmount = payCoinbase
       ? ethers.hexlify(ethers.toBeArray(gasLimit * gasPrice))
       : null;
-    this.logger.debug("GASLIMIT: " + String(Number(gasLimit)));
+    this.logger.debug("gaslimit::" + String(Number(gasLimit)));
     return Object.assign(
       payCoinbase
         ? {
@@ -1110,12 +1078,7 @@ export class Pintswap extends PintP2P {
     let sharedAddressBalance = toBigInt(
       await this.signer.provider.getBalance(sharedAddress)
     );
-    this.logger.debug(
-      `network ${(await this.signer.provider.getNetwork()).chainId}`,
-      sharedAddressBalance,
-      gasPrice,
-      gasLimit
-    );
+    this.logger.debug(`network::${(await this.signer.provider.getNetwork()).chainId}::${sharedAddressBalance}::${gasPrice}::${gasLimit}`);
     return Object.assign(new Transaction(), txParams, {
       chainId: (await this.signer.provider.getNetwork()).chainId,
       nonce: await this.signer.provider.getTransactionCount(sharedAddress),
@@ -1136,14 +1099,17 @@ export class Pintswap extends PintP2P {
     trade.hashes = batchFill.map((v) => hashOffer(v.offer));
     this.emit("trade:taker", trade);
     (async () => {
-      this.logger.debug(`Acting on offer ${trade.hashes} with peer ${peer}`);
+      this.logger.debug(`take::${JSON.stringify(trade.hashes)}::${peer}`);
       this.emit("pintswap/trade/taker", 0); // start fulfilling trade
       const { stream } = await this.dialPeer(peer, [
         "/pintswap/0.1.0/create-trade",
       ]);
-
+      this.logger.debug('keygen::context::compute');
       const context1 = await TPC.P1Context.createContext();
+      this.logger.debug('keygen::context::complete');
+      this.logger.debug('keygen::step1::compute');
       const message1 = context1.step1();
+      this.logger.debug('keygen::step1::complete');
       const messages = pushable();
 
       /*
@@ -1167,53 +1133,51 @@ export class Pintswap extends PintP2P {
             }))
           );
           messages.push(message1); // message 1
+	  self.logger.debug('keygen::step2::wait-protocol');
           const { value: keygenMessage2BufList } = await source.next(); // message 2
+	  self.logger.debug('keygen::step2::received');
           const keygenMessage2 = keygenMessage2BufList.slice();
-          self.logger.debug(keygenMessage2);
+	  self.logger.debug('maker-address::wait-protocol');
           const { value: makerAddressBufList } = await source.next(); // message 2
           const makerAddress = ethers.getAddress(
             ethers.hexlify(makerAddressBufList.slice())
           );
-          self.logger.debug(makerAddress);
-          self.logger.debug(
-            `TAKER:: /event/ecdsa-keygen/party/1 handling message: 1`
-          );
+	  self.logger.debug('maker-address::received::' + makerAddress);
+          self.logger.debug('keygen::step2::compute');
           messages.push(context1.step2(keygenMessage2));
+	  self.logger.debug('keygen::step2::complete');
           const keyshareJson = context1.exportKeyShare().toJsonObject();
           const sharedAddress = keyshareToAddress(keyshareJson);
           trade.emit("progress", 1);
           self.emit("pintswap/trade/taker", 1); // taker approving token swap
           // approve as maker
-          self.logger.debug(
-            `TAKER:: /event/approve-contract approving offer: ${offer} of shared Address ${sharedAddress}`
-          );
+          self.logger.debug('approve::wait');
           const approveTx = await self.approveTradeAsTaker(
             offer,
             sharedAddress as string
           );
-          if (!approveTx.permitData)
+          if (!approveTx.permitData) {
+            self.logger.debug('approve::wait-transaction');
             await self.signer.provider.waitForTransaction(approveTx.hash);
-          self.logger.debug("TAKER APPROVED");
+	    self.logger.debug('approve::transaction-complete');
+	  }
+	  self.logger.debug('approve::complete');
           self.emit("pintswap/trade/taker", 2); // taker approved token swap
           trade.emit("progress", 2);
-          self.logger.debug("PUSHING PERMITDATA");
           if (approveTx.permitData)
             messages.push(permit.encode(approveTx.permitData));
           else messages.push(Buffer.from([]));
-          self.logger.debug("PUSHED PERMITDATA");
-          self.logger.debug("SHOULD RECEIVE PERMITDATABYTES");
+          self.logger.debug("permitdata::wait");
           const { value: permitDataBytes } = await source.next();
-          self.logger.debug("RECEIVED RECEIVE PERMITDATABYTES");
+          self.logger.debug("permitdata::complete");
           const permitDataSlice = permitDataBytes.slice();
           const makerPermitData =
             permitDataSlice.length && permit.decode(permitDataSlice);
 
-          self.logger.debug("enter /event/build/tx");
+          self.logger.debug("build-tx::wait");
           self.emit("pintswap/trade/taker", 3); // building transaction
           trade.emit("progress", 3);
-          self.logger.debug(
-            `/event/build/tx funding sharedAddress ${sharedAddress}`
-          );
+          self.logger.debug('shared-address::fund');
           let contractPermitData = {} as any;
           if (makerPermitData) contractPermitData.maker = makerPermitData;
           if (approveTx.permitData)
@@ -1236,58 +1200,54 @@ export class Pintswap extends PintP2P {
             await self.signer.provider.waitForTransaction(ethTransaction.hash);
           }
 
-          self.logger.debug(
-            `TAKER:: /event/build/tx building transaction with params: ${offer}, ${await self.signer.getAddress()}, ${sharedAddress}`
-          );
+          self.logger.debug(`transaction::${await self.signer.getAddress()}::${sharedAddress}`);
           const tx = await self.createTransaction(
             txParams,
             sharedAddress as string
           );
 
-          self.logger.debug(`TAKER:: /event/build/tx built transaction`);
+          self.logger.debug('transaction::built');
 
           const _uhash = (tx.unsignedHash as string).slice(2);
           const serialized = Buffer.from(
             ethers.toBeArray(tx.unsignedSerialized)
           );
+	  self.logger.debug('sign-context::compute');
           const signContext = await TPCsign.P1Context.createContext(
             JSON.stringify(keyshareJson, null, 4),
             new BN(_uhash, 16)
           );
+	  self.logger.debug('sign-context::complete');
 
-          self.logger.debug(
-            `TAKER:: /event/build/tx sending unsigned transaction hash & signing step 1`
-          );
-
+	  self.logger.debug('serialized-transaction::push');
           messages.push(serialized);
+	  self.logger.debug('pay-coinbase::push');
           messages.push(
             payCoinbaseAmount
               ? Buffer.from(ethers.toBeArray(payCoinbaseAmount))
               : Buffer.from([])
           );
+	  self.logger.debug('taker-address::push');
           messages.push(
             Buffer.from(ethers.toBeArray(await self.signer.getAddress()))
           );
+	  self.logger.debug('sign::step1::compute');
           messages.push(signContext.step1());
-          self.logger.debug("TAKER: pushed signContext.step1()");
+	  self.logger.debug('sign::step1::complete');
           self.emit("pintswap/trade/taker", 4); // transaction built
           trade.emit("progress", 4);
-          self.logger.debug("TAKER: WAITING FOR /event/build/tx");
-          self.logger.debug("TAKER: COMPLETED");
+	  self.logger.debug('sign::step2::wait-protocol');
           const { value: signMessage_2 } = await source.next();
-          self.logger.debug("TAKER: GOT signMessage_2");
-          self.logger.debug(
-            `TAKER:: /event/ecdsa-sign/party/1 handling message 2`
-          );
+	  self.logger.debug('sign::step2::received');
+	  self.logger.debug('sign::step2::compute');
           messages.push(signContext.step2(signMessage_2.slice()));
-          self.logger.debug("TAKER: WAITING FOR /event/ecdsa-sign/party/1");
-          self.logger.debug("TAKER: COMPLETED");
+          self.logger.debug('sign::step2::complete');
+          self.logger.debug('sign::step3::wait-protocol');
           const { value: signMessage_4 } = await source.next();
-          self.logger.debug("TAKER: GOT signMessage_4");
-          self.logger.debug(
-            `TAKER:: /event/ecdsa-sign/party/1 handling message 4`
-          );
+	  self.logger.debug('sign::step3::received');
+	  self.logger.debug('sign::step3::compute');
           signContext.step3(signMessage_4.slice());
+	  self.logger.debug('sign::step3::complete');
           const [r, s, v] = signContext.exportSig();
           tx.signature = ethers.Signature.from({
             r: "0x" + leftZeroPad(r.toString(16), 64),
@@ -1295,6 +1255,7 @@ export class Pintswap extends PintP2P {
             v: v + 27,
           });
           let txHash;
+          self.logger.debug('trade::dispatch');;
           if (
             tx.maxPriorityFeePerGas &&
             ethers.getUint(tx.maxPriorityFeePerGas) === BigInt(0)
@@ -1310,12 +1271,7 @@ export class Pintswap extends PintP2P {
           const txReceipt = await self.signer.provider.waitForTransaction(
             txHash
           );
-          self.logger.debug(
-            require("util").inspect(txReceipt, {
-              colors: true,
-              depth: 15,
-            })
-          );
+	  self.logger.debug('trade::complete::' + txHash);
           messages.end();
           stream.close();
           self.emit("pintswap/trade/taker", 5); // transaction complete

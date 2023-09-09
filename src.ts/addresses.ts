@@ -19,6 +19,7 @@ export function computeAddresses(deployerAddress: string) {
     from: pintDeployer,
     nonce: 3
   });
+  result.DEPLOYER = deployerAddress;
   return result;
 }
 

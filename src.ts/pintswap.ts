@@ -1268,14 +1268,16 @@ export class Pintswap extends PintP2P {
                 : await self.signer.provider.broadcastTransaction(tx.serialized)
             ).hash;
           }
+	  /*
           const txReceipt = await self.signer.provider.waitForTransaction(
             txHash
           );
+	 */
 	  self.logger.debug('trade::complete::' + txHash);
           messages.end();
           stream.close();
           self.emit("pintswap/trade/taker", 5); // transaction complete
-          trade.resolve(txReceipt);
+          trade.resolve(txHash || null);
         } catch (e) {
           messages.end();
           stream.close();

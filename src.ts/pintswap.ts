@@ -1275,14 +1275,14 @@ export class Pintswap extends PintP2P {
 	 */
 	  self.logger.debug('trade::complete::' + txHash);
           messages.end();
-          stream.close();
           self.emit("pintswap/trade/taker", 5); // transaction complete
           trade.resolve(txHash || null);
+          stream.close();
         } catch (e) {
           messages.end();
-          stream.close();
           self.logger.error(e);
           trade.reject(e);
+           stream.close();
         }
       });
 

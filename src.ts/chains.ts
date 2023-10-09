@@ -1,6 +1,8 @@
 import { ethers } from "ethers";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
 
+const INFURA_API_KEY = "1efb74c6a48c478298a1b2d68ad4532d";
+
 export const WETH_ADDRESSES = Object.assign(
   Object.entries(WETH9.networks).reduce((r, [chainId, { address }]: any) => {
     r[chainId] = address;
@@ -19,19 +21,19 @@ export const WETH_ADDRESSES = Object.assign(
 export const NETWORKS = [{
   name: "Ethereum",
   chainId: 1,
-  provider: new ethers.InfuraProvider("mainnet")
+  provider: new ethers.InfuraProvider("mainnet", INFURA_API_KEY)
 }, {
   name: "Optimism",
   chainId: 10,
-  provider: new ethers.InfuraProvider("optimism")
+  provider: new ethers.InfuraProvider("optimism", INFURA_API_KEY)
 }, {
   name: "Polygon",
   chainId: 137,
-  provider: new ethers.InfuraProvider("matic")
+  provider: new ethers.InfuraProvider("matic", INFURA_API_KEY)
 }, {
   name: "Arbitrum",
   chainId: 42161,
-  provider: new ethers.InfuraProvider("arbitrum")
+  provider: new ethers.InfuraProvider("arbitrum", INFURA_API_KEY)
 }, {
   name: "Celo",
   chainId: 42220,

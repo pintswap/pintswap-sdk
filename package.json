@@ -19,7 +19,7 @@
     "node:hardhat": "yarn hardhat node",
     "script:maker": "yarn node:client scripts/client-test.js --mockMaker true",
     "script:maker:eth": "ETH=1 yarn node:client scripts/client-test.js --mockMaker true",
-    "script:get-contracts": "node scripts/get-addresses.js"
+    "script:get-addresses": "node scripts/get-addresses.js"
   },
   "repository": "https://github.com/pintswap/pintswap-sdk",
   "author": "flex",

@@ -1094,6 +1094,20 @@ export class Pintswap extends PintP2P {
       },
     ]);
   }
+  async _keygenMPC(i, input, context?) {
+    switch (i) {
+      case 'KEYGEN_A0':
+        return await TPC.P1.createContext();
+      case 'KEYGEN_A1':
+        return context.step1();
+      case 'KEYGEN_A2':
+        return context.step2(input);
+      case 'KEYGEN_B1':
+        return context.step1()
+      case 'SIGN_A1':
+        return context.step1();
+
+    
   createBatchTrade(peer, batchFill) {
     const trade = new PintswapTrade();
     trade.hashes = batchFill.map((v) => hashOffer(v.offer));

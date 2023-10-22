@@ -1,6 +1,29 @@
 syntax = "proto3";
 package pintswap;
 
+message WorkerInput {
+  enum WorkerInputType {
+    KEYGEN_A0 = 0;
+    KEYGEN_A1 = 1;
+    KEYGEN_B0 = 2;
+    KEYGEN_B1 = 3;
+    SIGN_A0 = = 4;
+    SIGN_B0 = 5;
+    SIGN_A1 = 6;
+    SIGN_B1 = 7;
+    SIGN_A2 = 8;
+  }
+  WorkerInputType type = 1;
+  uint32 id = 2;
+  bytes data = 3;
+}
+
+message WorkerOutput {
+  uint32 id = 1;
+  bytes data = 2;
+}
+    
+
 message ERC20Transfer {
   bytes token = 1;
   bytes amount = 2;

@@ -2,6 +2,49 @@
     "nested": {
         "pintswap": {
             "nested": {
+                "WorkerInput": {
+                    "fields": {
+                        "type": {
+                            "type": "WorkerInputType",
+                            "id": 1
+                        },
+                        "id": {
+                            "type": "uint32",
+                            "id": 2
+                        },
+                        "data": {
+                            "type": "bytes",
+                            "id": 3
+                        }
+                    },
+                    "nested": {
+                        "WorkerInputType": {
+                            "values": {
+                                "KEYGEN_A0": 0,
+                                "KEYGEN_A1": 1,
+                                "KEYGEN_B0": 2,
+                                "KEYGEN_B1": 3,
+                                "SIGN_A0": 4,
+                                "SIGN_B0": 5,
+                                "SIGN_A1": 6,
+                                "SIGN_B1": 7,
+                                "SIGN_A2": 8
+                            }
+                        }
+                    }
+                },
+                "WorkerOutput": {
+                    "fields": {
+                        "id": {
+                            "type": "uint32",
+                            "id": 1
+                        },
+                        "data": {
+                            "type": "bytes",
+                            "id": 2
+                        }
+                    }
+                },
                 "ERC20Transfer": {
                     "fields": {
                         "token": {

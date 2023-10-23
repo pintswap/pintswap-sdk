@@ -7,7 +7,7 @@ message WorkerInput {
     KEYGEN_A1 = 1;
     KEYGEN_B0 = 2;
     KEYGEN_B1 = 3;
-    SIGN_A0 = = 4;
+    SIGN_A0 = 4;
     SIGN_B0 = 5;
     SIGN_A1 = 6;
     SIGN_B1 = 7;

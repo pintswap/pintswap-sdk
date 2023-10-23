@@ -25,7 +25,7 @@ import {
   isERC721Transfer,
   isERC1155Transfer,
 } from "./trade";
-import { IOffer, ITransfer } from "./types";
+import { IKeygenMpc, IOffer, ISignMpc, ITransfer } from "./types";
 import PeerId from "peer-id";
 import { createLogger } from "./logger";
 import * as permit from "./permit";
@@ -1094,19 +1094,60 @@ export class Pintswap extends PintP2P {
       },
     ]);
   }
-  async _keygenMPC(i, input, context?) {
+
+  async _keygenMPC({
+    i,
+    input,
+    context
+  }: {
+    i: IKeygenMpc, 
+    input, 
+    context?
+  }) {
     switch (i) {
       case 'KEYGEN_A0':
-        return await TPC.P1.createContext();
+        return await TPC.P1Context.createContext();
       case 'KEYGEN_A1':
         return context.step1();
       case 'KEYGEN_A2':
         return context.step2(input);
+      case 'KEYGEN_B0': // TODO
+        return
       case 'KEYGEN_B1':
-        return context.step1()
-      case 'SIGN_A1':
         return context.step1();
+      default: // TODO
+        return 
+    }
+  }
 
+  async _signMPC({
+    i, 
+    keyshareJson, 
+    m, 
+    context,
+    input
+  } : { 
+    i: ISignMpc; 
+    input?: any
+    keyshareJson?: string; 
+    m?: BN; 
+    context?: any 
+  }) {
+    switch (i) {
+      case 'SIGN_A0': // TODO
+        return await TPCsign.P1Context.createContext(keyshareJson, m);
+      case 'SIGN_A1': // TODO
+        return context.step1();
+      case 'SIGN_A2': // TODO
+        return context.step2(input)
+      case 'SIGN_B0': // TODO
+        return context.step3(input)
+      case 'SIGN_B1': // TODO
+        return 
+      default: // TODO
+        return
+    }
+  }
     
   createBatchTrade(peer, batchFill) {
     const trade = new PintswapTrade();

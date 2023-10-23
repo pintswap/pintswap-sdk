@@ -3,8 +3,9 @@
 import { PintP2P } from "./p2p";
 import { BigNumberish } from "ethers";
 import { EventEmitter } from "events";
+import BN from "bn.js";
 import { defer } from "./trade";
-import { IOffer, ITransfer } from "./types";
+import { IKeygenMpc, IOffer, ISignMpc, ITransfer } from "./types";
 import PeerId from "peer-id";
 import { createLogger } from "./logger";
 export declare const protobufOffersToHex: (offers: any) => any;
@@ -128,5 +129,17 @@ export declare class Pintswap extends PintP2P {
     }>;
     createTransaction(txParams: any, sharedAddress: string): Promise<any>;
     createTrade(peer: any, offer: any): PintswapTrade;
+    _keygenMPC({ i, input, context }: {
+        i: IKeygenMpc;
+        input: any;
+        context?: any;
+    }): Promise<any>;
+    _signMPC({ i, keyshareJson, m, context, input }: {
+        i: ISignMpc;
+        input?: any;
+        keyshareJson?: string;
+        m?: BN;
+        context?: any;
+    }): Promise<any>;
     createBatchTrade(peer: any, batchFill: any): PintswapTrade;
 }

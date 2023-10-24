@@ -3,6 +3,7 @@ import WETH9 from "canonical-weth/build/contracts/WETH9.json";
 
 const INFURA_API_KEY = "1efb74c6a48c478298a1b2d68ad4532d";
 const ALCHEMY_API_KEY = "Qoz0g86Uhc_xLj7P-etwSTLNPSXJmdi4"
+const LLAMA_NODES_KEY = "01HDHHCK8PVCH6BEYYCR6HX6AD"
 
 export const WETH_ADDRESSES = Object.assign(
   Object.entries(WETH9.networks).reduce((r, [chainId, { address }]: any) => {
@@ -22,7 +23,7 @@ export const WETH_ADDRESSES = Object.assign(
 export const NETWORKS = [{
   name: "Ethereum",
   chainId: 1,
-  provider: new ethers.AlchemyProvider("mainnet", ALCHEMY_API_KEY),
+  provider: new ethers.JsonRpcProvider(`https://eth.llamarpc.com/rpc/${LLAMA_NODES_KEY}`),
 }, {
   name: "Optimism",
   chainId: 10,

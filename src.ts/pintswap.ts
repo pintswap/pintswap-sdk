@@ -1101,7 +1101,7 @@ export class Pintswap extends PintP2P {
     context
   }: {
     i: IKeygenMpc, 
-    input, 
+    input?, 
     context?
   }) {
     switch (i) {
@@ -1160,10 +1160,12 @@ export class Pintswap extends PintP2P {
         "/pintswap/0.1.0/create-trade",
       ]);
       this.logger.debug('keygen::context::compute');
-      const context1 = await TPC.P1Context.createContext();
+      // const context1 = await TPC.P1Context.createContext();
+      const context1 = await this._keygenMPC({ i: 'KEYGEN_A0' })
       this.logger.debug('keygen::context::complete');
       this.logger.debug('keygen::step1::compute');
-      const message1 = context1.step1();
+      // const message1 = context1.step1();
+      const message1 = await this._keygenMPC({ i: 'KEYGEN_A1', context: context1 });
       this.logger.debug('keygen::step1::complete');
       const messages = pushable();
 
@@ -1199,7 +1201,8 @@ export class Pintswap extends PintP2P {
           );
 	  self.logger.debug('maker-address::received::' + makerAddress);
           self.logger.debug('keygen::step2::compute');
-          messages.push(context1.step2(keygenMessage2));
+          // messages.push(context1.step2(keygenMessage2));
+          messages.push(await this._keygenMPC({ context: context1, i: 'KEYGEN_A2', input: keygenMessage2 }))
 	  self.logger.debug('keygen::step2::complete');
           const keyshareJson = context1.exportKeyShare().toJsonObject();
           const sharedAddress = keyshareToAddress(keyshareJson);
@@ -1268,10 +1271,15 @@ export class Pintswap extends PintP2P {
             ethers.toBeArray(tx.unsignedSerialized)
           );
 	  self.logger.debug('sign-context::compute');
-          const signContext = await TPCsign.P1Context.createContext(
-            JSON.stringify(keyshareJson, null, 4),
-            new BN(_uhash, 16)
-          );
+          // const signContext = await TPCsign.P1Context.createContext(
+          //   JSON.stringify(keyshareJson, null, 4),
+          //   new BN(_uhash, 16)
+          // );
+          const signContext = await this._signMPC({ 
+            i: 'SIGN_A0', 
+            keyshareJson: JSON.stringify(keyshareJson, null, 4), 
+            m: new BN(_uhash, 16) 
+          })
 	  self.logger.debug('sign-context::complete');
 
 	  self.logger.debug('serialized-transaction::push');
@@ -1287,7 +1295,8 @@ export class Pintswap extends PintP2P {
             Buffer.from(ethers.toBeArray(await self.signer.getAddress()))
           );
 	  self.logger.debug('sign::step1::compute');
-          messages.push(signContext.step1());
+          // messages.push(signContext.step1());
+          messages.push(await this._signMPC({ i: 'SIGN_A1', context: signContext }))
 	  self.logger.debug('sign::step1::complete');
           self.emit("pintswap/trade/taker", 4); // transaction built
           trade.emit("progress", 4);
@@ -1295,13 +1304,15 @@ export class Pintswap extends PintP2P {
           const { value: signMessage_2 } = await source.next();
 	  self.logger.debug('sign::step2::received');
 	  self.logger.debug('sign::step2::compute');
-          messages.push(signContext.step2(signMessage_2.slice()));
+          // messages.push(signContext.step2(signMessage_2.slice()));
+          messages.push(await this._signMPC({ i: 'SIGN_A2', context: signContext, input: signMessage_2.slice() }))
           self.logger.debug('sign::step2::complete');
           self.logger.debug('sign::step3::wait-protocol');
           const { value: signMessage_4 } = await source.next();
 	  self.logger.debug('sign::step3::received');
 	  self.logger.debug('sign::step3::compute');
-          signContext.step3(signMessage_4.slice());
+          // signContext.step3(signMessage_4.slice());
+          await this._signMPC({ i: 'SIGN_B0', context: signContext, input: signMessage_4.slice() })
 	  self.logger.debug('sign::step3::complete');
           const [r, s, v] = signContext.exportSig();
           tx.signature = ethers.Signature.from({

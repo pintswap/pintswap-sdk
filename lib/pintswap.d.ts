@@ -131,7 +131,7 @@ export declare class Pintswap extends PintP2P {
     createTrade(peer: any, offer: any): PintswapTrade;
     _keygenMPC({ i, input, context }: {
         i: IKeygenMpc;
-        input: any;
+        input?: any;
         context?: any;
     }): Promise<any>;
     _signMPC({ i, keyshareJson, m, context, input }: {

@@ -78,9 +78,23 @@ export const protobufOffersToHex = (offers) =>
   });
 
 const getGasPrice = async (provider) => {
-  if (provider.getGasPrice) return await provider.getGasPrice();
+  if (provider.getGasPrice) {
+    return await provider.getGasPrice();
+  }
   return (await provider.getFeeData()).gasPrice;
 };
+
+const max = (a, b) => {
+  if (a > b) return a;
+  else return b;
+};
+
+const getGasPriceWithFloor = async (provider) => {
+  const pending = await provider.getBlock('pending');
+  const gasPrice = await getGasPrice(provider);
+  return max(pending.baseFeePerGas, gasPrice);
+};
+
 
 const signTypedData = async (signer, ...args) => {
   if (signer.signTypedData) return await signer.signTypedData(...args);
@@ -1016,7 +1030,7 @@ export class Pintswap extends PintP2P {
       permitData,
       payCoinbase ? "0x01" : null
     );
-    const gasPrice = toBigInt(await getGasPrice(this.signer.provider));
+    const gasPrice = toBigInt(await getGasPriceWithFloor(this.signer.provider));
 
     const gasLimit = await (async () => {
       do {

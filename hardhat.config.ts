@@ -1,8 +1,8 @@
-const ethers = require('ethers');
-require("@nomicfoundation/hardhat-toolbox");
+import { ethers } from "ethers";
+import "@nomicfoundation/hardhat-toolbox";
 
 /** @type import('hardhat/config').HardhatUserConfig */
-module.exports = {
+export default {
   solidity: {
     compilers: [
       {

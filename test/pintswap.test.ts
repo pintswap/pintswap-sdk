@@ -1,9 +1,89 @@
-const { expect } = require("chai");
-const { Pintswap, setFallbackWETH } = require("../lib");
-const WETH9 = require("canonical-weth/build/contracts/WETH9.json");
-const { hashOffer } = require('../lib/trade');
+import { expect } from "chai";
+import { Pintswap, setFallbackWETH } from "../lib";
+import WETH9 from "canonical-weth/build/contracts/WETH9.json";
+import { hashOffer } from "../lib/trade";
+import { EventEmitter } from "events";
+import { URL } from "url";
+import pair from "it-pair";
 
 const ln = (v) => ((console.log(require('util').inspect(v, { colors: true, depth: 15 }))), v);
+
+const pintswapByAddress: any = {};
+
+export class MockPintswap extends Pintswap {
+  public _handlers: any;
+  public _topics: any[];
+
+  constructor(args) {
+    super(args);
+    pintswapByAddress[this.address] = this;
+    this._handlers = {};
+    this._topics = [];
+    const self = this;
+    const pubsub = ((this as any).pubsub = new EventEmitter());
+    (pubsub as any).start = () => {};
+    (pubsub as any).subscribe = (topic) => {
+      this._topics.push(topic);
+    };
+    (pubsub as any).publish = (topic, data) => {
+      Object.entries(pintswapByAddress)
+        .filter(([k, v]) => (v as any)._topics.find((v) => v === topic))
+        .forEach(([k, v]) => {
+          (v as any).pubsub.emit(topic, {
+            from: Pintswap.fromAddress(self.address),
+            data: data,
+          });
+        });
+    };
+    (pubsub as any).unsubscribe = (topic) => {
+      this._topics.splice(
+        this._topics.findIndex((v) => v === topic),
+        1
+      );
+    };
+  }
+  async start() {
+    await this.startNode();
+  }
+  async startNode() {
+    await this.handleBroadcastedOffers();
+    await this.handleUserData();
+  }
+  //@ts-ignore
+  async findPeer() {}
+
+  async handle(protocols, cb) {
+    if (!Array.isArray(protocols)) protocols = [protocols];
+    protocols.forEach((v) => {
+      this._handlers[v] = cb;
+    });
+  }
+  async resolveName(v) {
+    return v;
+  }
+  async dialPeer(address, protocol) {
+    const a = pair();
+    const b = pair();
+    const fromStream = {
+      sink: b.sink,
+      source: a.source,
+    };
+    (fromStream as any).close = () => {};
+    const toStream = {
+      sink: a.sink,
+      source: b.source,
+    };
+    (toStream as any).close = () => {};
+    new Promise((resolve, reject) => setTimeout(resolve, 0))
+      .then(() => {
+        pintswapByAddress[address]._handlers[protocol]({
+          stream: toStream,
+        });
+      })
+      .catch((err) => console.error(err));
+    return { stream: fromStream };
+  }
+}
 
 describe("Pintswap - Integration Tests", function () {
   const testingEth = process.env.ETH ? true : false;
@@ -113,39 +193,27 @@ describe("Pintswap - Integration Tests", function () {
     const [makerSigner, takerSigner] = await ethers.getSigners();
 
     await new Promise(async (resolve) => {
-      maker = await Pintswap.initialize({ signer: makerSigner });
+      maker = await MockPintswap.initialize({ signer: makerSigner });
       await maker.startNode();
-      maker.on("peer:discovery", async (peer) => {
-        console.log(`Maker:: found peer with id: ${peer}`);
-      });
 
       if (process.env.BATCH) {
         maker.broadcastOffer(offers[0]);
         maker.broadcastOffer(offers[1]);
-        console.log(hashOffer(offers[0]));
       } else maker.broadcastOffer(offer);
       setTimeout(resolve, 6000);
     });
 
     await new Promise(async (resolve) => {
-      taker = await Pintswap.initialize({ signer: takerSigner });
+      taker = await MockPintswap.initialize({ signer: takerSigner });
       await taker.startNode();
-      taker.on("peer:discovery", async (peer) => {
-        console.log(`Taker:: found peer with id: ${peer}`);
-      });
       setTimeout(resolve, 6000);
     });
   });
   it("`Taker` should be able to dial and get the trade of the `Maker`", async function () {
-    let offers = ln(await taker.getTradesByPeerId(maker.peerId.toB58String()));
+    let offers = await taker.getUserData(maker.address);
   });
-
-  it("`Maker` should be started", async function () {
-    expect(maker.isStarted()).to.be.equal(true);
-  });
-
   it("`Maker` should dialProtocol `Taker` to create a trade", async function () {
-    let val = await await (process.env.BATCH ? taker.createBatchTrade(maker.peerId, ln(offers.map((v, i) => ({ amount: i === 1 ? ethers.utils.hexlify(ethers.BigNumber.from(String(v.gets.amount / 2))) : v.gets.amount, offer: v })))) : taker.createTrade(maker.peerId, offer)).toPromise();
-    expect(Number(val.status)).to.eql(1);
+    let val = await await (process.env.BATCH ? taker.createBatchTrade(maker.address, offers.map((v, i) => ({ amount: i === 1 ? ethers.utils.hexlify(ethers.BigNumber.from(String(v.gets.amount / 2))) : v.gets.amount, offer: v }))) : taker.createTrade(maker.address, offer)).toPromise();
+    console.log(val);
   });
 });

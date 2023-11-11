@@ -24,6 +24,7 @@ export const erc721PermitInterface = new ethers.Interface([
 // UTILS
 export function toBigInt(v) {
   if (v.toHexString) return v.toBigInt();
+  if (['string', 'number'].includes(typeof v)) return BigInt(v);
   return v;
 }
 

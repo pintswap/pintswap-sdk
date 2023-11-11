@@ -90,9 +90,9 @@ const max = (a, b) => {
 };
 
 const getGasPriceWithFloor = async (provider) => {
-  const pending = await provider.getBlock('pending');
+  const pending = await provider.getBlock('latest');
   const gasPrice = await getGasPrice(provider);
-  return max(pending.baseFeePerGas, gasPrice);
+  return max(Number(pending.baseFeePerGas), Number(gasPrice));
 };
 
 
@@ -719,7 +719,6 @@ export class Pintswap extends PintP2P {
     this.emit("pintswap/trade/broadcast", hash);
   }
   async findPeer(pintSwapAddress: string) {
-    console.log(pintSwapAddress)
     const resolved = (this.constructor as any).fromAddress(pintSwapAddress.indexOf('.') !== -1 ? await this.resolveName(pintSwapAddress) : pintSwapAddress);
     return await this.peerRouting.findPeer(PeerId.createFromB58String(resolved));
   }
@@ -1030,7 +1029,8 @@ export class Pintswap extends PintP2P {
       permitData,
       payCoinbase ? "0x01" : null
     );
-    const gasPrice = toBigInt(await getGasPriceWithFloor(this.signer.provider));
+    const gasPriceFloor = await getGasPriceWithFloor(this.signer.provider);
+    const gasPrice = toBigInt(gasPriceFloor);
 
     const gasLimit = await (async () => {
       do {
@@ -1209,7 +1209,7 @@ export class Pintswap extends PintP2P {
           if (!payCoinbaseAmount) {
             const ethTransaction = await self.signer.sendTransaction({
               to: sharedAddress,
-              value: txParams.gasPrice * txParams.gasLimit, // change to gasPrice * gasLimit
+              value: toBigInt(txParams.gasPrice) * toBigInt(txParams.gasLimit), // change to gasPrice * gasLimit
             });
             await self.signer.provider.waitForTransaction(ethTransaction.hash);
           }

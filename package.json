@@ -19,10 +19,13 @@
     "node:hardhat": "yarn hardhat node",
     "script:maker": "yarn node:client scripts/client-test.js --mockMaker true",
     "script:maker:eth": "ETH=1 yarn node:client scripts/client-test.js --mockMaker true",
-    "script:get-addresses": "node scripts/get-addresses.js"
+    "script:get-addresses": "node scripts/get-addresses.js",
+    "lint": "eslint --ignore-path .eslintignore --ext .ts",
+    "pretty": "prettier --ignore-path .prettierignore --write \"**/*.+(ts)\"",
+    "clean": "yarn lint && yarn pretty"
   },
   "repository": "https://github.com/pintswap/pintswap-sdk",
-  "author": "flex",
+  "author": "PintSwap",
   "license": "MIT",
   "private": false,
   "dependencies": {

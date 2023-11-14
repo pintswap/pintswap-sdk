@@ -18,11 +18,17 @@ export type ITransfer = {
   token: string;
   tokenId?: string;
   amount?: string;
-}
+};
 
 export interface IOffer {
   gives: ITransfer;
   gets: ITransfer;
 }
 
-export type IAvailableChainIds = '42161' | '137' | '10' | '43112' | '1' | '31337';
+export type IAvailableChainIds =
+  | "42161"
+  | "137"
+  | "10"
+  | "43112"
+  | "1"
+  | "31337";

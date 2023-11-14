@@ -33,13 +33,13 @@ export const ASSETS = {
 export function getMessage(request) {
   const address = getAddress(request.asset);
   const chainId = toChainId(toNetwork(address));
-    return {
-      owner: request.owner,
-      spender: request.spender,
-      nonce: request.nonce,
-      deadline: request.expiry,
-      value: request.value,
-    };
+  return {
+    owner: request.owner,
+    spender: request.spender,
+    nonce: request.nonce,
+    deadline: request.expiry,
+    value: request.value,
+  };
 }
 
 export function getDomainStructure(asset) {
@@ -89,7 +89,7 @@ export async function fetchData(o, provider) {
       "function nonces(address) view returns (uint256)",
       "function name() view returns (string)",
       "function version() view returns (string)",
-      "function VERSION() view returns (string)"
+      "function VERSION() view returns (string)",
     ],
     provider
   );
@@ -97,7 +97,7 @@ export async function fetchData(o, provider) {
     ...o,
     nonce: await contract.nonces(o.owner),
     name: await contract.name(),
-    version: await getVersion(contract)
+    version: await getVersion(contract),
   };
 }
 
@@ -108,28 +108,28 @@ export function isUSDC(asset) {
 }
 
 export function getPermitStructure(asset) {
-    return [
-      {
-        name: "owner",
-        type: "address",
-      },
-      {
-        name: "spender",
-        type: "address",
-      },
-      {
-        name: "value",
-        type: "uint256",
-      },
-      {
-        name: "nonce",
-        type: "uint256",
-      },
-      {
-        name: "deadline",
-        type: "uint256",
-      },
-    ];
+  return [
+    {
+      name: "owner",
+      type: "address",
+    },
+    {
+      name: "spender",
+      type: "address",
+    },
+    {
+      name: "value",
+      type: "uint256",
+    },
+    {
+      name: "nonce",
+      type: "uint256",
+    },
+    {
+      name: "deadline",
+      type: "uint256",
+    },
+  ];
 }
 
 export function toChainId(network) {
@@ -200,7 +200,7 @@ export function getDomain(o) {
     name: o.name,
     version: o.version,
     chainId: String(chainId),
-    verifyingContract: address
+    verifyingContract: address,
   };
 }
 export function toEIP712(o) {

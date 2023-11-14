@@ -128,5 +128,9 @@ export declare class Pintswap extends PintP2P {
     }>;
     createTransaction(txParams: any, sharedAddress: string): Promise<any>;
     createTrade(peer: any, offer: any): PintswapTrade;
-    createBatchTrade(peer: any, batchFill: any): PintswapTrade;
+    createBatchTrade(peer: string, batchFill: {
+        offer: IOffer;
+        amount: string;
+        tokenId?: string;
+    }[]): PintswapTrade;
 }

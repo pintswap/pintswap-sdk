@@ -24,7 +24,7 @@ export const erc721PermitInterface = new ethers.Interface([
 // UTILS
 export function toBigInt(v) {
   if (v.toHexString) return v.toBigInt();
-  if (['string', 'number'].includes(typeof v)) return BigInt(v);
+  if (["string", "number"].includes(typeof v)) return BigInt(v);
   return v;
 }
 
@@ -44,7 +44,7 @@ export const isERC1155Transfer = (o) =>
   Boolean(o.tokenId && o.token && o.amount !== undefined);
 
 export const expandNullHexValueToZero = (value) => {
-  if (value === '0x') return '0x00';
+  if (value === "0x") return "0x00";
   return value;
 };
 
@@ -62,7 +62,12 @@ export const hashTransfer = (o) => {
   if (isERC1155Transfer(o))
     return solidityPackedKeccak256(
       ["string", "address", "uint256", "uint256"],
-      ["/pintswap/erc1155", o.token, expandNullHexValueToZero(o.tokenId), expandNullHexValueToZero(o.amount)]
+      [
+        "/pintswap/erc1155",
+        o.token,
+        expandNullHexValueToZero(o.tokenId),
+        expandNullHexValueToZero(o.amount),
+      ]
     );
   throw Error("no matching token structure");
 };
@@ -109,7 +114,6 @@ export const transactionToObject = (tx) => ({
   maxFeePerGas: tx.maxFeePerGas,
   maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
 });
-
 
 let fallbackWETH = null;
 export const setFallbackWETH = (address) => {
@@ -187,7 +191,11 @@ const makeCheckOp = (ary) => (op) => {
   const [item] = ary.splice(0, 1);
   const [opCode, _, __, operand] = item || [];
   if (!opCode) return false;
-  if (Array.isArray(op) ? (op.find((v) => v === 'PUSH' && opCode.match(v) || v === opCode)) : ((op === "PUSH" && opCode.match(op)) || opCode === op))
+  if (
+    Array.isArray(op)
+      ? op.find((v) => (v === "PUSH" && opCode.match(v)) || v === opCode)
+      : (op === "PUSH" && opCode.match(op)) || opCode === op
+  )
     return operand || null;
   else return false;
 };
@@ -327,7 +335,7 @@ export const parsePermit2 = (disassembly, first = false) => {
     tail: disassembly.slice(parsed.length),
     data: {
       token: ethers.getAddress(parsed[10]),
-      to: parsed[22] === '0x' ? 'CALLER' : ethers.getAddress(parsed[22]),
+      to: parsed[22] === "0x" ? "CALLER" : ethers.getAddress(parsed[22]),
       from: ethers.getAddress(parsed[28]),
       signature: {
         r: parsed[27],
@@ -343,9 +351,11 @@ const parseTransfer = (disassembly, chainId = 1, first = false) => {
   const transferFrom = parseTransferFrom(disassembly, first);
   const transfer = !transferFrom && parsePermit2(disassembly, first);
   if (transfer === false && transferFrom === false) return false;
-  const withdraw = transfer && transfer.data.token === ethers.getAddress(toWETH(chainId)) && parseWithdraw(transfer.tail);
-  const sendEther =
-    withdraw && parseSendEther(withdraw.tail);
+  const withdraw =
+    transfer &&
+    transfer.data.token === ethers.getAddress(toWETH(chainId)) &&
+    parseWithdraw(transfer.tail);
+  const sendEther = withdraw && parseSendEther(withdraw.tail);
   if (
     transfer &&
     transfer.data.token === ethers.getAddress(toWETH(chainId)) &&
@@ -354,12 +364,13 @@ const parseTransfer = (disassembly, chainId = 1, first = false) => {
     return false;
   return {
     data: {
-      transferFrom: transferFrom && transferFrom.data || null,
-      transfer: transfer && transfer.data || null,
-      withdraw: withdraw && withdraw.data || null,
+      transferFrom: (transferFrom && transferFrom.data) || null,
+      transfer: (transfer && transfer.data) || null,
+      withdraw: (withdraw && withdraw.data) || null,
       sendEther: (sendEther && sendEther.data) || null,
     },
-    tail: (sendEther && sendEther.tail) || ((transfer || transferFrom) as any).tail,
+    tail:
+      (sendEther && sendEther.tail) || ((transfer || transferFrom) as any).tail,
   };
 };
 
@@ -367,7 +378,13 @@ export const parseTrade = (bytecode, chainId = 1) => {
   const disassembly = evmdis.disassemble(bytecode);
   const firstPermit = parsePermit(disassembly, true);
   const secondPermit = firstPermit && parsePermit(firstPermit.tail, false);
-  const firstTransfer = parseTransfer(secondPermit && secondPermit.tail || firstPermit && firstPermit.tail || disassembly, chainId, !firstPermit);
+  const firstTransfer = parseTransfer(
+    (secondPermit && secondPermit.tail) ||
+      (firstPermit && firstPermit.tail) ||
+      disassembly,
+    chainId,
+    !firstPermit
+  );
   if (!firstTransfer) return false;
   const secondTransfer = parseTransfer(firstTransfer.tail, chainId, false);
   if (!secondTransfer) return false;
@@ -404,19 +421,30 @@ export const parseTrade = (bytecode, chainId = 1) => {
       permitData.maker = firstPermit.data;
       permitData.taker = secondPermit.data;
     } else {
-      if (firstPermit.data.token === (firstTransfer.data.transferFrom || firstTransfer.data.transfer).token) permitData.taker = firstPermit.data;
+      if (
+        firstPermit.data.token ===
+        (firstTransfer.data.transferFrom || firstTransfer.data.transfer).token
+      )
+        permitData.taker = firstPermit.data;
       else permitData.maker = firstPermit.data;
     }
   }
-  const taker = (firstTransfer.data.transfer || firstTransfer.data.transferFrom).from;
-  const maker = (secondTransfer.data.transfer || secondTransfer.data.transferFrom).from;
+  const taker = (firstTransfer.data.transfer || firstTransfer.data.transferFrom)
+    .from;
+  const maker = (
+    secondTransfer.data.transfer || secondTransfer.data.transferFrom
+  ).from;
   const gets = {
-    token: (firstTransfer.data.transfer || firstTransfer.data.transferFrom).token,
-    amount: (firstTransfer.data.transfer || firstTransfer.data.transferFrom).amount
+    token: (firstTransfer.data.transfer || firstTransfer.data.transferFrom)
+      .token,
+    amount: (firstTransfer.data.transfer || firstTransfer.data.transferFrom)
+      .amount,
   };
   const gives = {
-    token: (secondTransfer.data.transfer || secondTransfer.data.transferFrom).token,
-    amount: (secondTransfer.data.transfer || secondTransfer.data.transferFrom).amount
+    token: (secondTransfer.data.transfer || secondTransfer.data.transferFrom)
+      .token,
+    amount: (secondTransfer.data.transfer || secondTransfer.data.transferFrom)
+      .amount,
   };
   return [{ gets, gives }, maker, taker, chainId, permitData, null];
 };
@@ -500,7 +528,8 @@ export const parsePermit = (disassembly, first = false) => {
     .map((v) => checkOp(v));
   if (
     parsed[2] !== "0xe4" ||
-    parsed[7] !== "0xd505accf00000000000000000000000000000000000000000000000000000000" ||
+    parsed[7] !==
+      "0xd505accf00000000000000000000000000000000000000000000000000000000" ||
     parsed[11] !== "0x04"
   )
     return false;
@@ -511,9 +540,9 @@ export const parsePermit = (disassembly, first = false) => {
       amount: parsed[19],
       signature: ethers.Signature.from({
         r: parsed[25],
-	s: parsed[28],
-	v: Number(parsed[22])
-      })
+        s: parsed[28],
+        v: Number(parsed[22]),
+      }),
     },
     tail: disassembly.slice(parsed.length),
   };
@@ -542,7 +571,7 @@ export const parseTransferFrom = (disassembly, first = false) => {
     "PUSH",
     "PUSH1",
     "MSTORE",
-    "CALL"
+    "CALL",
   ]
     .concat(first ? [] : ["AND"])
     .map((v) => checkOp(v));
@@ -558,7 +587,7 @@ export const parseTransferFrom = (disassembly, first = false) => {
       token: ethers.getAddress(parsed[5]),
       from: ethers.getAddress(parsed[10]),
       to: ethers.getAddress(parsed[13]),
-      amount: parsed[16]
+      amount: parsed[16],
     },
     tail: disassembly.slice(parsed.length),
   };

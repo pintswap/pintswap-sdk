@@ -13,17 +13,18 @@ export default {
             runs: 200,
           },
         },
-      }]
+      },
+    ],
   },
   mocha: {
-    timeout: 0
+    timeout: 0,
   },
   networks: {
     hardhat: {
-      forking: { 
-        url: new ethers.InfuraProvider('mainnet')._getConnection().url
+      forking: {
+        url: new ethers.InfuraProvider("mainnet")._getConnection().url,
       },
-      chainId: 1
-    }
-  }
+      chainId: 1,
+    },
+  },
 };

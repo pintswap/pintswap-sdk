@@ -53,7 +53,7 @@ const createLogger = (proc?: string) => {
           format.colorize(),
           format.label({ label: proc }),
           format.timestamp(),
-          format.printf(customFormatter),
+          format.printf(customFormatter)
         ),
       }),
     ],
@@ -61,7 +61,7 @@ const createLogger = (proc?: string) => {
   const error = logger.error;
   (logger as any).error = function (err) {
     if (err instanceof Error) {
-      error.call(logger, '');
+      error.call(logger, "");
       console.error(err);
     } else error.call(logger, err);
   };

@@ -6,7 +6,9 @@ import { EventEmitter } from "events";
 import { URL } from "url";
 import pair from "it-pair";
 
-const ln = (v) => ((console.log(require('util').inspect(v, { colors: true, depth: 15 }))), v);
+const ln = (v) => (
+  console.log(require("util").inspect(v, { colors: true, depth: 15 })), v
+);
 
 const pintswapByAddress: any = {};
 
@@ -213,7 +215,21 @@ describe("Pintswap - Integration Tests", function () {
     let offers = await taker.getUserData(maker.address);
   });
   it("`Maker` should dialProtocol `Taker` to create a trade", async function () {
-    let val = await await (process.env.BATCH ? taker.createBatchTrade(maker.address, offers.map((v, i) => ({ amount: i === 1 ? ethers.utils.hexlify(ethers.BigNumber.from(String(v.gets.amount / 2))) : v.gets.amount, offer: v }))) : taker.createTrade(maker.address, offer)).toPromise();
+    let val = await await (process.env.BATCH
+      ? taker.createBatchTrade(
+          maker.address,
+          offers.map((v, i) => ({
+            amount:
+              i === 1
+                ? ethers.utils.hexlify(
+                    ethers.BigNumber.from(String(v.gets.amount / 2))
+                  )
+                : v.gets.amount,
+            offer: v,
+          }))
+        )
+      : taker.createTrade(maker.address, offer)
+    ).toPromise();
     console.log(val);
   });
 });

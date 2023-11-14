@@ -12,7 +12,7 @@ import { SignatureTransfer, PERMIT2_ADDRESS } from "@uniswap/permit2-sdk";
 import pushable from "it-pushable";
 import { uniq, mapValues } from "lodash";
 import { toBigInt, toWETH } from "./trade";
-import { DEFAULT_TIMEOUT_SEC, reqWithTimeout } from "./timeout";
+import { reqWithTimeout } from "./timeout";
 import BN from "bn.js";
 import {
   keyshareToAddress,
@@ -1050,9 +1050,11 @@ export class Pintswap extends PintP2P {
         );
         return tx;
       }
-    } catch (err) {
-      this.logger.error(err);
-      return false;
+    } catch (e) {
+      this.logger.error(e);
+      if (String(e).includes("rpc error with payload"))
+        return "insufficient_funds";
+      else return "user_rejected";
     }
   }
   async approveTradeAsTaker(offer: IOffer, sharedAddress: string) {
@@ -1210,13 +1212,19 @@ export class Pintswap extends PintP2P {
         e: string,
         _messages?: any
       ) => {
+        self.logger.error(e);
         this.emit(`pintswap/trade/${side}`, e);
         setTimeout(() => {}, 1000);
         _messages && _messages.end();
-        self.logger.error(e);
         trade.reject(new Error(e));
         stream.close();
       };
+
+      // handle if dial request has no valid addresses
+      if (!stream?.source) {
+        handleError("taker", "dial request has no valid addresses");
+        return;
+      }
 
       this.logger.debug("keygen::context::compute");
       const context1 = await reqWithTimeout(TPC.P1Context.createContext());
@@ -1236,11 +1244,6 @@ export class Pintswap extends PintP2P {
 
       const self = this;
 
-      // handle if dial request has no valid addresses
-      if (!stream?.source) {
-        handleError("taker", "dial request has no valid addresses", messages);
-        return;
-      }
       pipe(stream.source, lp.decode(), async function (source) {
         try {
           messages.push(
@@ -1293,8 +1296,11 @@ export class Pintswap extends PintP2P {
             sharedAddress as string
           );
           // taker rejects
-          if (approveTx === false) {
+          if (approveTx === "user_rejected") {
             handleError("taker", "user rejected signing", messages);
+            return;
+          } else if (approveTx === "insufficient_funds") {
+            handleError("taker", "insufficient funds", messages);
             return;
           }
           // permit data not yet present
@@ -1310,7 +1316,12 @@ export class Pintswap extends PintP2P {
             messages.push(permit.encode(approveTx.permitData));
           else messages.push(Buffer.from([]));
           self.logger.debug("permitdata::wait");
-          const { value: permitDataBytes } = await source.next();
+          const permitData = await reqWithTimeout(source.next(), 60);
+          if (permitData === "timeout") {
+            handleError("taker", "maker not responsive", messages);
+            return;
+          }
+          const permitDataBytes = permitData?.value || [];
           self.logger.debug("permitdata::complete");
           const permitDataSlice = permitDataBytes.slice();
           const makerPermitData =
@@ -1337,14 +1348,25 @@ export class Pintswap extends PintP2P {
             handleError("taker", "user rejected signing", messages);
             return;
           }
+          self.logger.debug("transaction-params::received");
           const payCoinbaseAmount = txParams.payCoinbaseAmount;
           delete txParams.payCoinbaseAmount;
           if (!payCoinbaseAmount) {
-            const ethTransaction = await self.signer.sendTransaction({
-              to: sharedAddress,
-              value: toBigInt(txParams.gasPrice) * toBigInt(txParams.gasLimit), // change to gasPrice * gasLimit
-            });
-            await self.signer.provider.waitForTransaction(ethTransaction.hash);
+            // check if user has enough gas
+            try {
+              const ethTransaction = await self.signer.sendTransaction({
+                to: sharedAddress,
+                value:
+                  toBigInt(txParams.gasPrice) * toBigInt(txParams.gasLimit), // change to gasPrice * gasLimit
+              });
+              self.logger.debug("eth-transaction::wait");
+              await self.signer.provider.waitForTransaction(
+                ethTransaction.hash
+              );
+              self.logger.debug("eth-transaction::complete");
+            } catch (e) {
+              self.logger.error("INSUFFICIENT FUNDS FOR GAS:", e);
+            }
           }
 
           self.logger.debug(
@@ -1425,10 +1447,11 @@ export class Pintswap extends PintP2P {
           trade.resolve(txHash || null);
           stream.close();
         } catch (e) {
-          messages.end();
-          self.logger.error(e);
-          trade.reject(e);
-          stream.close();
+          let msg: string;
+          if (String(e).includes("insufficient funds"))
+            msg = "insufficient funds";
+          else msg = "ERROR";
+          handleError("taker", msg, messages);
         }
       });
 

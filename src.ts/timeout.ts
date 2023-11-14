@@ -1,4 +1,4 @@
-export const DEFAULT_TIMEOUT_SEC = 20;
+export const DEFAULT_TIMEOUT_SEC = 30;
 
 export async function timeoutAfter(seconds: number): Promise<"timeout"> {
   return new Promise((resolve, reject) => {
@@ -16,7 +16,6 @@ export async function reqWithTimeout(
     const response = await Promise.race([timeoutAfter(seconds), promise]);
     return response;
   } catch (error) {
-    console.error("Timed out:", error.message);
     return "timeout";
   }
 }

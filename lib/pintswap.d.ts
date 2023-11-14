@@ -113,7 +113,7 @@ export declare class Pintswap extends PintP2P {
     approveTradeAsTaker(offer: IOffer, sharedAddress: string): Promise<any>;
     approveTradeAsMaker(offer: IOffer, sharedAddress: string): Promise<any>;
     approvePermit2(asset: string): Promise<any>;
-    prepareTransaction(offer: IOffer, maker: string, sharedAddress: string, permitData: any): Promise<({
+    prepareTransaction(offer: IOffer, maker: string, sharedAddress: string, permitData: any): Promise<false | (({
         maxPriorityFeePerGas: bigint;
         maxFeePerGas: bigint;
         gasPrice?: undefined;
@@ -125,7 +125,7 @@ export declare class Pintswap extends PintP2P {
         data: any;
         gasLimit: any;
         payCoinbaseAmount: string;
-    }>;
+    })>;
     createTransaction(txParams: any, sharedAddress: string): Promise<any>;
     createTrade(peer: any, offer: any): PintswapTrade;
     createBatchTrade(peer: string, batchFill: {

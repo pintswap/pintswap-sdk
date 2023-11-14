@@ -1214,7 +1214,7 @@ export class Pintswap extends PintP2P {
       };
 
       this.logger.debug("keygen::context::compute");
-      const context1 = await reqWithTimeout(TPC.P1Context.createContext(), 20);
+      const context1 = await reqWithTimeout(TPC.P1Context.createContext(), 30);
       if (context1 === "timeout") {
         handleError("taker", "timeout");
         return;

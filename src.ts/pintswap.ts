@@ -1199,22 +1199,31 @@ export class Pintswap extends PintP2P {
       const { stream } = await this.dialPeer(peer, [
         "/pintswap/0.1.0/create-trade",
       ]);
+
+      const handleError = (
+        side: "maker" | "taker",
+        e: string,
+        _messages?: any
+      ) => {
+        this.emit(`pintswap/trade/${side}`, e);
+        setTimeout(() => {}, 1000);
+        _messages && _messages.end();
+        self.logger.error(e);
+        trade.reject(new Error(e));
+        stream.close();
+      };
+
       this.logger.debug("keygen::context::compute");
-      const context1 = await TPC.P1Context.createContext();
+      const context1 = await reqWithTimeout(TPC.P1Context.createContext(), 20);
+      if (context1 === "timeout") {
+        handleError("taker", "timeout");
+        return;
+      }
       this.logger.debug("keygen::context::complete");
       this.logger.debug("keygen::step1::compute");
       const message1 = context1.step1();
       this.logger.debug("keygen::step1::complete");
       const messages = pushable();
-
-      const handleError = (side: "maker" | "taker", e: string) => {
-        this.emit(`pintswap/trade/${side}`, e);
-        setTimeout(() => {}, 1000);
-        messages.end();
-        self.logger.error(e);
-        trade.reject(new Error(e));
-        stream.close();
-      };
 
       const self = this;
 
@@ -1237,7 +1246,7 @@ export class Pintswap extends PintP2P {
           self.logger.debug("keygen::step2::wait-protocol");
           const step2keygen = await reqWithTimeout(source.next());
           if (step2keygen === "timeout") {
-            handleError("taker", "timeout");
+            handleError("taker", "timeout", messages);
             return;
           }
           const keygenMessage2BufList = step2keygen?.value || [];
@@ -1265,7 +1274,7 @@ export class Pintswap extends PintP2P {
           );
           // taker rejects
           if (approveTx === false) {
-            handleError("taker", "user rejected signing");
+            handleError("taker", "user rejected signing", messages);
             return;
           }
           // permit data not yet present

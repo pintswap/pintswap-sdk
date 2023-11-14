@@ -1087,76 +1087,81 @@ export class Pintswap extends PintP2P {
     sharedAddress: string,
     permitData: any
   ) {
-    const chainId = Number((await this.signer.provider.getNetwork()).chainId);
-    const payCoinbase = Boolean(
-      false &&
-        [offer.gives.token, offer.gets.token].find(
-          (v) => ethers.ZeroAddress === v
-        )
-    );
-    const taker = await this.signer.getAddress();
-    const contract = createContract(
-      offer,
-      maker,
-      taker,
-      chainId,
-      permitData,
-      payCoinbase ? "0x01" : null
-    );
-    const gasPriceFloor = await getGasPriceWithFloor(this.signer.provider);
-    const gasPrice = toBigInt(gasPriceFloor);
+    try {
+      const chainId = Number((await this.signer.provider.getNetwork()).chainId);
+      const payCoinbase = Boolean(
+        false &&
+          [offer.gives.token, offer.gets.token].find(
+            (v) => ethers.ZeroAddress === v
+          )
+      );
+      const taker = await this.signer.getAddress();
+      const contract = createContract(
+        offer,
+        maker,
+        taker,
+        chainId,
+        permitData,
+        payCoinbase ? "0x01" : null
+      );
+      const gasPriceFloor = await getGasPriceWithFloor(this.signer.provider);
+      const gasPrice = toBigInt(gasPriceFloor);
 
-    const gasLimit = await (async () => {
-      do {
-        try {
-          const estimate =
-            toBigInt(
-              await this.signer.provider.estimateGas({
-                data: contract,
-                from: sharedAddress,
-                //          gasPrice,
-              })
-            ) + BigInt(26000);
-          if (estimate > BigInt(10e6)) {
-            throw Error("gas estimate too high -- revert");
+      const gasLimit = await (async () => {
+        do {
+          try {
+            const estimate =
+              toBigInt(
+                await this.signer.provider.estimateGas({
+                  data: contract,
+                  from: sharedAddress,
+                  //          gasPrice,
+                })
+              ) + BigInt(26000);
+            if (estimate > BigInt(10e6)) {
+              throw Error("gas estimate too high -- revert");
+            }
+            return estimate;
+          } catch (e) {
+            this.logger.error(e);
+            await new Promise((resolve) => setTimeout(resolve, 1000));
           }
-          return estimate;
-        } catch (e) {
-          this.logger.error(e);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+        } while (true);
+      })();
+      const payCoinbaseAmount = payCoinbase
+        ? ethers.hexlify(ethers.toBeArray(gasLimit * gasPrice))
+        : null;
+      this.logger.debug("gaslimit::" + String(Number(gasLimit)));
+      return Object.assign(
+        payCoinbase
+          ? {
+              maxPriorityFeePerGas: BigInt(0),
+              maxFeePerGas: ethers.getUint(
+                (
+                  await this.signer.provider.getBlock("latest")
+                ).baseFeePerGas.toHexString()
+              ),
+            }
+          : { gasPrice },
+        {
+          data: !payCoinbase
+            ? contract
+            : createContract(
+                offer,
+                maker,
+                taker,
+                chainId,
+                permitData,
+                payCoinbaseAmount
+              ),
+          gasLimit,
+          payCoinbaseAmount,
         }
-      } while (true);
-    })();
-    const payCoinbaseAmount = payCoinbase
-      ? ethers.hexlify(ethers.toBeArray(gasLimit * gasPrice))
-      : null;
-    this.logger.debug("gaslimit::" + String(Number(gasLimit)));
-    return Object.assign(
-      payCoinbase
-        ? {
-            maxPriorityFeePerGas: BigInt(0),
-            maxFeePerGas: ethers.getUint(
-              (
-                await this.signer.provider.getBlock("latest")
-              ).baseFeePerGas.toHexString()
-            ),
-          }
-        : { gasPrice },
-      {
-        data: !payCoinbase
-          ? contract
-          : createContract(
-              offer,
-              maker,
-              taker,
-              chainId,
-              permitData,
-              payCoinbaseAmount
-            ),
-        gasLimit,
-        payCoinbaseAmount,
-      }
-    );
+      );
+    } catch (e) {
+      this.logger.error("user rejected transaction");
+      return false;
+    }
   }
 
   async createTransaction(txParams: any, sharedAddress: string) {
@@ -1214,19 +1219,28 @@ export class Pintswap extends PintP2P {
       };
 
       this.logger.debug("keygen::context::compute");
-      const context1 = await reqWithTimeout(TPC.P1Context.createContext(), 30);
+      const context1 = await reqWithTimeout(TPC.P1Context.createContext());
       if (context1 === "timeout") {
         handleError("taker", "timeout");
         return;
       }
       this.logger.debug("keygen::context::complete");
       this.logger.debug("keygen::step1::compute");
-      const message1 = context1.step1();
+      const message1 = await reqWithTimeout(context1.step1());
+      if (message1 === "timeout") {
+        handleError("taker", "timeout");
+        return;
+      }
       this.logger.debug("keygen::step1::complete");
       const messages = pushable();
 
       const self = this;
 
+      // handle if dial request has no valid addresses
+      if (!stream?.source) {
+        handleError("taker", "dial request has no valid addresses", messages);
+        return;
+      }
       pipe(stream.source, lp.decode(), async function (source) {
         try {
           messages.push(
@@ -1244,17 +1258,23 @@ export class Pintswap extends PintP2P {
           );
           messages.push(message1); // message 1
           self.logger.debug("keygen::step2::wait-protocol");
+          // timeout for step 2 of keygen
           const step2keygen = await reqWithTimeout(source.next());
           if (step2keygen === "timeout") {
             handleError("taker", "timeout", messages);
             return;
           }
           const keygenMessage2BufList = step2keygen?.value || [];
-          // const { value: keygenMessage2BufList } = await source.next(); // message 2
           self.logger.debug("keygen::step2::received");
           const keygenMessage2 = keygenMessage2BufList.slice();
           self.logger.debug("maker-address::wait-protocol");
-          const { value: makerAddressBufList } = await source.next(); // message 2
+          // timout for maker address buffer
+          const makerAddressBuf = await reqWithTimeout(source.next());
+          if (makerAddressBuf === "timeout") {
+            handleError("taker", "timeout", messages);
+            return;
+          }
+          const makerAddressBufList = makerAddressBuf?.value || [];
           const makerAddress = ethers.getAddress(
             ethers.hexlify(makerAddressBufList.slice())
           );
@@ -1306,12 +1326,17 @@ export class Pintswap extends PintP2P {
             contractPermitData.taker = approveTx.permitData;
           if (!Object.keys(contractPermitData).length)
             contractPermitData = null;
+          // handle user rejection
           const txParams = await self.prepareTransaction(
             offer,
             makerAddress,
             sharedAddress,
             contractPermitData
           );
+          if (txParams === false) {
+            handleError("taker", "user rejected signing", messages);
+            return;
+          }
           const payCoinbaseAmount = txParams.payCoinbaseAmount;
           delete txParams.payCoinbaseAmount;
           if (!payCoinbaseAmount) {

@@ -12,6 +12,7 @@ import { SignatureTransfer, PERMIT2_ADDRESS } from "@uniswap/permit2-sdk";
 import pushable from "it-pushable";
 import { uniq, mapValues } from "lodash";
 import { toBigInt, toWETH } from "./trade";
+import { DEFAULT_TIMEOUT_SEC, reqWithTimeout } from "./timeout";
 import BN from "bn.js";
 import {
   keyshareToAddress,
@@ -288,10 +289,17 @@ export class Pintswap extends PintP2P {
   }
   async dialPeer(...args) {
     const [peerId, ...rest] = args;
-    return await this.dialProtocol.apply(this, [
-      PeerId.createFromB58String((this.constructor as any).fromAddress(peerId)),
-      ...rest,
-    ]);
+    try {
+      return await this.dialProtocol.apply(this, [
+        PeerId.createFromB58String(
+          (this.constructor as any).fromAddress(peerId)
+        ),
+        ...rest,
+      ]);
+    } catch (err) {
+      this.logger.error(err);
+      return false;
+    }
   }
   async resolveName(name) {
     const parts = name.split(".");
@@ -328,7 +336,7 @@ export class Pintswap extends PintP2P {
     else return result;
   }
   async registerName(name) {
-    let parts = name.split(".");
+    const parts = name.split(".");
     const query = parts.slice(0, -1).join(".");
     const tld = parts[parts.length - 1];
     const messages = pushable();
@@ -404,7 +412,7 @@ export class Pintswap extends PintP2P {
       try {
         const { offers, bio, pfp } = this._decodeMakerBroadcast(message.data);
         const from = (this.constructor as any).toAddress(message.from);
-        let _offerhash = ethers.keccak256(message.data);
+        const _offerhash = ethers.keccak256(message.data);
         const pair: [string, IOffer] = [_offerhash, offers];
         this.peers.set(from + "::bio", bio);
         this.peers.set(from + "::pfp", pfp as any);
@@ -532,7 +540,7 @@ export class Pintswap extends PintP2P {
       try {
         this.logger.debug("handling userdata request");
         this.emit("pintswap/trade/peer", 2);
-        let userData = this._encodeUserData();
+        const userData = this._encodeUserData();
         const messages = pushable();
         pipe(messages, lp.encode(), stream.sink);
         messages.push(userData);
@@ -548,7 +556,7 @@ export class Pintswap extends PintP2P {
       try {
         this.logger.debug("handling order request from peer");
         this.emit("pintswap/trade/peer", 2); // maker sees that taker is connected
-        let offerList = this._encodeOffers();
+        const offerList = this._encodeOffers();
         const messages = pushable();
         pipe(messages, lp.encode(), stream.sink);
         messages.push(offerList);
@@ -674,7 +682,7 @@ export class Pintswap extends PintP2P {
             ) {
               throw Error("transaction.gasPrice is unrealistically high");
             }
-     */
+            */
             self.logger.debug("contract-assemble::wait");
 
             let contractPermitData = {} as any;
@@ -804,7 +812,7 @@ export class Pintswap extends PintP2P {
     return offerList;
   }
   _decodeMakerBroadcast(data: Buffer) {
-    let offerList = protocol.MakerBroadcast.toObject(
+    const offerList = protocol.MakerBroadcast.toObject(
       protocol.MakerBroadcast.decode(data),
       {
         enums: String,
@@ -832,7 +840,7 @@ export class Pintswap extends PintP2P {
     };
   }
   _decodeOffers(data: Buffer) {
-    let offerList = protocol.OfferList.toObject(
+    const offerList = protocol.OfferList.toObject(
       protocol.OfferList.decode(data),
       {
         enums: String,
@@ -849,15 +857,18 @@ export class Pintswap extends PintP2P {
     return Object.assign(offerList, { offers });
   }
   _decodeUserData(data: Buffer) {
-    let userData = protocol.UserData.toObject(protocol.UserData.decode(data), {
-      enums: String,
-      longs: String,
-      bytes: String,
-      defaults: true,
-      arrays: true,
-      objects: true,
-      oneofs: true,
-    });
+    const userData = protocol.UserData.toObject(
+      protocol.UserData.decode(data),
+      {
+        enums: String,
+        longs: String,
+        bytes: String,
+        defaults: true,
+        arrays: true,
+        objects: true,
+        oneofs: true,
+      }
+    );
 
     const offers = protobufOffersToHex(userData.offers);
     return {
@@ -881,15 +892,95 @@ export class Pintswap extends PintP2P {
     return address;
   }
   async approveTrade(transfer: ITransfer, sharedAddress: string) {
-    const { chainId } = await this.signer.provider.getNetwork();
-    const tradeAddress = await this.getTradeAddress(sharedAddress);
-    if (isERC721Transfer(transfer) || isERC1155Transfer(transfer)) {
-      if (await detectERC721Permit(transfer.token, this.signer)) {
+    try {
+      const { chainId } = await this.signer.provider.getNetwork();
+      const tradeAddress = await this.getTradeAddress(sharedAddress);
+      if (isERC721Transfer(transfer) || isERC1155Transfer(transfer)) {
+        if (await detectERC721Permit(transfer.token, this.signer)) {
+          const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
+          const permitData = await erc721Permit.signAndMergeERC721(
+            {
+              asset: transfer.token,
+              tokenId: transfer.tokenId,
+              spender: tradeAddress,
+              owner: await this.signer.getAddress(),
+              expiry,
+            },
+            this.signer
+          );
+          return {
+            permitData,
+            async wait() {
+              return {};
+            },
+          };
+        }
+        const token = new Contract(
+          transfer.token,
+          [
+            "function setApprovalForAll(address, bool)",
+            "function isApprovedForAll(address, address) view returns (bool)",
+          ],
+          this.signer
+        );
+        if (
+          !(await token.isApprovedForAll(
+            await this.signer.getAddress(),
+            tradeAddress
+          ))
+        ) {
+          return await token.setApprovalForAll(tradeAddress, true);
+        }
+        return {
+          async wait() {
+            return {};
+          },
+        };
+      }
+      const token = new Contract(
+        await coerceToWeth(ethers.getAddress(transfer.token), this.signer),
+        genericAbi,
+        this.signer
+      );
+      this.logger.debug("address::" + (await this.signer.getAddress()));
+      this.logger.debug(
+        "balance::" +
+          ethers.formatEther(
+            await token.balanceOf(await this.signer.getAddress())
+          )
+      );
+      if (transfer.token === ethers.ZeroAddress) {
+        const weth = new ethers.Contract(
+          toWETH(Number(chainId)),
+          [
+            "function deposit()",
+            "function balanceOf(address) view returns (uint256)",
+          ],
+          this.signer
+        );
+        const wethBalance = ethers.toBigInt(
+          await weth.balanceOf(await this.signer.getAddress())
+        );
+        if (wethBalance < ethers.toBigInt(transfer.amount)) {
+          const depositTx = await weth.deposit({
+            value: ethers.toBigInt(transfer.amount) - wethBalance,
+          });
+          if (this._awaitReceipts)
+            await this.signer.provider.waitForTransaction(depositTx.hash);
+        }
+        this.logger.debug(
+          "weth-balance::" +
+            ethers.formatEther(
+              await weth.balanceOf(await this.signer.getAddress())
+            )
+        );
+      }
+      if (await detectPermit(transfer.token, this.signer)) {
         const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
-        const permitData = await erc721Permit.signAndMergeERC721(
+        const permitData = await permit.sign(
           {
             asset: transfer.token,
-            tokenId: transfer.tokenId,
+            value: transfer.amount,
             spender: tradeAddress,
             owner: await this.signer.getAddress(),
             expiry,
@@ -902,138 +993,66 @@ export class Pintswap extends PintP2P {
             return {};
           },
         };
-      }
-      const token = new Contract(
-        transfer.token,
-        [
-          "function setApprovalForAll(address, bool)",
-          "function isApprovedForAll(address, address) view returns (bool)",
-        ],
-        this.signer
-      );
-      if (
-        !(await token.isApprovedForAll(
-          await this.signer.getAddress(),
-          tradeAddress
-        ))
-      ) {
-        return await token.setApprovalForAll(tradeAddress, true);
-      }
-      return {
-        async wait() {
-          return {};
-        },
-      };
-    }
-    const token = new Contract(
-      await coerceToWeth(ethers.getAddress(transfer.token), this.signer),
-      genericAbi,
-      this.signer
-    );
-    this.logger.debug("address::" + (await this.signer.getAddress()));
-    this.logger.debug(
-      "balance::" +
-        ethers.formatEther(
-          await token.balanceOf(await this.signer.getAddress())
-        )
-    );
-    if (transfer.token === ethers.ZeroAddress) {
-      const weth = new ethers.Contract(
-        toWETH(Number(chainId)),
-        [
-          "function deposit()",
-          "function balanceOf(address) view returns (uint256)",
-        ],
-        this.signer
-      );
-      const wethBalance = ethers.toBigInt(
-        await weth.balanceOf(await this.signer.getAddress())
-      );
-      if (wethBalance < ethers.toBigInt(transfer.amount)) {
-        const depositTx = await weth.deposit({
-          value: ethers.toBigInt(transfer.amount) - wethBalance,
-        });
-        if (this._awaitReceipts)
-          await this.signer.provider.waitForTransaction(depositTx.hash);
-      }
-      this.logger.debug(
-        "weth-balance::" +
-          ethers.formatEther(
-            await weth.balanceOf(await this.signer.getAddress())
-          )
-      );
-    }
-    if (await detectPermit(transfer.token, this.signer)) {
-      const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
-      const permitData = await permit.sign(
-        {
-          asset: transfer.token,
-          value: transfer.amount,
-          spender: tradeAddress,
-          owner: await this.signer.getAddress(),
-          expiry,
-        },
-        this.signer
-      );
-      return {
-        permitData,
-        async wait() {
-          return {};
-        },
-      };
-    } else if ([42220, 42161, 137, 10, 1].includes(Number(chainId))) {
-      const tx = await this.approvePermit2(transfer.token);
-      if (tx && this._awaitReceipts)
-        await this.signer.provider.waitForTransaction(tx.hash);
-      const signatureTransfer = {
-        permit: {
-          permitted: {
-            token: await coerceToWeth(transfer.token, this.signer),
-            amount: transfer.amount,
+      } else if ([42220, 42161, 137, 10, 1].includes(Number(chainId))) {
+        const tx = await this.approvePermit2(transfer.token);
+        if (tx && this._awaitReceipts)
+          await this.signer.provider.waitForTransaction(tx.hash);
+        const signatureTransfer = {
+          permit: {
+            permitted: {
+              token: await coerceToWeth(transfer.token, this.signer),
+              amount: transfer.amount,
+            },
+            spender: tradeAddress,
+            nonce: ethers.hexlify(
+              ethers.toBeArray(ethers.getUint(Math.floor(Date.now() / 1000)))
+            ),
+            deadline: ethers.hexlify(
+              ethers.toBeArray(
+                ethers.getUint(Math.floor(Date.now() / 1000)) +
+                  BigInt(60 * 60 * 24)
+              )
+            ),
           },
-          spender: tradeAddress,
-          nonce: ethers.hexlify(
-            ethers.toBeArray(ethers.getUint(Math.floor(Date.now() / 1000)))
-          ),
-          deadline: ethers.hexlify(
-            ethers.toBeArray(
-              ethers.getUint(Math.floor(Date.now() / 1000)) +
-                BigInt(60 * 60 * 24)
+          permit2Address: PERMIT2_ADDRESS,
+          chainId,
+        };
+        const signature = await signTypedData(
+          this.signer,
+          ...getPermitData(signatureTransfer)
+        );
+        return {
+          permitData: {
+            signatureTransfer: signatureTransfer.permit,
+            signature,
+          },
+          async wait() {
+            return {};
+          },
+        };
+      } else {
+        const tx = await token.approve(tradeAddress, transfer.amount);
+        this.logger.debug("trade-address::" + tradeAddress);
+        this.logger.debug(
+          "balance::after-approve::" +
+            ethers.formatEther(
+              await token.balanceOf(await this.signer.getAddress())
             )
-          ),
-        },
-        permit2Address: PERMIT2_ADDRESS,
-        chainId,
-      };
-      const signature = await signTypedData(
-        this.signer,
-        ...getPermitData(signatureTransfer)
-      );
-      return {
-        permitData: {
-          signatureTransfer: signatureTransfer.permit,
-          signature,
-        },
-        async wait() {
-          return {};
-        },
-      };
-    } else {
-      const tx = await token.approve(tradeAddress, transfer.amount);
-      this.logger.debug("trade-address::" + tradeAddress);
-      this.logger.debug(
-        "balance::after-approve::" +
-          ethers.formatEther(
-            await token.balanceOf(await this.signer.getAddress())
-          )
-      );
-      this.logger.debug(
-        "allowance::after-approve::" +
-          ethers.formatEther(
-            await token.allowance(await this.signer.getAddress(), tradeAddress)
-          )
-      );
-      return tx;
+        );
+        this.logger.debug(
+          "allowance::after-approve::" +
+            ethers.formatEther(
+              await token.allowance(
+                await this.signer.getAddress(),
+                tradeAddress
+              )
+            )
+        );
+        return tx;
+      }
+    } catch (err) {
+      this.logger.error(err);
+      return false;
     }
   }
   async approveTradeAsTaker(offer: IOffer, sharedAddress: string) {
@@ -1076,7 +1095,7 @@ export class Pintswap extends PintP2P {
         )
     );
     const taker = await this.signer.getAddress();
-    let contract = createContract(
+    const contract = createContract(
       offer,
       maker,
       taker,
@@ -1144,7 +1163,7 @@ export class Pintswap extends PintP2P {
     const { gasLimit, maxFeePerGas, maxPriorityFeePerGas, gasPrice, data } =
       txParams;
 
-    let sharedAddressBalance = toBigInt(
+    const sharedAddressBalance = toBigInt(
       await this.signer.provider.getBalance(sharedAddress)
     );
     this.logger.debug(
@@ -1167,7 +1186,10 @@ export class Pintswap extends PintP2P {
       },
     ]);
   }
-  createBatchTrade(peer, batchFill) {
+  createBatchTrade(
+    peer: string,
+    batchFill: { offer: IOffer; amount: string; tokenId?: string }[]
+  ) {
     const trade = new PintswapTrade();
     trade.hashes = batchFill.map((v) => hashOffer(v.offer));
     this.emit("trade:taker", trade);
@@ -1185,9 +1207,15 @@ export class Pintswap extends PintP2P {
       this.logger.debug("keygen::step1::complete");
       const messages = pushable();
 
-      /*
-       * Pintswap#approveAsMaker
-       */
+      const handleError = (side: "maker" | "taker", e: string) => {
+        this.emit(`pintswap/trade/${side}`, e);
+        setTimeout(() => {}, 1000);
+        messages.end();
+        self.logger.error(e);
+        trade.reject(new Error(e));
+        stream.close();
+      };
+
       const self = this;
 
       pipe(stream.source, lp.decode(), async function (source) {
@@ -1207,7 +1235,13 @@ export class Pintswap extends PintP2P {
           );
           messages.push(message1); // message 1
           self.logger.debug("keygen::step2::wait-protocol");
-          const { value: keygenMessage2BufList } = await source.next(); // message 2
+          const step2keygen = await reqWithTimeout(source.next());
+          if (step2keygen === "timeout") {
+            handleError("taker", "timeout");
+            return;
+          }
+          const keygenMessage2BufList = step2keygen?.value || [];
+          // const { value: keygenMessage2BufList } = await source.next(); // message 2
           self.logger.debug("keygen::step2::received");
           const keygenMessage2 = keygenMessage2BufList.slice();
           self.logger.debug("maker-address::wait-protocol");
@@ -1229,6 +1263,12 @@ export class Pintswap extends PintP2P {
             offer,
             sharedAddress as string
           );
+          // taker rejects
+          if (approveTx === false) {
+            handleError("taker", "user rejected signing");
+            return;
+          }
+          // permit data not yet present
           if (!approveTx.permitData) {
             self.logger.debug("approve::wait-transaction");
             await self.signer.provider.waitForTransaction(approveTx.hash);
@@ -1343,14 +1383,11 @@ export class Pintswap extends PintP2P {
                 : await self.signer.provider.broadcastTransaction(tx.serialized)
             ).hash;
           }
-          /*
-          const txReceipt = await self.signer.provider.waitForTransaction(
-            txHash
-          );
-	 */
+
+          // complete
+          self.emit("pintswap/trade/taker", txHash);
           self.logger.debug("trade::complete::" + txHash);
           messages.end();
-          self.emit("pintswap/trade/taker", 5); // transaction complete
           trade.resolve(txHash || null);
           stream.close();
         } catch (e) {

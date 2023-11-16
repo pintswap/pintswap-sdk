@@ -241,7 +241,7 @@ export function sumOffers(offers: any[]) {
 }
 
 export const NS_MULTIADDRS = {
-  DRIP: ["QmTABj5y3Q7LPErKeEPyNHKakp4gAknfwFEAm6LsD6TaNT"],
+  DRIP: [PintP2P.toAddress("QmTABj5y3Q7LPErKeEPyNHKakp4gAknfwFEAm6LsD6TaNT")],
   // DRIP: ["pint1zgsfhgpxt9kmeyxl2lm08l9nr2233gcahzhyllrfre7k4ce9vjywrpqxv2kgc"],
 };
 

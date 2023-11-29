@@ -19,6 +19,7 @@ import { mapValues } from "lodash";
 import base64url from "base64url";
 import { bech32 } from "bech32";
 import { toB58String, fromB58String } from "multihashes";
+import { SIGNAL_SERVER } from "./constants";
 
 export const VERSION = "1.0.0";
 
@@ -99,8 +100,7 @@ export class PintP2P extends Libp2p {
   public signer: VoidSigner;
   public addressPromise: Promise<string>;
   static PRESETS = {
-    // MAINNET: "/dns4/p2p.diacetyl.is/tcp/443/wss/p2p-webrtc-star/",
-    MAINNET: "/dns4/ns1.doublecup.dev/tcp/443/wss/p2p-webrtc-star/",
+    MAINNET: SIGNAL_SERVER,
   };
   static fromPresetOrMultiAddr(multiaddr) {
     return (

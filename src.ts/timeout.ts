@@ -1,4 +1,4 @@
-export const DEFAULT_TIMEOUT_SEC = 30;
+export const DEFAULT_TIMEOUT_SEC = 60;
 
 export async function timeoutAfter(seconds: number): Promise<"timeout"> {
   return new Promise((resolve, reject) => {

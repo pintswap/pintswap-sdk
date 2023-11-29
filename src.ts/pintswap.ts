@@ -34,6 +34,7 @@ import * as erc721Permit from "./erc721-permit";
 import { detectPermit } from "./detect-permit";
 import { detectERC721Permit } from "./detect-erc721-permit";
 import fetch from "cross-fetch";
+import { NAMESERVERS } from "./constants";
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
 const base64ToValue = (data) => ethers.hexlify(ethers.decodeBase64(data));
@@ -241,8 +242,7 @@ export function sumOffers(offers: any[]) {
 }
 
 export const NS_MULTIADDRS = {
-  DRIP: [PintP2P.toAddress("QmTABj5y3Q7LPErKeEPyNHKakp4gAknfwFEAm6LsD6TaNT")],
-  // DRIP: ["pint1zgsfhgpxt9kmeyxl2lm08l9nr2233gcahzhyllrfre7k4ce9vjywrpqxv2kgc"],
+  DRIP: [NAMESERVERS.DRIP],
 };
 
 export interface NFTPFP {
@@ -1317,7 +1317,7 @@ export class Pintswap extends PintP2P {
             messages.push(permit.encode(approveTx.permitData));
           else messages.push(Buffer.from([]));
           self.logger.debug("permitdata::wait");
-          const permitData = await reqWithTimeout(source.next(), 60);
+          const permitData = await reqWithTimeout(source.next());
           if (permitData === "timeout") {
             handleError("taker", "maker not responsive", messages);
             return;

@@ -24,9 +24,12 @@ export const NETWORKS = [
   {
     name: "Ethereum",
     chainId: 1,
-    provider: new ethers.JsonRpcProvider(
-      `https://eth.llamarpc.com/rpc/${LLAMA_NODES_KEY}`
-    ),
+    provider: new ethers.AlchemyProvider(
+      'mainnet', 'Qoz0g86Uhc_xLj7P-etwSTLNPSXJmdi4'
+    )
+    // provider: new ethers.JsonRpcProvider(
+    //   `https://eth.llamarpc.com/rpc/${LLAMA_NODES_KEY}`
+    // ),
   },
   {
     name: "Optimism",

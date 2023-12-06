@@ -242,7 +242,7 @@ export function sumOffers(offers: any[]) {
 }
 
 export const NS_MULTIADDRS = {
-  DRIP: [NAMESERVERS.DRIP],
+  DRIP: [PintP2P.toAddress("QmTABj5y3Q7LPErKeEPyNHKakp4gAknfwFEAm6LsD6TaNT")],
 };
 
 export interface NFTPFP {

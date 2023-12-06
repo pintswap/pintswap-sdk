@@ -1,1 +1,1 @@
-{"version":3,"file":"constants.js","sourceRoot":"","sources":["../src.ts/constants.ts"],"names":[],"mappings":";AAAA,mCAAmC;;;AAEtB,QAAA,aAAa,GACxB,oDAAoD,CAAC;AACvD,0DAA0D;AAC7C,QAAA,WAAW,GAAG;IACzB,IAAI,EAAE,oEAAoE;IAC1E,4EAA4E;CAC7E,CAAC"}
+{"version":3,"file":"constants.js","sourceRoot":"","sources":["../src.ts/constants.ts"],"names":[],"mappings":";;;AAAA,mCAAmC;AACnC;;GAEG;AACU,QAAA,aAAa,GACxB,oDAAoD,CAAC;AACvD,0DAA0D;AAC7C,QAAA,WAAW,GAAG;IACzB,IAAI,EAAE,oEAAoE;IAC1E,4EAA4E;CAC7E,CAAC"}

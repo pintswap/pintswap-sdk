@@ -1,5 +1,7 @@
 // import { PintP2P } from "./p2p";
-
+/**
+ * @deprecated
+ */
 export const SIGNAL_SERVER =
   "/dns4/p2p.diacetyl.is/tcp/443/wss/p2p-webrtc-star/";
 // "/dns4/ns1.doublecup.dev/tcp/443/wss/p2p-webrtc-star/";

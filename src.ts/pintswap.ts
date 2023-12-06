@@ -34,7 +34,6 @@ import * as erc721Permit from "./erc721-permit";
 import { detectPermit } from "./detect-permit";
 import { detectERC721Permit } from "./detect-erc721-permit";
 import fetch from "cross-fetch";
-import { NAMESERVERS } from "./constants";
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
 const base64ToValue = (data) => ethers.hexlify(ethers.decodeBase64(data));

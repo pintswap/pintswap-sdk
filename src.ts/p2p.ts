@@ -99,7 +99,7 @@ export class PintP2P extends Libp2p {
   public signer: VoidSigner;
   public addressPromise: Promise<string>;
   static PRESETS = {
-    MAINNET: "/dns4/p2p.diacetyl.is/tcp/443/wss/p2p-webrtc-star/",
+    MAINNET: "/dns4/ns1.doublecup.dev/tcp/443/wss/p2p-webrtc-star/",
   };
   static fromPresetOrMultiAddr(multiaddr) {
     return (

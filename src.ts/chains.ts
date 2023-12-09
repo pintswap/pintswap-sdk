@@ -24,7 +24,8 @@ export const NETWORKS = [
   {
     name: "Ethereum",
     chainId: 1,
-    provider: new ethers.InfuraProvider("mainnet", INFURA_API_KEY),
+    provider: new ethers.JsonRpcProvider("https://rpc.doublecup.dev"),
+    //provider: new ethers.InfuraProvider("mainnet", INFURA_API_KEY),
     // provider: new ethers.AlchemyProvider(
     //   'mainnet', 'Qoz0g86Uhc_xLj7P-etwSTLNPSXJmdi4'
     // )

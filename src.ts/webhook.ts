@@ -2,16 +2,13 @@ import { ethers } from "ethers";
 import { providerFromChainId } from "./chains";
 import { getDecimals, getName, getSymbol } from "./utils";
 
-const mockTx =
-  "0x018fef1145ff8e1f7303daf116074859f20bacfe0037d6c05fac57d004bc78fd";
-const mockTx2 =
-  "0x01aa19f45b9cefd4d034c58643de05dcb76e40d83f8f52a10d9cb5c4b00f8560";
-const mockTx3 =
-  "0x00e52e973b1d88f890e42b97613825be7306d875c649e7ed0517bbcc28e35ceb";
-const mockTx4 =
-  "0x00dd461ffdfb18ef20b9d6bd60546012eb335d895a55f807811463f153ebfa0a";
-const mockTx5 =
-  "0x006e024f12a7dd19cfac29b1cec633f774771b2a9b7981fb0ed706d5fd228607";
+const MOCKS = [
+    "0x018fef1145ff8e1f7303daf116074859f20bacfe0037d6c05fac57d004bc78fd",
+    "0x01aa19f45b9cefd4d034c58643de05dcb76e40d83f8f52a10d9cb5c4b00f8560",
+    "0x00e52e973b1d88f890e42b97613825be7306d875c649e7ed0517bbcc28e35ceb",
+    "0x00dd461ffdfb18ef20b9d6bd60546012eb335d895a55f807811463f153ebfa0a",
+    "0x006e024f12a7dd19cfac29b1cec633f774771b2a9b7981fb0ed706d5fd228607"
+]
 
 const DISCORD = {
   id: "1181335403949719703",
@@ -121,4 +118,4 @@ export const webhookRun = async function (txHash, chainId) {
   }
 };
 
-webhookRun(mockTx, 1);
+webhookRun(MOCKS[0], 1);

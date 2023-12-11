@@ -261,11 +261,11 @@ const getTokensFromTxHash = async (txHash, provider, chainId) => {
 
 const buildEmbedder = async (tokens, chainId) => {
     const date = new Date().toUTCString()
-    
+
     const embed = new Discord.EmbedBuilder()
         .setTitle(`Transaction Complete!`)
         .setColor(10181046)
-        .setThumbnail("https://pngset.com/images/lean-purple-spilled-drank-spilled-cup-of-lean-transparent-png-874771.png")
+        .setThumbnail("https://i.pinimg.com/originals/14/9d/d4/149dd4d7532e300c773bb91d6cb38b1d.jpg")
         .setTimestamp(Date.now())
         .addFields([
             {
@@ -296,14 +296,13 @@ export const webhookRun = async function (txHash, chainId) {
         const provider = providerFromChainId(chainId)
         const tokens = await getTokensFromTxHash(txHash, provider, chainId)
         const embed = await buildEmbedder(tokens, chainId)
-        
         await wc.send({
             content: ``,
-            embeds:[embed]
+            embeds: [embed]
         })
     } catch (e) {
         console.error(e)
     }
 }
 
-webhookRun(mockTx,1)
+webhookRun(mockTx, 1)

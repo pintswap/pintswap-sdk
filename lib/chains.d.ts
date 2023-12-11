@@ -12,6 +12,7 @@ export declare const NETWORKS: {
     chainId: number;
     provider: ethers.JsonRpcProvider;
 }[];
+export declare const providerFromChainId: (chainId?: number) => ethers.JsonRpcProvider;
 export declare function tokenExists(provider: any, address: any): Promise<boolean>;
 export declare function detectTradeNetwork(trade: any): Promise<number>;
 export declare function detectTokenNetwork(address: string): Promise<number>;

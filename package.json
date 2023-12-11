@@ -44,7 +44,6 @@
     "canonical-weth": "^1.4.0",
     "chai": "^4.2.0",
     "cross-fetch": "^3.1.5",
-    "discord.js": "14.14.1",
     "emasm": "https://github.com/kungfuflex/emasm",
     "ethers": "^6.3.1",
     "evmdis": "https://github.com/kungfuflex/evmdis",

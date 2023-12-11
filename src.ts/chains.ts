@@ -55,6 +55,10 @@ export const NETWORKS = [
   },
 ];
 
+export const providerFromChainId = (chainId = 1) => {
+  return NETWORKS.find((p) => p.chainId === chainId).provider;
+};
+
 export async function tokenExists(provider, address) {
   const contract = new ethers.Contract(
     address,

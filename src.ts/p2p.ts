@@ -217,7 +217,7 @@ export class PintP2P extends Libp2p {
           [Bootstrap.tag]: {
             enabled: true,
             list: [
-              multiaddr + "QmTABj5y3Q7LPErKeEPyNHKakp4gAknfwFEAm6LsD6TaNT"
+              multiaddr + "QmTABj5y3Q7LPErKeEPyNHKakp4gAknfwFEAm6LsD6TaNT",
             ],
           },
         },

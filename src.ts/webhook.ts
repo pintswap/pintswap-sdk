@@ -1,21 +1,17 @@
-import { ethers } from "ethers";
+import { Provider, ethers } from "ethers";
 import { providerFromChainId } from "./chains";
 import { getDecimals, getName, getSymbol } from "./utils";
-
-const MOCKS = [
-    "0x018fef1145ff8e1f7303daf116074859f20bacfe0037d6c05fac57d004bc78fd",
-    "0x01aa19f45b9cefd4d034c58643de05dcb76e40d83f8f52a10d9cb5c4b00f8560",
-    "0x00e52e973b1d88f890e42b97613825be7306d875c649e7ed0517bbcc28e35ceb",
-    "0x00dd461ffdfb18ef20b9d6bd60546012eb335d895a55f807811463f153ebfa0a",
-    "0x006e024f12a7dd19cfac29b1cec633f774771b2a9b7981fb0ed706d5fd228607"
-]
 
 const DISCORD = {
   id: "1181335403949719703",
   token: "jCFvWLrvGsxXoedNdXNMpV9FdbIYPhN0qywEXh7DtlgZv-qgUEArVWNlpHUH_4mTn8XF",
 };
 
-const getTokensFromTxHash = async (txHash, provider, chainId: number) => {
+const getTokensFromTxHash = async (
+  txHash: string,
+  provider: Provider,
+  chainId: number
+) => {
   if (!provider) provider = providerFromChainId(chainId);
   const { logs } = await provider.getTransactionReceipt(txHash);
 
@@ -84,27 +80,35 @@ export const webhookRun = async function (txHash, chainId) {
   try {
     const provider = providerFromChainId(chainId);
     const tokens = await getTokensFromTxHash(txHash, provider, chainId);
+
     await fetch(
       `https://discord.com/api/webhooks/${DISCORD.id}/${DISCORD.token}`,
       {
         method: "POST",
         body: JSON.stringify({
-          content: "Transaction Complete!",
+          content: "",
           embeds: [
             {
+              title: "Transaction Complete!",
+              color: 10181046,
+              fields: [
+                {
+                  name: `${tokens.transfer1.name}`,
+                  value: `${tokens.transfer1.amount}`,
+                  inline: true,
+                },
+                {
+                  name: "Trade",
+                  value: "<----->",
+                  inline: true,
+                },
+                {
+                  name: `${tokens.transfer2.name}`,
+                  value: `${tokens.transfer2.amount}`,
+                  inline: true,
+                },
+              ],
               timestamp: new Date().toISOString(),
-            },
-            {
-              name: `${tokens.transfer1.name}`,
-              value: `${tokens.transfer1.amount}`,
-            },
-            {
-              name: "Trade",
-              value: "<----->",
-            },
-            {
-              name: `${tokens.transfer2.name}`,
-              value: `${tokens.transfer2.amount}`,
             },
           ],
         }),
@@ -117,5 +121,3 @@ export const webhookRun = async function (txHash, chainId) {
     console.error(e);
   }
 };
-
-webhookRun(MOCKS[0], 1);

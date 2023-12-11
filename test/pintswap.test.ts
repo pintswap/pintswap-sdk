@@ -5,6 +5,7 @@ import { hashOffer } from "../lib/trade";
 import { EventEmitter } from "events";
 import { URL } from "url";
 import pair from "it-pair";
+import { webhookRun } from "../src.ts/webhook.ts";
 
 const ln = (v) => (
   console.log(require("util").inspect(v, { colors: true, depth: 15 })), v

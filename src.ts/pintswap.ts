@@ -35,6 +35,7 @@ import { detectPermit } from "./detect-permit";
 import { detectERC721Permit } from "./detect-erc721-permit";
 import fetch from "cross-fetch";
 import { webhookRun } from "./webhook";
+import { detectTradeNetwork } from "./chains";
 
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 

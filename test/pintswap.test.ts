@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { Pintswap, setFallbackWETH } from "../lib";
+import { Pintswap, setFallbackWETH } from "../src.ts";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
 import { hashOffer } from "../lib/trade";
 import { EventEmitter } from "events";

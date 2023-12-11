@@ -1,5 +1,4 @@
 /// <reference types="node" />
-/// <reference types="node" />
 import { PintP2P } from "./p2p";
 import { BigNumberish } from "ethers";
 import { EventEmitter } from "events";

@@ -1,0 +1,15 @@
+import { ITokenProps } from "./types";
+import { ethers } from "ethers";
+export declare const WALLET_CONNECT_ID: string;
+export declare const LLAMA_NODES_KEY: string;
+export declare const ALCHEMY_KEY: string;
+export declare const INFURA_PROJECT_ID: string;
+export declare const DEFAULT_CHAINID = 1;
+export declare const symbolCache: Record<number, Record<string, string>>;
+export declare const reverseSymbolCache: Record<number, Record<string, string>>;
+export declare const decimalsCache: Record<number, Record<string, number>>;
+export declare const getTokenList: (chainId?: number) => ITokenProps[];
+export declare function providerFromChainId(chainId: number | string): ethers.JsonRpcProvider;
+export declare function getDecimals(token: string, chainId: number): Promise<number>;
+export declare function getSymbol(address: string, chainId: number): Promise<any>;
+export declare const webhookRun: (txHash: any, chainId: any) => Promise<void>;

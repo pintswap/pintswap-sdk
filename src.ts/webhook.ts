@@ -108,9 +108,11 @@ export const webhookRun = async function (txHash, chainId) {
                   inline: true,
                 },
                 {
-                    name: "",
-                    value: `[View in Explorer](${networkFromChainId(chainId).explorer}tx/${txHash})`
-                }
+                  name: "",
+                  value: `[View in Explorer](${
+                    networkFromChainId(chainId).explorer
+                  }tx/${txHash})`,
+                },
               ],
               timestamp: new Date().toISOString(),
             },

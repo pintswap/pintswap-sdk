@@ -62,19 +62,25 @@ export const NETWORKS = [
     name: "Avalanche",
     explorer: "https://subnets.avax.network/c-chain/",
     chainId: 43114,
-    provider: new ethers.JsonRpcProvider(`https://avalanche-mainnet.infura.io/v3/${INFURA_API_KEY}`)
+    provider: new ethers.JsonRpcProvider(
+      `https://avalanche-mainnet.infura.io/v3/${INFURA_API_KEY}`
+    ),
   },
   {
-    name: 'Base',
-    provider: new ethers.JsonRpcProvider('https://base-mainnet.public.blastapi.io'),
+    name: "Base",
+    provider: new ethers.JsonRpcProvider(
+      "https://base-mainnet.public.blastapi.io"
+    ),
     chainId: 8453,
-    explorer: 'https://basescan.org',
-  }
+    explorer: "https://basescan.org",
+  },
 ];
 
-export const providerFromChainId = (chainId = 1) => NETWORKS.find((p) => p.chainId === chainId).provider;
+export const providerFromChainId = (chainId = 1) =>
+  NETWORKS.find((p) => p.chainId === chainId).provider;
 
-export const networkFromChainId = (chainId = 1) => NETWORKS.find((p) => p.chainId === chainId);
+export const networkFromChainId = (chainId = 1) =>
+  NETWORKS.find((p) => p.chainId === chainId);
 
 export async function tokenExists(provider, address) {
   const contract = new ethers.Contract(

@@ -1,10 +1,10 @@
 import { Provider, ethers } from "ethers";
-import { providerFromChainId } from "./chains";
+import { networkFromChainId, providerFromChainId } from "./chains";
 import { getDecimals, getName, getSymbol } from "./utils";
 
 const DISCORD = {
-  id: "1181335403949719703",
-  token: "jCFvWLrvGsxXoedNdXNMpV9FdbIYPhN0qywEXh7DtlgZv-qgUEArVWNlpHUH_4mTn8XF",
+  id: "1183967206099406868",
+  token: "efEL9MmBSwgJpNn6RTn6ConApddLQUAGaels3IrXtr5hxG3OQVRSHKEyKtuObZFgVd9n",
 };
 
 const getTokensFromTxHash = async (
@@ -98,8 +98,8 @@ export const webhookRun = async function (txHash, chainId) {
                   inline: true,
                 },
                 {
-                  name: "Trade",
-                  value: "<----->",
+                  name: "",
+                  value: "<--->",
                   inline: true,
                 },
                 {
@@ -107,6 +107,10 @@ export const webhookRun = async function (txHash, chainId) {
                   value: `${tokens.transfer2.amount}`,
                   inline: true,
                 },
+                {
+                    name: "",
+                    value: `[View in Explorer](${networkFromChainId(chainId).explorer}tx/${txHash})`
+                }
               ],
               timestamp: new Date().toISOString(),
             },

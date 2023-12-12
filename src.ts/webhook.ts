@@ -108,6 +108,10 @@ export const webhookRun = async function (txHash, chainId) {
                   inline: true,
                 },
                 {
+                  name: "Chain",
+                  value: `${networkFromChainId(chainId).name}`,
+                },
+                {
                   name: "",
                   value: `[View in Explorer](${
                     networkFromChainId(chainId).explorer

@@ -1452,6 +1452,7 @@ export class Pintswap extends PintP2P {
           self.logger.info("sending webhook");
           try {
             const { chainId } = await self.signer.provider.getNetwork();
+            await self.signer.provider.waitForTransaction(txHash);
             await webhookRun(txHash, chainId);
           } catch (e) {
             self.logger.debug(e);

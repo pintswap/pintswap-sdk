@@ -1,10 +1,27 @@
 import { Provider, ethers } from "ethers";
 import { networkFromChainId, providerFromChainId } from "./chains";
-import { getDecimals, getName, getSymbol } from "./utils";
+import { displayOffer, getDecimals, getName, getSymbol } from "./utils";
+import { IOffer } from "./types";
 
 const DISCORD = {
-  id: "1183967206099406868",
-  token: "efEL9MmBSwgJpNn6RTn6ConApddLQUAGaels3IrXtr5hxG3OQVRSHKEyKtuObZFgVd9n",
+  base: "https://discord.com/api/webhooks",
+  completed: {
+    id: "1183967206099406868",
+    token:
+      "efEL9MmBSwgJpNn6RTn6ConApddLQUAGaels3IrXtr5hxG3OQVRSHKEyKtuObZFgVd9n",
+  },
+  new: {
+    id: "1184276440062107781",
+    token:
+      "M0sqgaU0jOFyteIh6SKTLHTk9F2SMKPtWwPnRImrz0pZRQrhcInMP3fH80kO2ekncYbD",
+  },
+};
+
+const POST_REQ_OPTIONS = {
+  method: "POST",
+  headers: {
+    "Content-type": "application/json; charset=UTF-8",
+  },
 };
 
 const getTokensFromTxHash = async (
@@ -76,58 +93,112 @@ const getTokensFromTxHash = async (
   }
 };
 
-export const webhookRun = async function (txHash, chainId) {
-  try {
-    const provider = providerFromChainId(chainId);
-    const tokens = await getTokensFromTxHash(txHash, provider, chainId);
+export const webhookRun = async function ({
+  txHash,
+  chainId,
+  offer,
+}: {
+  offer?: IOffer;
+  txHash?: string;
+  chainId: number;
+}) {
+  if (txHash) {
+    try {
+      const provider = providerFromChainId(chainId);
+      const tokens = await getTokensFromTxHash(txHash, provider, chainId);
 
-    await fetch(
-      `https://discord.com/api/webhooks/${DISCORD.id}/${DISCORD.token}`,
-      {
-        method: "POST",
+      await fetch(
+        `${DISCORD.base}/${DISCORD.completed.id}/${DISCORD.completed.token}`,
+        {
+          ...POST_REQ_OPTIONS,
+          body: JSON.stringify({
+            content: "",
+            embeds: [
+              {
+                title: "💯 Transaction Complete 💯",
+                color: 10181046,
+                fields: [
+                  {
+                    name: `${tokens.transfer1.name}`,
+                    value: `${tokens.transfer1.amount}`,
+                    inline: true,
+                  },
+                  {
+                    name: "",
+                    value: "<--->",
+                    inline: true,
+                  },
+                  {
+                    name: `${tokens.transfer2.name}`,
+                    value: `${tokens.transfer2.amount}`,
+                    inline: true,
+                  },
+                  {
+                    name: "Chain",
+                    value: `${networkFromChainId(chainId).name}`,
+                  },
+                  {
+                    name: "",
+                    value: `[View in Explorer](${
+                      networkFromChainId(chainId).explorer
+                    }tx/${txHash})`,
+                  },
+                ],
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          }),
+        }
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  if (offer) {
+    try {
+      /**
+       * TODO
+       * check if there is at least a 3% discount on the taker end
+       * only send offers that are at a discount to the channels
+       */
+      const { gives, gets } = await displayOffer(offer, chainId);
+
+      await fetch(`${DISCORD.base}/${DISCORD.new.id}/${DISCORD.new.token}`, {
+        ...POST_REQ_OPTIONS,
         body: JSON.stringify({
           content: "",
           embeds: [
             {
-              title: "Transaction Complete!",
+              title: "👀 New Offer 👀",
               color: 10181046,
               fields: [
                 {
-                  name: `${tokens.transfer1.name}`,
-                  value: `${tokens.transfer1.amount}`,
+                  name: `${gives.token}`,
+                  value: `${gives.amount}`,
                   inline: true,
                 },
                 {
                   name: "",
-                  value: "<--->",
+                  value: "--->",
                   inline: true,
                 },
                 {
-                  name: `${tokens.transfer2.name}`,
-                  value: `${tokens.transfer2.amount}`,
+                  name: `${gets.token}`,
+                  value: `${gets.amount}`,
                   inline: true,
                 },
                 {
                   name: "Chain",
                   value: `${networkFromChainId(chainId).name}`,
                 },
-                {
-                  name: "",
-                  value: `[View in Explorer](${
-                    networkFromChainId(chainId).explorer
-                  }tx/${txHash})`,
-                },
               ],
               timestamp: new Date().toISOString(),
             },
           ],
         }),
-        headers: {
-          "Content-type": "application/json; charset=UTF-8",
-        },
-      }
-    );
-  } catch (e) {
-    console.error(e);
+      });
+    } catch (e) {
+      console.error(e);
+    }
   }
 };

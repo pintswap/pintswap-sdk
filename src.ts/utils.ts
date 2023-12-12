@@ -1,6 +1,12 @@
-import { Contract, ZeroAddress, getAddress, isAddress } from "ethers";
+import {
+  Contract,
+  ZeroAddress,
+  formatUnits,
+  getAddress,
+  isAddress,
+} from "ethers";
 import { providerFromChainId } from "./chains";
-import { ITokenProps } from "./types";
+import { IOffer, ITokenProps } from "./types";
 
 // CONSTANTS
 export const TOKENS: ITokenProps[] = require("./token-list.json").tokens;
@@ -109,3 +115,42 @@ export async function getName(
     return address;
   }
 }
+
+export const displayOffer = async ({ gets, gives }: IOffer, chainId = 1) => {
+  try {
+    /**
+     * TODO
+     * check if the offer contains an NFT by checking for a tokenId in the offer
+     * if there is a token Id, change the webhook post request to state that it is an NFT offer
+     */
+    const [givesSymbol, getsSymbol, givesDecimals, getsDecimals] =
+      await Promise.all([
+        getSymbol(gives.token, chainId),
+        getSymbol(gets.token, chainId),
+        getDecimals(gives.token, chainId),
+        getDecimals(gets.token, chainId),
+      ]);
+    return {
+      gives: {
+        token: givesSymbol || gives.token,
+        amount: formatUnits(gives.token, givesDecimals) || "N/A",
+      },
+      gets: {
+        token: getsSymbol || gets.token,
+        amount: formatUnits(gets.token, getsDecimals) || "N/A",
+      },
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      gives: {
+        token: gives.token,
+        amount: gives.amount,
+      },
+      gets: {
+        token: gets.token,
+        amount: gets.amount,
+      },
+    };
+  }
+};

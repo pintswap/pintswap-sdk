@@ -77,7 +77,7 @@ export declare class Pintswap extends PintP2P {
     _encodeUserData(): any;
     handleUserData(): Promise<void>;
     handleBroadcastedOffers(): Promise<void>;
-    broadcastOffer(_offer: IOffer): void;
+    broadcastOffer(_offer: IOffer, chainId?: number): void;
     findPeer(pintSwapAddress: string): Promise<{
         id: PeerId;
         multiaddrs: import("multiaddr").Multiaddr[];

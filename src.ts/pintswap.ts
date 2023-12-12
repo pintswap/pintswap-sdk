@@ -1444,6 +1444,10 @@ export class Pintswap extends PintP2P {
             ).hash;
           }
 
+          // complete
+          self.emit("pintswap/trade/taker", txHash);
+          self.logger.debug("trade::complete::" + txHash);
+
           // discord webhook
           self.logger.info("sending webhook");
           try {
@@ -1453,9 +1457,6 @@ export class Pintswap extends PintP2P {
             self.logger.debug(e);
           }
 
-          // complete
-          self.emit("pintswap/trade/taker", txHash);
-          self.logger.debug("trade::complete::" + txHash);
           messages.end();
           trade.resolve(txHash || null);
           stream.close();

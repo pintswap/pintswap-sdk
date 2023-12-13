@@ -1,5 +1,4 @@
 import {
-  ZeroAddress,
   getUint,
   hexlify,
   Signature,

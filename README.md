@@ -141,7 +141,7 @@ await pintswap.startNode();
 
 Stops p2p connectivity associated with the PintSwap instance.
 
-### broadcastOffer(offer)
+### broadcastOffer(offer, chainId?, isPublic?)
 
 Inserts an order into the `pintswap.offers` Map such that it can be traded against, using the structure below:
 
@@ -156,7 +156,7 @@ pintswap.broadcastOffer({
     token: '0x8d008CAC1a5CB08aC962b1e34E977B79ABEee88D',
     amount: '0xbe951906eba2a8000000'
   }
-});
+}, 1, true);
 ```
 
 For NFT trades it is possible to use a field similar to `tokenId: '0x01'` instead of the `amount` field in either the `gets` or `gives` field of the offer.

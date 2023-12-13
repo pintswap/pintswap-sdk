@@ -7,7 +7,7 @@ export declare const MIN_ABI: {
 export declare function getDecimals(token: string, chainId: number): Promise<number>;
 export declare function getSymbol(address: string, chainId: number): Promise<string>;
 export declare function getName(address: string, chainId: number): Promise<string>;
-export declare const displayOffer: ({ gets, gives }: IOffer, chainId?: number) => Promise<{
+export declare const displayOffer: ({ gets, gives }: IOffer, chainId?: number, type?: "symbol" | "name") => Promise<{
     gives: {
         token: string;
         amount: string;

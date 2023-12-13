@@ -40,9 +40,9 @@ export async function getDecimals(
     const address = getAddress(token);
     if (address === ZeroAddress) return 18;
     const match = getTokenList(chainId).find(
-      (v) => getAddress(v?.address) === address
+      (v) => getAddress(v.address) === address
     );
-    if (match) return match?.decimals || 18;
+    if (match?.decimals) return match.decimals;
     else {
       try {
         const contract = new Contract(
@@ -74,7 +74,7 @@ export async function getSymbol(
   const match = getTokenList(chainId).find(
     (v) => getAddress(v.address) === address
   );
-  if (match) return match.symbol;
+  if (match?.symbol) return match.symbol;
   const provider = providerFromChainId(chainId);
   try {
     const contract = new Contract(
@@ -100,7 +100,7 @@ export async function getName(
   const match = getTokenList(chainId).find(
     (v) => getAddress(v.address) === address
   );
-  if (match) return match.name;
+  if (match?.name) return match.name;
   const provider = providerFromChainId(chainId);
   try {
     const contract = new Contract(
@@ -116,7 +116,11 @@ export async function getName(
   }
 }
 
-export const displayOffer = async ({ gets, gives }: IOffer, chainId = 1) => {
+export const displayOffer = async (
+  { gets, gives }: IOffer,
+  chainId = 1,
+  type: "symbol" | "name" = "symbol"
+) => {
   try {
     /**
      * TODO
@@ -125,19 +129,23 @@ export const displayOffer = async ({ gets, gives }: IOffer, chainId = 1) => {
      */
     const [givesSymbol, getsSymbol, givesDecimals, getsDecimals] =
       await Promise.all([
-        getSymbol(gives.token, chainId),
-        getSymbol(gets.token, chainId),
+        type === "name"
+          ? getName(gives.token, chainId)
+          : getSymbol(gives.token, chainId),
+        type === "name"
+          ? getName(gets.token, chainId)
+          : getSymbol(gets.token, chainId),
         getDecimals(gives.token, chainId),
         getDecimals(gets.token, chainId),
       ]);
     return {
       gives: {
         token: givesSymbol || gives.token,
-        amount: formatUnits(gives.token, givesDecimals) || "N/A",
+        amount: formatUnits(gives.amount, givesDecimals) || "N/A",
       },
       gets: {
         token: getsSymbol || gets.token,
-        amount: formatUnits(gets.token, getsDecimals) || "N/A",
+        amount: formatUnits(gets.amount, getsDecimals) || "N/A",
       },
     };
   } catch (err) {

@@ -2,6 +2,7 @@ import { Provider, ethers } from "ethers";
 import { networkFromChainId, providerFromChainId } from "./chains";
 import { displayOffer, getDecimals, getName, getSymbol } from "./utils";
 import { IOffer } from "./types";
+import { hashOffer } from "./trade";
 
 const DISCORD = {
   base: "https://discord.com/api/webhooks",
@@ -93,14 +94,26 @@ const getTokensFromTxHash = async (
   }
 };
 
+const buildFulfillMarkdownLink = (offer?: IOffer, peer?: string) => {
+  const baseLink = "https://app.pintswap.exchange";
+  if (offer && peer) {
+    return `[Take offer in Web App](${baseLink}/#/fulfill/${peer}/${hashOffer(
+      offer
+    )})`;
+  }
+  return `[Go to Web App](${baseLink})`;
+};
+
 export const webhookRun = async function ({
   txHash,
   chainId,
   offer,
+  peer,
 }: {
   offer?: IOffer;
   txHash?: string;
   chainId: number;
+  peer?: string;
 }) {
   if (txHash) {
     try {
@@ -161,7 +174,7 @@ export const webhookRun = async function ({
        * check if there is at least a 3% discount on the taker end
        * only send offers that are at a discount to the channels
        */
-      const { gives, gets } = await displayOffer(offer, chainId);
+      const { gives, gets } = await displayOffer(offer, chainId, "name");
 
       await fetch(`${DISCORD.base}/${DISCORD.new.id}/${DISCORD.new.token}`, {
         ...POST_REQ_OPTIONS,
@@ -190,6 +203,10 @@ export const webhookRun = async function ({
                 {
                   name: "Chain",
                   value: `${networkFromChainId(chainId).name}`,
+                },
+                {
+                  name: "",
+                  value: buildFulfillMarkdownLink(offer, peer),
                 },
               ],
               timestamp: new Date().toISOString(),

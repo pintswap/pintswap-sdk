@@ -748,13 +748,18 @@ export class Pintswap extends PintP2P {
   }
 
   // adds new offer to this.offers: Map<hash, IOffer>
-  broadcastOffer(_offer: IOffer, chainId = 1) {
+  async broadcastOffer(_offer: IOffer, chainId = 1) {
     this.logger.debug("trying to list new offer");
     const hash = hashOffer(_offer);
     this.offers.set(hash, _offer);
     this.emit("pintswap/trade/broadcast", hash);
-    webhookRun({ offer: _offer, chainId }); // TODO: check if this works fine without await
+    await webhookRun({
+      offer: _offer,
+      chainId,
+      peer: this.peerId.toB58String(),
+    });
   }
+
   async findPeer(pintSwapAddress: string) {
     const resolved = (this.constructor as any).fromAddress(
       pintSwapAddress.indexOf(".") !== -1

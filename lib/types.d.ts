@@ -21,3 +21,17 @@ export interface IOffer {
     gets: ITransfer;
 }
 export type IAvailableChainIds = "42161" | "137" | "10" | "43112" | "1" | "31337";
+export type ITokenProps = {
+    chainId: number;
+    address: string;
+    name: string;
+    symbol: string;
+    decimals: number;
+    logoURI: string;
+    extensions?: {
+        bridgeInfo: Record<string, {
+            tokenAddress: string;
+        }>;
+    };
+    balance?: string;
+};

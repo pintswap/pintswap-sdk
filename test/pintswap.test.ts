@@ -1,10 +1,11 @@
 import { expect } from "chai";
-import { Pintswap, setFallbackWETH } from "../lib";
+import { Pintswap, setFallbackWETH } from "../src.ts";
 import WETH9 from "canonical-weth/build/contracts/WETH9.json";
 import { hashOffer } from "../lib/trade";
 import { EventEmitter } from "events";
 import { URL } from "url";
 import pair from "it-pair";
+import { webhookRun } from "../src.ts/webhook.ts";
 
 const ln = (v) => (
   console.log(require("util").inspect(v, { colors: true, depth: 15 })), v

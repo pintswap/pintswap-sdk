@@ -23,6 +23,7 @@ export const WETH_ADDRESSES = Object.assign(
 export const NETWORKS = [
   {
     name: "Ethereum",
+    explorer: "https://etherscan.io/",
     chainId: 1,
     provider: new ethers.JsonRpcProvider("https://rpc.doublecup.dev"),
     //provider: new ethers.InfuraProvider("mainnet", INFURA_API_KEY),
@@ -35,25 +36,51 @@ export const NETWORKS = [
   },
   {
     name: "Optimism",
+    explorer: "https://optimistic.etherscan.io/",
     chainId: 10,
     provider: new ethers.InfuraProvider("optimism", INFURA_API_KEY),
   },
   {
     name: "Polygon",
+    explorer: "https://polygonscan.com/",
     chainId: 137,
     provider: new ethers.InfuraProvider("matic", INFURA_API_KEY),
   },
   {
     name: "Arbitrum",
+    explorer: "https://arbiscan.io/",
     chainId: 42161,
     provider: new ethers.InfuraProvider("arbitrum", INFURA_API_KEY),
   },
   {
     name: "Celo",
+    explorer: "https://explorer.celo.org/mainnet/",
     chainId: 42220,
     provider: new ethers.JsonRpcProvider("https://forno.celo.org"),
   },
+  {
+    name: "Avalanche",
+    explorer: "https://subnets.avax.network/c-chain/",
+    chainId: 43114,
+    provider: new ethers.JsonRpcProvider(
+      `https://avalanche-mainnet.infura.io/v3/${INFURA_API_KEY}`
+    ),
+  },
+  {
+    name: "Base",
+    provider: new ethers.JsonRpcProvider(
+      "https://base-mainnet.public.blastapi.io"
+    ),
+    chainId: 8453,
+    explorer: "https://basescan.org",
+  },
 ];
+
+export const providerFromChainId = (chainId = 1) =>
+  NETWORKS.find((p) => p.chainId === chainId).provider;
+
+export const networkFromChainId = (chainId = 1) =>
+  NETWORKS.find((p) => p.chainId === chainId);
 
 export async function tokenExists(provider, address) {
   const contract = new ethers.Contract(

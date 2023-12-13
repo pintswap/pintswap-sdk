@@ -32,3 +32,16 @@ export type IAvailableChainIds =
   | "43112"
   | "1"
   | "31337";
+
+export type ITokenProps = {
+  chainId: number;
+  address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  logoURI: string;
+  extensions?: {
+    bridgeInfo: Record<string, { tokenAddress: string }>;
+  };
+  balance?: string;
+};

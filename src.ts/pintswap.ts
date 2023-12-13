@@ -34,6 +34,9 @@ import * as erc721Permit from "./erc721-permit";
 import { detectPermit } from "./detect-permit";
 import { detectERC721Permit } from "./detect-erc721-permit";
 import fetch from "cross-fetch";
+import { webhookRun } from "./webhook";
+import { detectTradeNetwork } from "./chains";
+
 const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
 
 const base64ToValue = (data) => ethers.hexlify(ethers.decodeBase64(data));
@@ -73,7 +76,7 @@ export const protobufOffersToHex = (offers) =>
       if (["erc721", "erc1155"].includes(v.data))
         o.tokenId = ethers.hexlify(ethers.decodeBase64(transfer.tokenId));
       o.token = ethers.getAddress(
-        ethers.zeroPadValue(ethers.decodeBase64(transfer.token), 20),
+        ethers.zeroPadValue(ethers.decodeBase64(transfer.token), 20)
       );
       return o;
     });
@@ -124,7 +127,7 @@ const getPermitData = (signatureTransfer) => {
   const { domain, types, values } = SignatureTransfer.getPermitData(
     signatureTransfer.permit,
     signatureTransfer.permit2Address,
-    signatureTransfer.chainId,
+    signatureTransfer.chainId
   );
   return [domain, types, values];
 };
@@ -170,12 +173,12 @@ export function decodeBatchFill(data) {
       arrays: true,
       objects: true,
       oneofs: true,
-    },
+    }
   );
   return fills.map((v) => ({
     offerHash: ethers.zeroPadValue(
       ethers.hexlify(ethers.decodeBase64(v.offerHash)),
-      32,
+      32
     ),
     amount: ethers.getUint(ethers.hexlify(ethers.decodeBase64(v.amount))),
   }));
@@ -193,7 +196,7 @@ export function scaleOffer(offer: IOffer, amount: BigNumberish) {
       tokenId: offer.gives.tokenId,
       token: offer.gives.token,
       amount: ethers.hexlify(
-        ethers.toBeArray((ethers.getUint(offer.gives.amount) * n) / d),
+        ethers.toBeArray((ethers.getUint(offer.gives.amount) * n) / d)
       ),
     },
     gets: {
@@ -218,7 +221,7 @@ export function sumOffers(offers: any[]) {
           v.gets.amount &&
           ethers.toBeHex(
             toBigIntFromBytes(v.gets.amount) +
-              toBigIntFromBytes(r.gets.amount || "0x0"),
+              toBigIntFromBytes(r.gets.amount || "0x0")
           ),
         tokenId: v.gets.tokenId,
       },
@@ -228,7 +231,7 @@ export function sumOffers(offers: any[]) {
           v.gives.amount &&
           ethers.toBeHex(
             toBigIntFromBytes(v.gives.amount) +
-              toBigIntFromBytes(r.gives.amount || "0x0"),
+              toBigIntFromBytes(r.gives.amount || "0x0")
           ),
         tokenId: v.gives.tokenId,
       },
@@ -236,12 +239,12 @@ export function sumOffers(offers: any[]) {
     {
       gets: {},
       gives: {},
-    },
+    }
   );
 }
 
 export const NS_MULTIADDRS = {
-  DRIP: ["pint1zgsdknywfch8h8t8r5gvpd62zhf7jaqjze599w3j8m9hnmvwnlynpdshvjz7n"]
+  DRIP: ["pint1zgsdknywfch8h8t8r5gvpd62zhf7jaqjze599w3j8m9hnmvwnlynpdshvjz7n"],
 };
 
 export interface NFTPFP {
@@ -256,7 +259,7 @@ export interface IUserData {
 
 const mapObjectStripNullAndUndefined = (o) => {
   return Object.fromEntries(
-    Object.entries(o).filter(([key, value]) => value != null),
+    Object.entries(o).filter(([key, value]) => value != null)
   );
 };
 
@@ -292,7 +295,7 @@ export class Pintswap extends PintP2P {
     try {
       return await this.dialProtocol.apply(this, [
         PeerId.createFromB58String(
-          (this.constructor as any).fromAddress(peerId),
+          (this.constructor as any).fromAddress(peerId)
         ),
         ...rest,
       ]);
@@ -311,18 +314,18 @@ export class Pintswap extends PintP2P {
         const nsHosts = NS_MULTIADDRS[tld.toUpperCase()];
         const { stream } = await this.dialPeer(
           nsHosts[Math.floor(nsHosts.length * Math.random())],
-          "/pintswap/0.1.0/ns/query",
+          "/pintswap/0.1.0/ns/query"
         );
         pipe(messages, lp.encode(), stream.sink);
         messages.push(
           protocol.NameQuery.encode({
             name: maybeFromName(query),
-          }).finish(),
+          }).finish()
         );
         messages.end();
         const it = pipe(stream.source, lp.decode());
         const response = protocol.NameQueryResponse.decode(
-          (await it.next()).value.slice(),
+          (await it.next()).value.slice()
         );
         resolve({
           status: response.status,
@@ -345,14 +348,14 @@ export class Pintswap extends PintP2P {
         const nsHosts = NS_MULTIADDRS[tld.toUpperCase()];
         const { stream } = await this.dialPeer(
           nsHosts[Math.floor(nsHosts.length * Math.random())],
-          "/pintswap/0.1.0/ns/register",
+          "/pintswap/0.1.0/ns/register"
         );
         pipe(messages, lp.encode(), stream.sink);
         messages.push(Buffer.from(query));
         messages.end();
         const it = await pipe(stream.source, lp.decode());
         const response = protocol.NameRegisterResponse.decode(
-          (await it.next()).value.slice(),
+          (await it.next()).value.slice()
         );
         resolve({
           status: response.status,
@@ -382,7 +385,7 @@ export class Pintswap extends PintP2P {
   async publishOffers() {
     await this.pubsub.publish(
       "/pintswap/0.1.2/publish-orders",
-      ethers.toBeArray(ethers.hexlify(this._encodeMakerBroadcast())),
+      ethers.toBeArray(ethers.hexlify(this._encodeMakerBroadcast()))
     );
   }
   startPublishingOffers(ms: number) {
@@ -483,11 +486,11 @@ export class Pintswap extends PintP2P {
           key,
           toTypedTransfer(
             mapValues(mapObjectStripNullAndUndefined(value), (v) =>
-              Buffer.from(ethers.toBeArray(v)),
-            ),
+              Buffer.from(ethers.toBeArray(v))
+            )
           ),
-        ]),
-      ),
+        ])
+      )
     );
   }
   _encodeMakerBroadcast() {
@@ -504,10 +507,10 @@ export class Pintswap extends PintP2P {
           Object.entries(v).map(([key, value]) => [
             key,
             toTypedTransfer(
-              mapValues(value, (v) => Buffer.from(ethers.toBeArray(v))),
+              mapValues(value, (v) => Buffer.from(ethers.toBeArray(v)))
             ),
-          ]),
-        ),
+          ])
+        )
       ),
     }).finish();
   }
@@ -519,11 +522,11 @@ export class Pintswap extends PintP2P {
             key,
             toTypedTransfer(
               mapValues(mapObjectStripNullAndUndefined(value), (v) =>
-                Buffer.from(ethers.toBeArray(v)),
-              ),
+                Buffer.from(ethers.toBeArray(v))
+              )
             ),
-          ]),
-        ),
+          ])
+        )
       ),
       ...(Buffer.isBuffer(this.userData.image)
         ? {
@@ -618,7 +621,7 @@ export class Pintswap extends PintP2P {
             self.emit(
               `pintswap/request/create-trade/fulfilling`,
               offerHashHex,
-              offer,
+              offer
             ); // emits offer hash and offer object to frontend
             trade.emit("fulfilling", {
               hash: offerHashHex,
@@ -627,7 +630,7 @@ export class Pintswap extends PintP2P {
             self.logger.debug("approve::dispatch");
             const tx = await self.approveTradeAsMaker(
               offer,
-              sharedAddress as string,
+              sharedAddress as string
             );
             if (tx.permitData) {
               const encoded = permit.encode(tx.permitData);
@@ -657,8 +660,8 @@ export class Pintswap extends PintP2P {
             const payCoinbaseAmount = payCoinbaseAmountBuffer.length
               ? ethers.hexlify(
                   ethers.toBeArray(
-                    "0x" + payCoinbaseAmountBuffer.toString("hex"),
-                  ),
+                    "0x" + payCoinbaseAmountBuffer.toString("hex")
+                  )
                 )
               : null;
             const serializedTx = serializedTxBufList.slice();
@@ -667,7 +670,7 @@ export class Pintswap extends PintP2P {
             self.logger.debug("taker-address::wait");
             const { value: _takerAddress } = await source.next();
             const takerAddress = ethers.getAddress(
-              ethers.hexlify(_takerAddress.slice()),
+              ethers.hexlify(_takerAddress.slice())
             );
             self.logger.debug("taker-address::complete::" + takerAddress);
             self.logger.debug("sign::step1::" + serialized);
@@ -698,7 +701,7 @@ export class Pintswap extends PintP2P {
                 takerAddress,
                 Number((await self.signer.provider.getNetwork()).chainId),
                 contractPermitData,
-                payCoinbaseAmount,
+                payCoinbaseAmount
               )
             )
               throw Error("transaction data is not a pintswap");
@@ -706,7 +709,7 @@ export class Pintswap extends PintP2P {
             self.logger.debug("sign-context::wait");
             const signContext = await TPCsign.P2Context.createContext(
               JSON.stringify(keyshareJson, null, 4),
-              new BN(transaction.unsignedHash.substr(2), 16),
+              new BN(transaction.unsignedHash.substr(2), 16)
             );
             self.logger.debug("sign-context::complete");
 
@@ -740,25 +743,33 @@ export class Pintswap extends PintP2P {
         } catch (e) {
           trade.reject(e);
         }
-      },
+      }
     );
   }
 
   // adds new offer to this.offers: Map<hash, IOffer>
-  broadcastOffer(_offer: IOffer) {
+  async broadcastOffer(_offer: IOffer, chainId = 1, isPublic?: boolean) {
     this.logger.debug("trying to list new offer");
     const hash = hashOffer(_offer);
     this.offers.set(hash, _offer);
     this.emit("pintswap/trade/broadcast", hash);
+    if (isPublic) {
+      await webhookRun({
+        offer: _offer,
+        chainId,
+        peer: this.peerId.toB58String(),
+      });
+    }
   }
+
   async findPeer(pintSwapAddress: string) {
     const resolved = (this.constructor as any).fromAddress(
       pintSwapAddress.indexOf(".") !== -1
         ? await this.resolveName(pintSwapAddress)
-        : pintSwapAddress,
+        : pintSwapAddress
     );
     return await this.peerRouting.findPeer(
-      PeerId.createFromB58String(resolved),
+      PeerId.createFromB58String(resolved)
     );
   }
   async getUserData(pintSwapAddress: string) {
@@ -774,7 +785,7 @@ export class Pintswap extends PintP2P {
     this.emit("pintswap/trade/peer", 0); // start finding peer's orders
     const { stream } = await this.dialPeer(
       pintSwapAddress,
-      "/pintswap/0.1.2/userdata",
+      "/pintswap/0.1.2/userdata"
     );
     this.emit("pintswap/trade/peer", 1); // peer found
     const decoded = pipe(stream.source, lp.decode());
@@ -800,7 +811,7 @@ export class Pintswap extends PintP2P {
     this.emit("pintswap/trade/peer", 0); // start finding peer's orders
     const { stream } = await this.dialPeer(
       pintSwapAddress,
-      "/pintswap/0.1.0/orders",
+      "/pintswap/0.1.0/orders"
     );
     this.emit("pintswap/trade/peer", 1); // peer found
     const decoded = pipe(stream.source, lp.decode());
@@ -822,7 +833,7 @@ export class Pintswap extends PintP2P {
         arrays: true,
         objects: true,
         oneofs: true,
-      },
+      }
     );
 
     const offers = protobufOffersToHex(offerList.offers);
@@ -850,7 +861,7 @@ export class Pintswap extends PintP2P {
         arrays: true,
         objects: true,
         oneofs: true,
-      },
+      }
     );
 
     const offers = protobufOffersToHex(offerList.offers);
@@ -867,7 +878,7 @@ export class Pintswap extends PintP2P {
         arrays: true,
         objects: true,
         oneofs: true,
-      },
+      }
     );
 
     const offers = protobufOffersToHex(userData.offers);
@@ -906,7 +917,7 @@ export class Pintswap extends PintP2P {
               owner: await this.signer.getAddress(),
               expiry,
             },
-            this.signer,
+            this.signer
           );
           return {
             permitData,
@@ -921,12 +932,12 @@ export class Pintswap extends PintP2P {
             "function setApprovalForAll(address, bool)",
             "function isApprovedForAll(address, address) view returns (bool)",
           ],
-          this.signer,
+          this.signer
         );
         if (
           !(await token.isApprovedForAll(
             await this.signer.getAddress(),
-            tradeAddress,
+            tradeAddress
           ))
         ) {
           return await token.setApprovalForAll(tradeAddress, true);
@@ -940,14 +951,14 @@ export class Pintswap extends PintP2P {
       const token = new Contract(
         await coerceToWeth(ethers.getAddress(transfer.token), this.signer),
         genericAbi,
-        this.signer,
+        this.signer
       );
       this.logger.debug("address::" + (await this.signer.getAddress()));
       this.logger.debug(
         "balance::" +
           ethers.formatEther(
-            await token.balanceOf(await this.signer.getAddress()),
-          ),
+            await token.balanceOf(await this.signer.getAddress())
+          )
       );
       if (transfer.token === ethers.ZeroAddress) {
         const weth = new ethers.Contract(
@@ -956,10 +967,10 @@ export class Pintswap extends PintP2P {
             "function deposit()",
             "function balanceOf(address) view returns (uint256)",
           ],
-          this.signer,
+          this.signer
         );
         const wethBalance = ethers.toBigInt(
-          await weth.balanceOf(await this.signer.getAddress()),
+          await weth.balanceOf(await this.signer.getAddress())
         );
         if (wethBalance < ethers.toBigInt(transfer.amount)) {
           const depositTx = await weth.deposit({
@@ -971,8 +982,8 @@ export class Pintswap extends PintP2P {
         this.logger.debug(
           "weth-balance::" +
             ethers.formatEther(
-              await weth.balanceOf(await this.signer.getAddress()),
-            ),
+              await weth.balanceOf(await this.signer.getAddress())
+            )
         );
       }
       if (await detectPermit(transfer.token, this.signer)) {
@@ -985,7 +996,7 @@ export class Pintswap extends PintP2P {
             owner: await this.signer.getAddress(),
             expiry,
           },
-          this.signer,
+          this.signer
         );
         return {
           permitData,
@@ -1005,13 +1016,13 @@ export class Pintswap extends PintP2P {
             },
             spender: tradeAddress,
             nonce: ethers.hexlify(
-              ethers.toBeArray(ethers.getUint(Math.floor(Date.now() / 1000))),
+              ethers.toBeArray(ethers.getUint(Math.floor(Date.now() / 1000)))
             ),
             deadline: ethers.hexlify(
               ethers.toBeArray(
                 ethers.getUint(Math.floor(Date.now() / 1000)) +
-                  BigInt(60 * 60 * 24),
-              ),
+                  BigInt(60 * 60 * 24)
+              )
             ),
           },
           permit2Address: PERMIT2_ADDRESS,
@@ -1019,7 +1030,7 @@ export class Pintswap extends PintP2P {
         };
         const signature = await signTypedData(
           this.signer,
-          ...getPermitData(signatureTransfer),
+          ...getPermitData(signatureTransfer)
         );
         return {
           permitData: {
@@ -1036,17 +1047,17 @@ export class Pintswap extends PintP2P {
         this.logger.debug(
           "balance::after-approve::" +
             ethers.formatEther(
-              await token.balanceOf(await this.signer.getAddress()),
-            ),
+              await token.balanceOf(await this.signer.getAddress())
+            )
         );
         this.logger.debug(
           "allowance::after-approve::" +
             ethers.formatEther(
               await token.allowance(
                 await this.signer.getAddress(),
-                tradeAddress,
-              ),
-            ),
+                tradeAddress
+              )
+            )
         );
         return tx;
       }
@@ -1067,11 +1078,11 @@ export class Pintswap extends PintP2P {
     const token = new Contract(
       await coerceToWeth(asset, this.signer),
       genericAbi,
-      this.signer,
+      this.signer
     );
     const allowance = await token.allowance(
       await this.signer.getAddress(),
-      PERMIT2_ADDRESS,
+      PERMIT2_ADDRESS
     );
     if (ethers.getUint(allowance) < ethers.getUint("0x0" + "f".repeat(63))) {
       if (ethers.getUint(allowance) !== BigInt(0)) {
@@ -1087,15 +1098,15 @@ export class Pintswap extends PintP2P {
     offer: IOffer,
     maker: string,
     sharedAddress: string,
-    permitData: any,
+    permitData: any
   ) {
     try {
       const chainId = Number((await this.signer.provider.getNetwork()).chainId);
       const payCoinbase = Boolean(
         false &&
           [offer.gives.token, offer.gets.token].find(
-            (v) => ethers.ZeroAddress === v,
-          ),
+            (v) => ethers.ZeroAddress === v
+          )
       );
       const taker = await this.signer.getAddress();
       const contract = createContract(
@@ -1104,7 +1115,7 @@ export class Pintswap extends PintP2P {
         taker,
         chainId,
         permitData,
-        payCoinbase ? "0x01" : null,
+        payCoinbase ? "0x01" : null
       );
       const gasPriceFloor = await getGasPriceWithFloor(this.signer.provider);
       const gasPrice = toBigInt(gasPriceFloor);
@@ -1118,7 +1129,7 @@ export class Pintswap extends PintP2P {
                   data: contract,
                   from: sharedAddress,
                   //          gasPrice,
-                }),
+                })
               ) + BigInt(26000);
             if (estimate > BigInt(10e6)) {
               throw Error("gas estimate too high -- revert");
@@ -1141,7 +1152,7 @@ export class Pintswap extends PintP2P {
               maxFeePerGas: ethers.getUint(
                 (
                   await this.signer.provider.getBlock("latest")
-                ).baseFeePerGas.toHexString(),
+                ).baseFeePerGas.toHexString()
               ),
             }
           : { gasPrice },
@@ -1154,11 +1165,11 @@ export class Pintswap extends PintP2P {
                 taker,
                 chainId,
                 permitData,
-                payCoinbaseAmount,
+                payCoinbaseAmount
               ),
           gasLimit,
           payCoinbaseAmount,
-        },
+        }
       );
     } catch (e) {
       this.logger.error("user rejected transaction");
@@ -1171,12 +1182,12 @@ export class Pintswap extends PintP2P {
       txParams;
 
     const sharedAddressBalance = toBigInt(
-      await this.signer.provider.getBalance(sharedAddress),
+      await this.signer.provider.getBalance(sharedAddress)
     );
     this.logger.debug(
       `network::${
         (await this.signer.provider.getNetwork()).chainId
-      }::${sharedAddressBalance}::${gasPrice}::${gasLimit}`,
+      }::${sharedAddressBalance}::${gasPrice}::${gasLimit}`
     );
     return Object.assign(new Transaction(), txParams, {
       chainId: (await this.signer.provider.getNetwork()).chainId,
@@ -1195,7 +1206,7 @@ export class Pintswap extends PintP2P {
   }
   createBatchTrade(
     peer: string,
-    batchFill: { offer: IOffer; amount: string; tokenId?: string }[],
+    batchFill: { offer: IOffer; amount: string; tokenId?: string }[]
   ) {
     const trade = new PintswapTrade();
     trade.hashes = batchFill.map((v) => hashOffer(v.offer));
@@ -1210,7 +1221,7 @@ export class Pintswap extends PintP2P {
       const handleError = (
         side: "maker" | "taker",
         e: string,
-        _messages?: any,
+        _messages?: any
       ) => {
         self.logger.error(e);
         this.emit(`pintswap/trade/${side}`, e);
@@ -1251,13 +1262,13 @@ export class Pintswap extends PintP2P {
               batchFill.map((v) => ({
                 offerHash: hashOffer(v.offer),
                 amount: v.amount || v.tokenId,
-              })),
-            ),
+              }))
+            )
           );
           const offer = sumOffers(
             batchFill.map((v) => ({
               ...scaleOffer(v.offer, v.amount),
-            })),
+            }))
           );
           messages.push(message1); // message 1
           self.logger.debug("keygen::step2::wait-protocol");
@@ -1280,7 +1291,7 @@ export class Pintswap extends PintP2P {
           }
           const makerAddressBufList = makerAddressBuf?.value || [];
           const makerAddress = ethers.getAddress(
-            ethers.hexlify(makerAddressBufList.slice()),
+            ethers.hexlify(makerAddressBufList.slice())
           );
           self.logger.debug("maker-address::received::" + makerAddress);
           self.logger.debug("keygen::step2::compute");
@@ -1294,7 +1305,7 @@ export class Pintswap extends PintP2P {
           self.logger.debug("approve::wait");
           const approveTx = await self.approveTradeAsTaker(
             offer,
-            sharedAddress as string,
+            sharedAddress as string
           );
           // taker rejects
           if (approveTx === "user_rejected") {
@@ -1343,7 +1354,7 @@ export class Pintswap extends PintP2P {
             offer,
             makerAddress,
             sharedAddress,
-            contractPermitData,
+            contractPermitData
           );
           if (txParams === false) {
             handleError("taker", "user rejected signing", messages);
@@ -1362,7 +1373,7 @@ export class Pintswap extends PintP2P {
               });
               self.logger.debug("eth-transaction::wait");
               await self.signer.provider.waitForTransaction(
-                ethTransaction.hash,
+                ethTransaction.hash
               );
               self.logger.debug("eth-transaction::complete");
             } catch (e) {
@@ -1371,23 +1382,23 @@ export class Pintswap extends PintP2P {
           }
 
           self.logger.debug(
-            `transaction::${await self.signer.getAddress()}::${sharedAddress}`,
+            `transaction::${await self.signer.getAddress()}::${sharedAddress}`
           );
           const tx = await self.createTransaction(
             txParams,
-            sharedAddress as string,
+            sharedAddress as string
           );
 
           self.logger.debug("transaction::built");
 
           const _uhash = (tx.unsignedHash as string).slice(2);
           const serialized = Buffer.from(
-            ethers.toBeArray(tx.unsignedSerialized),
+            ethers.toBeArray(tx.unsignedSerialized)
           );
           self.logger.debug("sign-context::compute");
           const signContext = await TPCsign.P1Context.createContext(
             JSON.stringify(keyshareJson, null, 4),
-            new BN(_uhash, 16),
+            new BN(_uhash, 16)
           );
           self.logger.debug("sign-context::complete");
 
@@ -1397,11 +1408,11 @@ export class Pintswap extends PintP2P {
           messages.push(
             payCoinbaseAmount
               ? Buffer.from(ethers.toBeArray(payCoinbaseAmount))
-              : Buffer.from([]),
+              : Buffer.from([])
           );
           self.logger.debug("taker-address::push");
           messages.push(
-            Buffer.from(ethers.toBeArray(await self.signer.getAddress())),
+            Buffer.from(ethers.toBeArray(await self.signer.getAddress()))
           );
           self.logger.debug("sign::step1::compute");
           messages.push(signContext.step1());
@@ -1444,6 +1455,17 @@ export class Pintswap extends PintP2P {
           // complete
           self.emit("pintswap/trade/taker", txHash);
           self.logger.debug("trade::complete::" + txHash);
+
+          // discord webhook
+          self.logger.info("sending webhook");
+          try {
+            const { chainId } = await self.signer.provider.getNetwork();
+            await self.signer.provider.waitForTransaction(txHash);
+            await webhookRun({ txHash, chainId });
+          } catch (e) {
+            self.logger.debug(e);
+          }
+
           messages.end();
           trade.resolve(txHash || null);
           stream.close();

@@ -94,12 +94,16 @@ const getTokensFromTxHash = async (
   }
 };
 
-const buildFulfillMarkdownLink = (offer?: IOffer, peer?: string) => {
+const buildFulfillMarkdownLink = (
+  offer?: IOffer,
+  peer?: string,
+  chainId = 1
+) => {
   const baseLink = "https://app.pintswap.exchange";
   if (offer && peer) {
     return `[Take offer in Web App](${baseLink}/#/fulfill/${peer}/${hashOffer(
       offer
-    )})`;
+    )}/${chainId})`;
   }
   return `[Go to Web App](${baseLink})`;
 };
@@ -206,7 +210,7 @@ export const webhookRun = async function ({
                 },
                 {
                   name: "",
-                  value: buildFulfillMarkdownLink(offer, peer),
+                  value: buildFulfillMarkdownLink(offer, peer, chainId),
                 },
               ],
               timestamp: new Date().toISOString(),

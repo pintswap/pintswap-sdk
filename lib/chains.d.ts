@@ -1,14 +1,14 @@
 import { ethers } from "ethers";
 export declare const WETH_ADDRESSES: {
-    42161: string;
-    137: string;
-    10: string;
-    43112: string;
-    324: string;
-    42220: string;
-    43114: string;
-    8453: string;
-    0: string;
+    "42161": string;
+    "137": string;
+    "10": string;
+    "43112": string;
+    "324": string;
+    "42220": string;
+    "43114": string;
+    "8453": string;
+    "56": string;
 };
 export declare const NETWORKS: {
     name: string;

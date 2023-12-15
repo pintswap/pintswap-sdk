@@ -11,12 +11,15 @@ export const WETH_ADDRESSES = Object.assign(
     return r;
   }, {}),
   {
-    "42161": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
-    "137": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
-    "10": "0x4200000000000000000000000000000000000006",
-    "43112": "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB",
-    "324": "0x8Ebe4A94740515945ad826238Fc4D56c6B8b0e60",
-    "42220": "0x122013fd7dF1C6F636a5bb8f03108E876548b455",
+    "42161": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", // ARB
+    "137": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619", // MATIC
+    "10": "0x4200000000000000000000000000000000000006", // OP
+    "43112": "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB", // AVAX
+    "324": "0x8Ebe4A94740515945ad826238Fc4D56c6B8b0e60", // zkSync
+    "42220": "0x122013fd7dF1C6F636a5bb8f03108E876548b455", // CELO
+    "43114": "0x49d5c2bdffac6ce2bfdb6640f4f80f226bc10bab", // AVAX
+    "8453": "0x4200000000000000000000000000000000000006", // BASE
+    "56": "0x4DB5a66E937A9F4473fA95b1cAF1d1E1D62E29EA", // BNB
   }
 );
 
@@ -35,28 +38,10 @@ export const NETWORKS = [
     // ),
   },
   {
-    name: "Optimism",
-    explorer: "https://optimistic.etherscan.io/",
-    chainId: 10,
-    provider: new ethers.InfuraProvider("optimism", INFURA_API_KEY),
-  },
-  {
-    name: "Polygon",
-    explorer: "https://polygonscan.com/",
-    chainId: 137,
-    provider: new ethers.InfuraProvider("matic", INFURA_API_KEY),
-  },
-  {
     name: "Arbitrum",
     explorer: "https://arbiscan.io/",
     chainId: 42161,
     provider: new ethers.InfuraProvider("arbitrum", INFURA_API_KEY),
-  },
-  {
-    name: "Celo",
-    explorer: "https://explorer.celo.org/mainnet/",
-    chainId: 42220,
-    provider: new ethers.JsonRpcProvider("https://forno.celo.org"),
   },
   {
     name: "Avalanche",
@@ -69,10 +54,36 @@ export const NETWORKS = [
   {
     name: "Base",
     provider: new ethers.JsonRpcProvider(
-      "https://base-mainnet.public.blastapi.io"
+      `https://base-mainnet.infura.io/v3/${INFURA_API_KEY}`
     ),
     chainId: 8453,
-    explorer: "https://basescan.org",
+    explorer: "https://basescan.org/",
+  },
+  {
+    name: "Optimism",
+    explorer: "https://optimistic.etherscan.io/",
+    chainId: 10,
+    provider: new ethers.InfuraProvider("optimism", INFURA_API_KEY),
+  },
+  {
+    name: "Polygon",
+    explorer: "https://polygonscan.com/",
+    chainId: 137,
+    provider: new ethers.InfuraProvider("matic", INFURA_API_KEY),
+  },
+  {
+    name: "Celo",
+    explorer: "https://explorer.celo.org/mainnet/",
+    chainId: 42220,
+    provider: new ethers.JsonRpcProvider("https://forno.celo.org"),
+  },
+  {
+    name: "Binance Smart Chain",
+    explorer: "https://bscscan.com/",
+    chainId: 56,
+    provider: new ethers.JsonRpcProvider(
+      `https://bnbsmartchain-mainnet.infura.io/v3/${INFURA_API_KEY}`
+    ),
   },
 ];
 

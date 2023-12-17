@@ -94,6 +94,10 @@ const getTokensFromTxHash = async (
   }
 };
 
+const calculateDiscount = (offer: IOffer) => {
+  console.log(offer)
+}
+
 const buildFulfillMarkdownLink = (
   offer?: IOffer,
   peer?: string,
@@ -172,6 +176,7 @@ export const webhookRun = async function ({
     }
   }
   if (offer) {
+    const discount = calculateDiscount(offer)
     try {
       /**
        * TODO

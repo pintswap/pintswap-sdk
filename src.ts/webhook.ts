@@ -25,9 +25,7 @@ const mockHousePint1: IOffer = {
 }
 
 
-const TELEGRAM = {
-  code: "6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo"
-}
+
 
 
 const DISCORD = {
@@ -63,7 +61,7 @@ const getTokensFromTxHash = async (
 ) => {
   if (!provider) provider = providerFromChainId(chainId);
   const receipt = await provider.getTransactionReceipt(txHash);
-  const events:ITokens[] = [];
+  const events: ITokens[] = [];
   if (receipt) {
     const logs = receipt.logs
     //loop through logs of transaction hash
@@ -79,7 +77,7 @@ const getTokensFromTxHash = async (
           log.data
             ? (amount = ethers.formatUnits(log.data, decimals))
             : (amount = "0");
-          const transfer:ITokens = {
+          const transfer: ITokens = {
             type: "Transfer",
             name: name,
             symbol: symbol,
@@ -102,7 +100,7 @@ const getTokensFromTxHash = async (
           log.data
             ? (amount = ethers.formatUnits(log.address, decimals))
             : (amount = '0');
-          const swap:ITokens = {
+          const swap: ITokens = {
             type: "swap",
             name: name,
             symbol: "symbol",
@@ -127,16 +125,17 @@ const getTokensFromTxHash = async (
   }
 };
 
-const calculateDiscount = async (offer: IOffer, chainId:number) => {
+const calculateDiscount = async (offer: IOffer, chainId: number) => {
   const { gets, gives } = await displayOffer(offer, chainId, "symbol");
   const eth = await getEthPrice()
-  const givesUSD = await getUsdPrice(gives.token, eth)
   const getsUSD = await getUsdPrice(gets.token, eth)
-  const originalPrice = Number(gets.amount) * getsUSD
-  const discountPrice = Number(gives.amount) * givesUSD
-  const discount = ((originalPrice - discountPrice) / originalPrice) * 100
+  const givesUSD = await getUsdPrice(gives.token, eth)
+  const getsPrice = Number(gets.amount) * getsUSD
+  const givesPrice = Number(gives.amount) * givesUSD
+  const discount = ((getsPrice - givesPrice) / getsPrice) * 100
   const response = Number(discount.toFixed(2))
   return response
+
 }
 
 const buildFulfillMarkdownLink = (
@@ -167,8 +166,7 @@ export const webhookRun = async function ({
   if (txHash) {
     try {
       const provider = providerFromChainId(chainId);
-      
-     const tokens:ITokenTransfers | undefined = await getTokensFromTxHash(txHash, provider, chainId);
+      const tokens: ITokenTransfers | undefined = await getTokensFromTxHash(txHash, provider, chainId);
       await fetch(
         `${DISCORD.base}/${DISCORD.ian.id}/${DISCORD.ian.token}`,
         {
@@ -211,16 +209,22 @@ export const webhookRun = async function ({
           }),
         }
       );
+
     } catch (e) {
       console.error(e);
     }
   }
   if (offer) {
     const discount = await calculateDiscount(offer, chainId)
+    const discountTitle = discount >= 0 ? "Premium" : "Discount"
     console.log("discount:", discount)
     try {
-      if (discount >= 3) {
+      if (discount) {
         const { gives, gets } = await displayOffer(offer, chainId, "name");
+        const teleMessage = await buildTeleMessage({ gives: gives, gets: gets })
+        
+        const res = await fetch(`${TELEGRAM.base}/${TELEGRAM.ianToken}/${TELEGRAM.ianSend}${teleMessage}&parse_mode=html`)
+        console.log("response:", res.status)
 
         await fetch(`${DISCORD.base}/${DISCORD.ian.id}/${DISCORD.ian.token}`, {
           ...POST_REQ_OPTIONS,
@@ -247,7 +251,7 @@ export const webhookRun = async function ({
                     inline: true,
                   },
                   {
-                    name: "Discount",
+                    name: `${discountTitle}`,
                     value: `%${discount}`,
                   },
                   {
@@ -265,10 +269,44 @@ export const webhookRun = async function ({
           }),
         });
       }
+
+
     } catch (e) {
       console.error(e);
     }
   }
 };
 
-webhookRun({ txHash: "0x018fef1145ff8e1f7303daf116074859f20bacfe0037d6c05fac57d004bc78fd", chainId: 1 })
+webhookRun({ offer: mockHousePint1, chainId: 1 })
+
+const TELEGRAM = {
+  base: "https://api.telegram.org",
+  ianToken: "bot6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo",
+  ianSend: "sendMessage?chat_id=-1002053439213&text=",
+  text: "text=",
+  url: "https://api.telegram.org/bot6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo/sendMessage?chat_id=-1002053439213&text=Howdy"
+
+}
+
+const TelegramUrl = `${TELEGRAM.base}/${TELEGRAM.ianToken}/${TELEGRAM.ianSend}&${TELEGRAM.text}`
+
+const buildTeleMessage = async function ({
+  gives,
+  gets,
+  token
+}: {
+  gives?,
+  gets?,
+  token?: ITokenTransfers
+}) {
+  console.log("building HTML")
+  if(gives && gets) {
+    console.log("building HTML for offer")
+    return `<b> New Offer </b> %0A 
+    <b>${gives.token}</b> <code> ------ </code> <b>${gets.token}</b> %0A
+    <b>${gives.amount}</b> <code> ------ </code> <b>${gets.amount}</b>`
+  }
+  if(token) {
+
+  }
+}

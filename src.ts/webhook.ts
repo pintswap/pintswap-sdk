@@ -24,10 +24,7 @@ const mockHousePint1: IOffer = {
 
 }
 
-
-
-
-
+const mockTx = "0x018fef1145ff8e1f7303daf116074859f20bacfe0037d6c05fac57d004bc78fd"
 const DISCORD = {
   base: "https://discord.com/api/webhooks",
   completed: {
@@ -141,13 +138,19 @@ const calculateDiscount = async (offer: IOffer, chainId: number) => {
 const buildFulfillMarkdownLink = (
   offer?: IOffer,
   peer?: string,
-  chainId = 1
+  chainId = 1,
+  telegram?: boolean
 ) => {
   const baseLink = "https://app.pintswap.exchange";
-  if (offer && peer) {
+  if (offer && peer && !telegram) {
     return `[Take offer in Web App](${baseLink}/#/fulfill/${peer}/${hashOffer(
       offer
     )}/${chainId})`;
+  }
+  if(offer && peer && telegram) {
+    return `${baseLink}/#/fulfill/${peer}/${hashOffer(
+      offer
+    )}/${chainId})`
   }
   return `[Go to Web App](${baseLink})`;
 };
@@ -167,6 +170,46 @@ export const webhookRun = async function ({
     try {
       const provider = providerFromChainId(chainId);
       const tokens: ITokenTransfers | undefined = await getTokensFromTxHash(txHash, provider, chainId);
+
+      const teleMessage = await buildTeleMessage(
+        {
+          tokens: tokens,
+          chainId: chainId,
+          offer: offer,
+          peer: peer,
+          txHash: txHash
+        }
+      )
+      const url = `${TELEGRAM.base}/${TELEGRAM.ianToken}/sendMessage`
+      const view = `${networkFromChainId(chainId)?.explorer}tx/${txHash}`
+
+      const data = {
+        chat_id: TELEGRAM.chat_id,
+        text: teleMessage,
+        parse_mode: "html",
+        reply_markup: JSON.stringify({
+          inline_keyboard: [
+            [{ text: `${tokens.transfer1.name}`, callback_data: 'no_action' },
+            { text: `------>`, callback_data: 'no_action' },
+            { text: `${tokens.transfer2.name}`, callback_data: 'no_action' }],
+
+            [{ text: `${tokens.transfer1.amount}`, callback_data: 'no_action' },
+            { text: `${tokens.transfer2.amount}`, callback_data: 'no_action' }],
+            [{ text: "View in Explorer", url: view }]
+          ]
+        })
+      }
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      console.log(response.status)
+      // const res = await fetch(`${TELEGRAM.base}/${TELEGRAM.ianToken}/${TELEGRAM.ianSend}${teleMessage}&parse_mode=html`)
+      // console.log("response:", res.status)
+
       await fetch(
         `${DISCORD.base}/${DISCORD.ian.id}/${DISCORD.ian.token}`,
         {
@@ -216,15 +259,50 @@ export const webhookRun = async function ({
   }
   if (offer) {
     const discount = await calculateDiscount(offer, chainId)
-    const discountTitle = discount >= 0 ? "Premium" : "Discount"
+
     console.log("discount:", discount)
     try {
       if (discount) {
         const { gives, gets } = await displayOffer(offer, chainId, "name");
-        const teleMessage = await buildTeleMessage({ gives: gives, gets: gets })
-        
-        const res = await fetch(`${TELEGRAM.base}/${TELEGRAM.ianToken}/${TELEGRAM.ianSend}${teleMessage}&parse_mode=html`)
-        console.log("response:", res.status)
+        const teleMessage = await buildTeleMessage(
+          {
+            gives: gives,
+            gets: gets,
+            discount: discount,
+            chainId: chainId,
+            offer: offer,
+            peer: peer
+          }
+        )
+        const url = `${TELEGRAM.base}/${TELEGRAM.ianToken}/sendMessage`
+        const view = `${networkFromChainId(chainId)?.explorer}tx/${txHash}`
+
+        const data = {
+          chat_id: TELEGRAM.chat_id,
+          text: teleMessage,
+          parse_mode: "html",
+          reply_markup: JSON.stringify({
+            inline_keyboard: [
+              [{ text: `${gives.token}`, callback_data: 'no_action' },
+              { text: `------>`, callback_data: 'no_action' },
+              { text: `${gets.token}`, callback_data: 'no_action' }],
+
+              [{ text: `${gives.amount}`, callback_data: 'no_action' },
+              { text: `${gets.amount}`, callback_data: 'no_action' }],
+              [{ text: "Take offer in Web App", url: buildFulfillMarkdownLink(offer, peer, chainId, true) }]
+            ]
+          })
+        }
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        // const res = await fetch(`${TELEGRAM.base}/${TELEGRAM.ianToken}/${TELEGRAM.ianSend}${teleMessage}&parse_mode=html`)
+        // console.log("response:", res.status)
 
         await fetch(`${DISCORD.base}/${DISCORD.ian.id}/${DISCORD.ian.token}`, {
           ...POST_REQ_OPTIONS,
@@ -251,8 +329,8 @@ export const webhookRun = async function ({
                     inline: true,
                   },
                   {
-                    name: `${discountTitle}`,
-                    value: `%${discount}`,
+                    name: `${discount <= -3 ? "Discount" : ""}`,
+                    value: `${discount <= -3 ? `${discount}` : ""}`,
                   },
                   {
                     name: "Chain",
@@ -277,11 +355,12 @@ export const webhookRun = async function ({
   }
 };
 
-webhookRun({ offer: mockHousePint1, chainId: 1 })
+webhookRun({ txHash: mockTx, chainId: 1 })
 
 const TELEGRAM = {
   base: "https://api.telegram.org",
   ianToken: "bot6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo",
+  chat_id: "-1002053439213",
   ianSend: "sendMessage?chat_id=-1002053439213&text=",
   text: "text=",
   url: "https://api.telegram.org/bot6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo/sendMessage?chat_id=-1002053439213&text=Howdy"
@@ -293,20 +372,59 @@ const TelegramUrl = `${TELEGRAM.base}/${TELEGRAM.ianToken}/${TELEGRAM.ianSend}&$
 const buildTeleMessage = async function ({
   gives,
   gets,
-  token
+  tokens,
+  discount,
+  chainId,
+  offer,
+  peer,
+  txHash
 }: {
   gives?,
   gets?,
-  token?: ITokenTransfers
+  tokens?: ITokenTransfers,
+  discount?,
+  chainId?,
+  offer?,
+  peer?,
+  txHash?,
 }) {
   console.log("building HTML")
-  if(gives && gets) {
-    console.log("building HTML for offer")
-    return `<b> New Offer </b> %0A 
-    <b>${gives.token}</b> <code> ------ </code> <b>${gets.token}</b> %0A
-    <b>${gives.amount}</b> <code> ------ </code> <b>${gets.amount}</b>`
-  }
-  if(token) {
+  console.log("discount:", discount)
+  console.log("chainId:", chainId)
 
+  console.log("peer:", peer)
+  const chain = `${networkFromChainId(chainId)?.name}`
+  const fulfill = buildFulfillMarkdownLink(offer, peer, chainId)
+  console.log("fulfill", fulfill)
+
+  if (gives && gets) {
+    console.log("building HTML for offer")
+    const givesAmt = Number(gives.amount).toFixed(3)
+    const getsAmt = Number(gets.amount).toFixed(3)
+    // return `<b> New Offer </b>%0A 
+    // <b>${gives.token}:</b><b>${givesAmt}</b><b> -----> </b> <b>${gets.token}:</b><b>${getsAmt}</b>%0A %0A
+    // ${discount <= -3 ?
+    //     `<u>Discount</u> %0A  
+    //   <code> </code><i>${discount}</i> %0A %0A`
+    //     : ""
+    //   }
+    return `
+    <b> New Offer </b> /n /n
+    <u>Chain</u> /n
+    <i>${chain}</i> /n
+    <i>${new Date().toUTCString()}</i>`
+  }
+  if (tokens) {
+
+    console.log("building HTML for offer")
+    const tk1Amt = Number(tokens.transfer1.amount).toFixed(3)
+    const tk2Amt = Number(tokens.transfer2.amount).toFixed(3)
+    const url = `${networkFromChainId(chainId)?.explorer}tx/${txHash}`
+    console.log(url)
+
+    return `<b> 💯 Transaction Complete 💯 </b> \n 
+    <u>Chain</u> 
+    <i>${chain}</i> \n
+    <b>${new Date().toUTCString()}</b> \n`
   }
 }

@@ -128,7 +128,8 @@ const calculateDiscount = async (offer: IOffer, chainId: number) => {
   const givesUSD = await getUsdPrice(gives.token, eth)
   const getsPrice = Number(gets.amount) * getsUSD
   const givesPrice = Number(gives.amount) * givesUSD
-  const discount = ((givesPrice - getsPrice) / givesPrice) * 100
+  const discount = (((getsPrice - givesPrice) / getsPrice) * 100)
+  console.log(discount)
   const response = Number(discount.toFixed(2))
   return response
 }
@@ -297,7 +298,7 @@ export const webhookRun = async function ({
             content: "",
             embeds: [
               {
-                title: "👀 New Offer 👀",
+                title: "👀 New Offer 👀 Holy smokes Batman",
                 color: 10181046,
                 fields: [
                   {
@@ -316,8 +317,8 @@ export const webhookRun = async function ({
                     inline: true,
                   },
                   {
-                    name: `${discount <= -3 ? "Discount" : ""}`,
-                    value: `${discount <= -3 ? `${discount}` : ""}`,
+                    name: `${discount >= 3 ? "Discount" : ""}`,
+                    value: `${discount >= 3 ? `${discount}` : ""}`,
                   },
                   {
                     name: "Chain",

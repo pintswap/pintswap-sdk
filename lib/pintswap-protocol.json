@@ -1,0 +1,282 @@
+{
+    "nested": {
+        "pintswap": {
+            "nested": {
+                "ERC20Transfer": {
+                    "fields": {
+                        "token": {
+                            "type": "bytes",
+                            "id": 1
+                        },
+                        "amount": {
+                            "type": "bytes",
+                            "id": 2
+                        }
+                    }
+                },
+                "ERC721Transfer": {
+                    "fields": {
+                        "token": {
+                            "type": "bytes",
+                            "id": 1
+                        },
+                        "tokenId": {
+                            "type": "bytes",
+                            "id": 2
+                        }
+                    }
+                },
+                "ERC1155Transfer": {
+                    "fields": {
+                        "token": {
+                            "type": "bytes",
+                            "id": 1
+                        },
+                        "tokenId": {
+                            "type": "bytes",
+                            "id": 2
+                        },
+                        "amount": {
+                            "type": "bytes",
+                            "id": 3
+                        }
+                    }
+                },
+                "Transfer": {
+                    "oneofs": {
+                        "data": {
+                            "oneof": [
+                                "erc20",
+                                "erc721",
+                                "erc1155"
+                            ]
+                        }
+                    },
+                    "fields": {
+                        "erc20": {
+                            "type": "ERC20Transfer",
+                            "id": 1
+                        },
+                        "erc721": {
+                            "type": "ERC721Transfer",
+                            "id": 2
+                        },
+                        "erc1155": {
+                            "type": "ERC1155Transfer",
+                            "id": 3
+                        }
+                    }
+                },
+                "Offer": {
+                    "fields": {
+                        "gives": {
+                            "type": "Transfer",
+                            "id": 1
+                        },
+                        "gets": {
+                            "type": "Transfer",
+                            "id": 2
+                        }
+                    }
+                },
+                "OfferList": {
+                    "fields": {
+                        "offers": {
+                            "rule": "repeated",
+                            "type": "Offer",
+                            "id": 1
+                        }
+                    }
+                },
+                "MakerBroadcast": {
+                    "fields": {
+                        "offers": {
+                            "rule": "repeated",
+                            "type": "Offer",
+                            "id": 1
+                        },
+                        "bio": {
+                            "type": "string",
+                            "id": 2
+                        },
+                        "pfp": {
+                            "type": "ERC721Transfer",
+                            "id": 3
+                        }
+                    }
+                },
+                "UserData": {
+                    "oneofs": {
+                        "pfp": {
+                            "oneof": [
+                                "file",
+                                "nft"
+                            ]
+                        }
+                    },
+                    "fields": {
+                        "bio": {
+                            "type": "string",
+                            "id": 1
+                        },
+                        "offers": {
+                            "rule": "repeated",
+                            "type": "Offer",
+                            "id": 3
+                        },
+                        "file": {
+                            "type": "bytes",
+                            "id": 4
+                        },
+                        "nft": {
+                            "type": "ERC721Transfer",
+                            "id": 5
+                        }
+                    }
+                },
+                "Fill": {
+                    "fields": {
+                        "offerHash": {
+                            "type": "bytes",
+                            "id": 1
+                        },
+                        "amount": {
+                            "type": "bytes",
+                            "id": 2
+                        }
+                    }
+                },
+                "BatchFill": {
+                    "fields": {
+                        "fills": {
+                            "rule": "repeated",
+                            "type": "Fill",
+                            "id": 1
+                        }
+                    }
+                },
+                "Transmission": {
+                    "fields": {
+                        "data": {
+                            "type": "bytes",
+                            "id": 1
+                        }
+                    }
+                },
+                "NameQuery": {
+                    "oneofs": {
+                        "data": {
+                            "oneof": [
+                                "multiaddr",
+                                "name"
+                            ]
+                        }
+                    },
+                    "fields": {
+                        "multiaddr": {
+                            "type": "bytes",
+                            "id": 1
+                        },
+                        "name": {
+                            "type": "string",
+                            "id": 2
+                        }
+                    }
+                },
+                "NameQueryResponse": {
+                    "fields": {
+                        "status": {
+                            "type": "NameQueryResponseStatus",
+                            "id": 1
+                        },
+                        "result": {
+                            "type": "string",
+                            "id": 2
+                        }
+                    },
+                    "nested": {
+                        "NameQueryResponseStatus": {
+                            "values": {
+                                "NAMEREG_QUERY_ERR": 0,
+                                "NAMEREG_QUERY_OK": 1
+                            }
+                        }
+                    }
+                },
+                "NameRegisterResponse": {
+                    "fields": {
+                        "status": {
+                            "type": "NameRegisterResponseStatus",
+                            "id": 1
+                        }
+                    },
+                    "nested": {
+                        "NameRegisterResponseStatus": {
+                            "values": {
+                                "NAMEREG_OK": 0,
+                                "NAMEREG_NO": 1,
+                                "NAMEREG_ERR": 2
+                            }
+                        }
+                    }
+                },
+                "Permit1Data": {
+                    "fields": {
+                        "v": {
+                            "type": "bytes",
+                            "id": 1
+                        },
+                        "r": {
+                            "type": "bytes",
+                            "id": 2
+                        },
+                        "s": {
+                            "type": "bytes",
+                            "id": 3
+                        },
+                        "expiry": {
+                            "type": "bytes",
+                            "id": 4
+                        }
+                    }
+                },
+                "Permit2Data": {
+                    "fields": {
+                        "nonce": {
+                            "type": "bytes",
+                            "id": 1
+                        },
+                        "deadline": {
+                            "type": "bytes",
+                            "id": 2
+                        },
+                        "signature": {
+                            "type": "bytes",
+                            "id": 3
+                        }
+                    }
+                },
+                "PermitData": {
+                    "oneofs": {
+                        "data": {
+                            "oneof": [
+                                "permit1Data",
+                                "permit2Data"
+                            ]
+                        }
+                    },
+                    "fields": {
+                        "permit1Data": {
+                            "type": "Permit1Data",
+                            "id": 1
+                        },
+                        "permit2Data": {
+                            "type": "Permit2Data",
+                            "id": 2
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

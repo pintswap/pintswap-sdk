@@ -21,7 +21,6 @@ const mockHousePint1: IOffer = {
     amount: "0x41608eb4fc6cf400",
     token: "0xFa4bAa6951B6Ee382e9ff9AF2D523278b99ca6D0"
   }
-
 }
 
 const mockTx = "0x018fef1145ff8e1f7303daf116074859f20bacfe0037d6c05fac57d004bc78fd"
@@ -147,7 +146,7 @@ const buildFulfillMarkdownLink = (
       offer
     )}/${chainId})`;
   }
-  if(offer && peer && telegram) {
+  if (offer && peer && telegram) {
     return `${baseLink}/#/fulfill/${peer}/${hashOffer(
       offer
     )}/${chainId})`
@@ -189,16 +188,11 @@ export const webhookRun = async function ({
         parse_mode: "html",
         reply_markup: JSON.stringify({
           inline_keyboard: [
-            [{ text: `${tokens.transfer1.name}`, callback_data: 'no_action' },
-            { text: `------>`, callback_data: 'no_action' },
-            { text: `${tokens.transfer2.name}`, callback_data: 'no_action' }],
-
-            [{ text: `${tokens.transfer1.amount}`, callback_data: 'no_action' },
-            { text: `${tokens.transfer2.amount}`, callback_data: 'no_action' }],
             [{ text: "View in Explorer", url: view }]
           ]
         })
       }
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -207,9 +201,6 @@ export const webhookRun = async function ({
         body: JSON.stringify(data)
       });
       console.log(response.status)
-      // const res = await fetch(`${TELEGRAM.base}/${TELEGRAM.ianToken}/${TELEGRAM.ianSend}${teleMessage}&parse_mode=html`)
-      // console.log("response:", res.status)
-
       await fetch(
         `${DISCORD.base}/${DISCORD.ian.id}/${DISCORD.ian.token}`,
         {
@@ -274,25 +265,24 @@ export const webhookRun = async function ({
             peer: peer
           }
         )
+
         const url = `${TELEGRAM.base}/${TELEGRAM.ianToken}/sendMessage`
-        const view = `${networkFromChainId(chainId)?.explorer}tx/${txHash}`
+        const offerURL = buildFulfillMarkdownLink(offer, peer, chainId, true)
+        console.log("offerURL", offerURL)
 
         const data = {
           chat_id: TELEGRAM.chat_id,
           text: teleMessage,
           parse_mode: "html",
-          reply_markup: JSON.stringify({
-            inline_keyboard: [
-              [{ text: `${gives.token}`, callback_data: 'no_action' },
-              { text: `------>`, callback_data: 'no_action' },
-              { text: `${gets.token}`, callback_data: 'no_action' }],
-
-              [{ text: `${gives.amount}`, callback_data: 'no_action' },
-              { text: `${gets.amount}`, callback_data: 'no_action' }],
-              [{ text: "Take offer in Web App", url: buildFulfillMarkdownLink(offer, peer, chainId, true) }]
-            ]
-          })
+          // reply_markup: JSON.stringify({
+          //   inline_keyboard: [
+          //     [{ text: "Take offer in Web App", url: offerURL }]
+          //   ]
+          // })
         }
+
+        console.log('sending webhook')
+
         const response = await fetch(url, {
           method: 'POST',
           headers: {
@@ -300,9 +290,7 @@ export const webhookRun = async function ({
           },
           body: JSON.stringify(data)
         });
-
-        // const res = await fetch(`${TELEGRAM.base}/${TELEGRAM.ianToken}/${TELEGRAM.ianSend}${teleMessage}&parse_mode=html`)
-        // console.log("response:", res.status)
+        console.log(response.status)
 
         await fetch(`${DISCORD.base}/${DISCORD.ian.id}/${DISCORD.ian.token}`, {
           ...POST_REQ_OPTIONS,
@@ -355,7 +343,8 @@ export const webhookRun = async function ({
   }
 };
 
-webhookRun({ txHash: mockTx, chainId: 1 })
+webhookRun({ offer: mockHousePint1, chainId: 1 })
+webhookRun({txHash: mockTx, chainId:1 })
 
 const TELEGRAM = {
   base: "https://api.telegram.org",
@@ -392,7 +381,6 @@ const buildTeleMessage = async function ({
   console.log("discount:", discount)
   console.log("chainId:", chainId)
 
-  console.log("peer:", peer)
   const chain = `${networkFromChainId(chainId)?.name}`
   const fulfill = buildFulfillMarkdownLink(offer, peer, chainId)
   console.log("fulfill", fulfill)
@@ -401,30 +389,33 @@ const buildTeleMessage = async function ({
     console.log("building HTML for offer")
     const givesAmt = Number(gives.amount).toFixed(3)
     const getsAmt = Number(gets.amount).toFixed(3)
-    // return `<b> New Offer </b>%0A 
-    // <b>${gives.token}:</b><b>${givesAmt}</b><b> -----> </b> <b>${gets.token}:</b><b>${getsAmt}</b>%0A %0A
-    // ${discount <= -3 ?
-    //     `<u>Discount</u> %0A  
-    //   <code> </code><i>${discount}</i> %0A %0A`
-    //     : ""
-    //   }
-    return `
-    <b> New Offer </b> /n /n
-    <u>Chain</u> /n
-    <i>${chain}</i> /n
+    return `<b> 👀 New Offer 👀 </b> \n
+    <b>${gives.token}: </b><i>${givesAmt}</i> \n 
+    <b> For </b> \n 
+    <b>${gets.token}:</b><i>${getsAmt}</i> \n
+    ${discount <= -3 ?
+    `<u>Discount</u>
+    <i>${discount}</i>\n`
+        : ""
+      }
+    <u>Chain</u>
+    <i>${chain}</i> \n
     <i>${new Date().toUTCString()}</i>`
   }
   if (tokens) {
 
     console.log("building HTML for offer")
-    const tk1Amt = Number(tokens.transfer1.amount).toFixed(3)
-    const tk2Amt = Number(tokens.transfer2.amount).toFixed(3)
+    // const tk1Amt = Number(tokens.transfer1.amount).toFixed(3)
+    // const tk2Amt = Number(tokens.transfer2.amount).toFixed(3)
     const url = `${networkFromChainId(chainId)?.explorer}tx/${txHash}`
     console.log(url)
 
     return `<b> 💯 Transaction Complete 💯 </b> \n 
+    <b>${tokens.transfer1.name}: </b><i>${tokens.transfer1.amount}</i> \n 
+    <i> For </i> \n  
+    <b>${tokens.transfer2.name}: </b><i>${tokens.transfer2.amount}</i> \n
     <u>Chain</u> 
-    <i>${chain}</i> \n
+    <i>${chain}</i> 
     <b>${new Date().toUTCString()}</b> \n`
   }
 }

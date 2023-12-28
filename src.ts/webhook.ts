@@ -128,10 +128,9 @@ const calculateDiscount = async (offer: IOffer, chainId: number) => {
   const givesUSD = await getUsdPrice(gives.token, eth)
   const getsPrice = Number(gets.amount) * getsUSD
   const givesPrice = Number(gives.amount) * givesUSD
-  const discount = ((getsPrice - givesPrice) / getsPrice) * 100
+  const discount = ((givesPrice - getsPrice) / givesPrice) * 100
   const response = Number(discount.toFixed(2))
   return response
-
 }
 
 const buildFulfillMarkdownLink = (
@@ -389,11 +388,11 @@ const buildTeleMessage = async function ({
     console.log("building HTML for offer")
     const givesAmt = Number(gives.amount).toFixed(3)
     const getsAmt = Number(gets.amount).toFixed(3)
-    return `<b> 👀 New Offer 👀 </b> \n
+    return `<b> 👀 New Offer 👀 New New </b> \n
     <b>${gives.token}: </b><i>${givesAmt}</i> \n 
     <b> For </b> \n 
     <b>${gets.token}:</b><i>${getsAmt}</i> \n
-    ${discount <= -3 ?
+    ${discount >= 3 ?
     `<u>Discount</u>
     <i>${discount}</i>\n`
         : ""

@@ -11,7 +11,7 @@ import {
 } from "./utils";
 import { IOffer, ITokenTransfers, ITokens } from "./types";
 import { hashOffer } from "./trade";
-
+const mockTx = "0x01aa19f45b9cefd4d034c58643de05dcb76e40d83f8f52a10d9cb5c4b00f8560"
 const mockHousePint1: IOffer = {
   gets: {
     amount: "0x2813e63b4531bc0000",
@@ -23,7 +23,6 @@ const mockHousePint1: IOffer = {
   }
 }
 
-const mockTx = "0x018fef1145ff8e1f7303daf116074859f20bacfe0037d6c05fac57d004bc78fd"
 const DISCORD = {
   base: "https://discord.com/api/webhooks",
   completed: {
@@ -42,6 +41,15 @@ const DISCORD = {
       "rYNmPeF4GTMpB-pIFjqd9pH-Nt1-hi3iHykNF2FWI8wJqRxIVgRq84dONz2ly6sYKP9Q"
   }
 };
+
+const TELEGRAM = {
+  base: "https://api.telegram.org",
+  offersToken: "bot6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo",
+  transactionToken: "bot6518633027:AAEs0h9cQ7IBDqEXdT6PPXnLJmuNjzvIKhg",
+  ianChat_id: "-1002053439213",
+  groupChat_id:"-4031773943",
+  url: "https://api.telegram.org/bot6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo/sendMessage?chat_id=-1002053439213&text=Howdy"
+}
 
 const POST_REQ_OPTIONS = {
   method: "POST",
@@ -128,9 +136,13 @@ const calculateDiscount = async (offer: IOffer, chainId: number) => {
   const givesUSD = await getUsdPrice(gives.token, eth)
   const getsPrice = Number(gets.amount) * getsUSD
   const givesPrice = Number(gives.amount) * givesUSD
-  const discount = (((getsPrice - givesPrice) / getsPrice) * 100)
-  console.log(discount)
-  const response = Number(discount.toFixed(2))
+  console.log("gets", getsPrice, "gives", givesPrice)
+  const discount = givesPrice - getsPrice
+  console.log("discount", discount)
+  const percentage = (discount/givesPrice) * 100
+  console.log('percentage', percentage)
+  const response = Number(percentage.toFixed(2))
+  console.log("Response toFixed", response )
   return response
 }
 
@@ -179,11 +191,11 @@ export const webhookRun = async function ({
           txHash: txHash
         }
       )
-      const url = `${TELEGRAM.base}/${TELEGRAM.ianToken}/sendMessage`
+      const url = `${TELEGRAM.base}/${TELEGRAM.transactionToken}/sendMessage`
       const view = `${networkFromChainId(chainId)?.explorer}tx/${txHash}`
 
       const data = {
-        chat_id: TELEGRAM.chat_id,
+        chat_id: TELEGRAM.groupChat_id,
         text: teleMessage,
         parse_mode: "html",
         reply_markup: JSON.stringify({
@@ -266,19 +278,19 @@ export const webhookRun = async function ({
           }
         )
 
-        const url = `${TELEGRAM.base}/${TELEGRAM.ianToken}/sendMessage`
+        const url = `${TELEGRAM.base}/${TELEGRAM.offersToken}/sendMessage`
         const offerURL = buildFulfillMarkdownLink(offer, peer, chainId, true)
         console.log("offerURL", offerURL)
 
         const data = {
-          chat_id: TELEGRAM.chat_id,
+          chat_id: TELEGRAM.groupChat_id,
           text: teleMessage,
           parse_mode: "html",
-          // reply_markup: JSON.stringify({
-          //   inline_keyboard: [
-          //     [{ text: "Take offer in Web App", url: offerURL }]
-          //   ]
-          // })
+          reply_markup: JSON.stringify({
+            inline_keyboard: [
+              [{ text: "Take offer in Web App", url: offerURL }]
+            ]
+          })
         }
 
         console.log('sending webhook')
@@ -298,7 +310,7 @@ export const webhookRun = async function ({
             content: "",
             embeds: [
               {
-                title: "👀 New Offer 👀 Holy smokes Batman",
+                title: "👀 New Offer 👀",
                 color: 10181046,
                 fields: [
                   {
@@ -318,7 +330,7 @@ export const webhookRun = async function ({
                   },
                   {
                     name: `${discount >= 3 ? "Discount" : ""}`,
-                    value: `${discount >= 3 ? `${discount}` : ""}`,
+                    value: `${discount >= 3 ? `${discount}%` : ""}`,
                   },
                   {
                     name: "Chain",
@@ -343,20 +355,7 @@ export const webhookRun = async function ({
   }
 };
 
-webhookRun({ offer: mockHousePint1, chainId: 1 })
-webhookRun({txHash: mockTx, chainId:1 })
-
-const TELEGRAM = {
-  base: "https://api.telegram.org",
-  ianToken: "bot6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo",
-  chat_id: "-1002053439213",
-  ianSend: "sendMessage?chat_id=-1002053439213&text=",
-  text: "text=",
-  url: "https://api.telegram.org/bot6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo/sendMessage?chat_id=-1002053439213&text=Howdy"
-
-}
-
-const TelegramUrl = `${TELEGRAM.base}/${TELEGRAM.ianToken}/${TELEGRAM.ianSend}&${TELEGRAM.text}`
+// webhookRun({txHash:mockTx, chainId:1})
 
 const buildTeleMessage = async function ({
   gives,
@@ -377,10 +376,6 @@ const buildTeleMessage = async function ({
   peer?,
   txHash?,
 }) {
-  console.log("building HTML")
-  console.log("discount:", discount)
-  console.log("chainId:", chainId)
-
   const chain = `${networkFromChainId(chainId)?.name}`
   const fulfill = buildFulfillMarkdownLink(offer, peer, chainId)
   console.log("fulfill", fulfill)
@@ -389,33 +384,47 @@ const buildTeleMessage = async function ({
     console.log("building HTML for offer")
     const givesAmt = Number(gives.amount).toFixed(3)
     const getsAmt = Number(gets.amount).toFixed(3)
-    return `<b> 👀 New Offer 👀 New New </b> \n
+    return `<b> 👀 New Offer 👀 </b> \n
     <b>${gives.token}: </b><i>${givesAmt}</i> \n 
     <b> For </b> \n 
-    <b>${gets.token}:</b><i>${getsAmt}</i> \n
+    <b>${gets.token}: </b><i>${getsAmt}</i> \n
     ${discount >= 3 ?
     `<u>Discount</u>
-    <i>${discount}</i>\n`
+    <i>${discount}%</i>\n`
         : ""
       }
     <u>Chain</u>
     <i>${chain}</i> \n
-    <i>${new Date().toUTCString()}</i>`
+    <i>${getCurrentFormattedDate()}</i>`
   }
   if (tokens) {
 
-    console.log("building HTML for offer")
-    // const tk1Amt = Number(tokens.transfer1.amount).toFixed(3)
-    // const tk2Amt = Number(tokens.transfer2.amount).toFixed(3)
     const url = `${networkFromChainId(chainId)?.explorer}tx/${txHash}`
-    console.log(url)
-
     return `<b> 💯 Transaction Complete 💯 </b> \n 
     <b>${tokens.transfer1.name}: </b><i>${tokens.transfer1.amount}</i> \n 
     <i> For </i> \n  
     <b>${tokens.transfer2.name}: </b><i>${tokens.transfer2.amount}</i> \n
     <u>Chain</u> 
-    <i>${chain}</i> 
-    <b>${new Date().toUTCString()}</b> \n`
+    <i>${chain}</i> \n
+    <b>${getCurrentFormattedDate()}</b> \n`
   }
+}
+
+function getCurrentFormattedDate() {
+  const now = new Date();
+
+  // Get the day of the week
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const day = days[now.getDay()];
+
+  // Format the time
+  let hours = now.getHours();
+  const minutes = now.getMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+
+  hours = hours % 12;
+  hours = hours ? hours : 12; // the hour '0' should be '12'
+  const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+
+  return `${day} at ${hours}:${minutesStr} ${ampm}`;
 }

@@ -46,9 +46,7 @@ const TELEGRAM = {
   base: "https://api.telegram.org",
   offersToken: "bot6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo",
   transactionToken: "bot6518633027:AAEs0h9cQ7IBDqEXdT6PPXnLJmuNjzvIKhg",
-  ianChat_id: "-1002053439213",
-  groupChat_id:"-4031773943",
-  url: "https://api.telegram.org/bot6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo/sendMessage?chat_id=-1002053439213&text=Howdy"
+  psChat_id:"-1002121825306",
 }
 
 const POST_REQ_OPTIONS = {
@@ -136,13 +134,9 @@ const calculateDiscount = async (offer: IOffer, chainId: number) => {
   const givesUSD = await getUsdPrice(gives.token, eth)
   const getsPrice = Number(gets.amount) * getsUSD
   const givesPrice = Number(gives.amount) * givesUSD
-  console.log("gets", getsPrice, "gives", givesPrice)
   const discount = givesPrice - getsPrice
-  console.log("discount", discount)
   const percentage = (discount/givesPrice) * 100
-  console.log('percentage', percentage)
   const response = Number(percentage.toFixed(2))
-  console.log("Response toFixed", response )
   return response
 }
 
@@ -195,7 +189,7 @@ export const webhookRun = async function ({
       const view = `${networkFromChainId(chainId)?.explorer}tx/${txHash}`
 
       const data = {
-        chat_id: TELEGRAM.groupChat_id,
+        chat_id: TELEGRAM.psChat_id,
         text: teleMessage,
         parse_mode: "html",
         reply_markup: JSON.stringify({
@@ -212,7 +206,6 @@ export const webhookRun = async function ({
         },
         body: JSON.stringify(data)
       });
-      console.log(response.status)
       await fetch(
         `${DISCORD.base}/${DISCORD.ian.id}/${DISCORD.ian.token}`,
         {
@@ -262,9 +255,8 @@ export const webhookRun = async function ({
   }
   if (offer) {
     const discount = await calculateDiscount(offer, chainId)
-
-    console.log("discount:", discount)
     try {
+      //TODO Only showing offers with a discount or conditionally showing the discount in each offer?
       if (discount) {
         const { gives, gets } = await displayOffer(offer, chainId, "name");
         const teleMessage = await buildTeleMessage(
@@ -277,13 +269,10 @@ export const webhookRun = async function ({
             peer: peer
           }
         )
-
         const url = `${TELEGRAM.base}/${TELEGRAM.offersToken}/sendMessage`
         const offerURL = buildFulfillMarkdownLink(offer, peer, chainId, true)
-        console.log("offerURL", offerURL)
-
         const data = {
-          chat_id: TELEGRAM.groupChat_id,
+          chat_id: TELEGRAM.psChat_id,
           text: teleMessage,
           parse_mode: "html",
           reply_markup: JSON.stringify({
@@ -292,9 +281,6 @@ export const webhookRun = async function ({
             ]
           })
         }
-
-        console.log('sending webhook')
-
         const response = await fetch(url, {
           method: 'POST',
           headers: {
@@ -302,8 +288,6 @@ export const webhookRun = async function ({
           },
           body: JSON.stringify(data)
         });
-        console.log(response.status)
-
         await fetch(`${DISCORD.base}/${DISCORD.ian.id}/${DISCORD.ian.token}`, {
           ...POST_REQ_OPTIONS,
           body: JSON.stringify({
@@ -347,15 +331,11 @@ export const webhookRun = async function ({
           }),
         });
       }
-
-
     } catch (e) {
       console.error(e);
     }
   }
 };
-
-// webhookRun({txHash:mockTx, chainId:1})
 
 const buildTeleMessage = async function ({
   gives,
@@ -378,10 +358,7 @@ const buildTeleMessage = async function ({
 }) {
   const chain = `${networkFromChainId(chainId)?.name}`
   const fulfill = buildFulfillMarkdownLink(offer, peer, chainId)
-  console.log("fulfill", fulfill)
-
   if (gives && gets) {
-    console.log("building HTML for offer")
     const givesAmt = Number(gives.amount).toFixed(3)
     const getsAmt = Number(gets.amount).toFixed(3)
     return `<b> 👀 New Offer 👀 </b> \n
@@ -398,8 +375,6 @@ const buildTeleMessage = async function ({
     <i>${getCurrentFormattedDate()}</i>`
   }
   if (tokens) {
-
-    const url = `${networkFromChainId(chainId)?.explorer}tx/${txHash}`
     return `<b> 💯 Transaction Complete 💯 </b> \n 
     <b>${tokens.transfer1.name}: </b><i>${tokens.transfer1.amount}</i> \n 
     <i> For </i> \n  
@@ -412,19 +387,15 @@ const buildTeleMessage = async function ({
 
 function getCurrentFormattedDate() {
   const now = new Date();
-
   // Get the day of the week
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const day = days[now.getDay()];
-
   // Format the time
   let hours = now.getHours();
   const minutes = now.getMinutes();
   const ampm = hours >= 12 ? 'PM' : 'AM';
-
   hours = hours % 12;
   hours = hours ? hours : 12; // the hour '0' should be '12'
   const minutesStr = minutes < 10 ? '0' + minutes : minutes;
-
   return `${day} at ${hours}:${minutesStr} ${ampm}`;
 }

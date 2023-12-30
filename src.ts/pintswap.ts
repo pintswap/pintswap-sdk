@@ -1223,7 +1223,7 @@ export class Pintswap extends PintP2P {
         e: string,
         _messages?: any
       ) => {
-        self.logger.error(e);
+        this.logger.error(e);
         this.emit(`pintswap/trade/${side}`, e);
         setTimeout(() => {}, 1000);
         _messages && _messages.end();

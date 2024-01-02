@@ -47,6 +47,7 @@ const TELEGRAM = {
   offersToken: "bot6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo",
   transactionToken: "bot6518633027:AAEs0h9cQ7IBDqEXdT6PPXnLJmuNjzvIKhg",
   psChat_id:"-1002121825306",
+  ianChat_id:"-4031773943"
 }
 
 const POST_REQ_OPTIONS = {
@@ -206,8 +207,9 @@ export const webhookRun = async function ({
         },
         body: JSON.stringify(data)
       });
+      console.log(response.status)
       await fetch(
-        `${DISCORD.base}/${DISCORD.ian.id}/${DISCORD.ian.token}`,
+        `${DISCORD.base}/${DISCORD.completed.id}/${DISCORD.completed.token}`,
         {
           ...POST_REQ_OPTIONS,
           body: JSON.stringify({
@@ -288,7 +290,8 @@ export const webhookRun = async function ({
           },
           body: JSON.stringify(data)
         });
-        await fetch(`${DISCORD.base}/${DISCORD.ian.id}/${DISCORD.ian.token}`, {
+        console.log(response.status)
+        await fetch(`${DISCORD.base}/${DISCORD.new.id}/${DISCORD.new.token}`, {
           ...POST_REQ_OPTIONS,
           body: JSON.stringify({
             content: "",

@@ -19,6 +19,7 @@ export type ITransfer = {
 export interface IOffer {
     gives: ITransfer;
     gets: ITransfer;
+    chainId?: string;
 }
 export type IAvailableChainIds = "42161" | "137" | "10" | "43112" | "1" | "31337";
 export type ITokenProps = {

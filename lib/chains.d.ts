@@ -3,7 +3,6 @@ export declare const WETH_ADDRESSES: {
     "42161": string;
     "137": string;
     "10": string;
-    "43112": string;
     "324": string;
     "42220": string;
     "43114": string;

@@ -23,6 +23,7 @@ export type ITransfer = {
 export interface IOffer {
   gives: ITransfer;
   gets: ITransfer;
+  chainId?: string;
 }
 
 export type IAvailableChainIds =

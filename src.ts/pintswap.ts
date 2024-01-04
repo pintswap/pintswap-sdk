@@ -954,13 +954,13 @@ export class Pintswap extends PintP2P {
         this.signer
       );
       this.logger.debug("address::" + (await this.signer.getAddress()));
-      this.logger.debug(
-        "balance::" +
-          ethers.formatEther(
-            await token.balanceOf(await this.signer.getAddress())
-          )
-      );
       if (transfer.token === ethers.ZeroAddress) {
+        this.logger.debug(
+          "native-balance::" +
+            ethers.formatEther(
+              await this.signer.provider.getBalance(await this.signer.getAddress())
+            )
+        );
         const weth = new ethers.Contract(
           toWETH(Number(chainId)),
           [
@@ -983,6 +983,13 @@ export class Pintswap extends PintP2P {
           "weth-balance::" +
             ethers.formatEther(
               await weth.balanceOf(await this.signer.getAddress())
+            )
+        );
+      } else {
+        this.logger.debug(
+          "token-balance::" +
+            ethers.formatEther(
+              await token.balanceOf(await this.signer.getAddress())
             )
         );
       }
@@ -1309,6 +1316,7 @@ export class Pintswap extends PintP2P {
           );
           // taker rejects
           if (approveTx === "user_rejected") {
+            self.logger.debug("txParams", approveTx);
             handleError("taker", "user rejected signing", messages);
             return;
           } else if (approveTx === "insufficient_funds") {
@@ -1357,6 +1365,7 @@ export class Pintswap extends PintP2P {
             contractPermitData
           );
           if (txParams === false) {
+            self.logger.debug("txParams", txParams);
             handleError("taker", "user rejected signing", messages);
             return;
           }

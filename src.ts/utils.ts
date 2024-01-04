@@ -72,7 +72,10 @@ export async function getSymbol(
 ): Promise<string> {
   if (!address || !chainId || !isAddress(address)) return address || "";
   address = getAddress(address);
-  if (address === ZeroAddress) return "ETH";
+  if (address === ZeroAddress) {
+    if (chainId === 43114) return "AVAX";
+    return "ETH";
+  }
   const match = getTokenList(chainId).find(
     (v) => getAddress(v.address) === address
   );
@@ -98,7 +101,10 @@ export async function getName(
 ): Promise<string> {
   if (!address || !chainId || !isAddress(address)) return address || "";
   address = getAddress(address);
-  if (address === ZeroAddress) return "Ethereum";
+  if (address === ZeroAddress) {
+    if (chainId === 43114) return "Avalanche";
+    return "Ethereum";
+  }
   const match = getTokenList(chainId).find(
     (v) => getAddress(v.address) === address
   );
@@ -113,7 +119,7 @@ export async function getName(
     const name = await contract?.name();
     return name;
   } catch (e) {
-    console.error("#getSymbol", e);
+    console.error("#getName", e);
     return address;
   }
 }

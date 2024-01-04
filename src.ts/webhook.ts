@@ -6,22 +6,11 @@ import {
   getName,
   getSymbol,
   getUsdPrice,
-  percentChange,
-  getEthPrice
+  getEthPrice,
+  maybeConvertName,
 } from "./utils";
-import { IOffer, ITokenTransfers, ITokens } from "./types";
+import { IOffer, ITokenTransfers, ITokens, ITransfer } from "./types";
 import { hashOffer } from "./trade";
-const mockTx = "0x01aa19f45b9cefd4d034c58643de05dcb76e40d83f8f52a10d9cb5c4b00f8560"
-const mockHousePint1: IOffer = {
-  gets: {
-    amount: "0x2813e63b4531bc0000",
-    token: "0x58fB30A61C218A3607e9273D52995a49fF2697Ee"
-  },
-  gives: {
-    amount: "0x41608eb4fc6cf400",
-    token: "0xFa4bAa6951B6Ee382e9ff9AF2D523278b99ca6D0"
-  }
-}
 
 const DISCORD = {
   base: "https://discord.com/api/webhooks",
@@ -38,17 +27,17 @@ const DISCORD = {
   ian: {
     id: "1181339596647301171",
     token:
-      "rYNmPeF4GTMpB-pIFjqd9pH-Nt1-hi3iHykNF2FWI8wJqRxIVgRq84dONz2ly6sYKP9Q"
-  }
+      "rYNmPeF4GTMpB-pIFjqd9pH-Nt1-hi3iHykNF2FWI8wJqRxIVgRq84dONz2ly6sYKP9Q",
+  },
 };
 
 const TELEGRAM = {
   base: "https://api.telegram.org",
   offersToken: "bot6551006929:AAGG7R8nPIMIwMK8o7-nKZ6oIwCm3wVnuJo",
   transactionToken: "bot6518633027:AAEs0h9cQ7IBDqEXdT6PPXnLJmuNjzvIKhg",
-  psChat_id:"-1002121825306",
-  ianChat_id:"-4031773943"
-}
+  psChat_id: "-1002121825306",
+  ianChat_id: "-4031773943",
+};
 
 const POST_REQ_OPTIONS = {
   method: "POST",
@@ -66,7 +55,7 @@ const getTokensFromTxHash = async (
   const receipt = await provider.getTransactionReceipt(txHash);
   const events: ITokens[] = [];
   if (receipt) {
-    const logs = receipt.logs
+    const logs = receipt.logs;
     //loop through logs of transaction hash
     for (const log of logs) {
       try {
@@ -99,10 +88,10 @@ const getTokensFromTxHash = async (
         ) {
           const name = await getName(log.address, chainId);
           const decimals = await getDecimals(log.address, chainId);
-          let amount
+          let amount;
           log.data
             ? (amount = ethers.formatUnits(log.address, decimals))
-            : (amount = '0');
+            : (amount = "0");
           const swap: ITokens = {
             type: "swap",
             name: name,
@@ -113,7 +102,7 @@ const getTokensFromTxHash = async (
             decimals: decimals,
             amount: amount,
           };
-          events.push(swap)
+          events.push(swap);
         }
       } catch (error) {
         console.error("Error decoding log:");
@@ -130,16 +119,16 @@ const getTokensFromTxHash = async (
 
 const calculateDiscount = async (offer: IOffer, chainId: number) => {
   const { gets, gives } = await displayOffer(offer, chainId, "symbol");
-  const eth = await getEthPrice()
-  const getsUSD = await getUsdPrice(gets.token, eth)
-  const givesUSD = await getUsdPrice(gives.token, eth)
-  const getsPrice = Number(gets.amount) * getsUSD
-  const givesPrice = Number(gives.amount) * givesUSD
-  const discount = givesPrice - getsPrice
-  const percentage = (discount/givesPrice) * 100
-  const response = Number(percentage.toFixed(2))
-  return response
-}
+  const eth = await getEthPrice();
+  const getsUSD = await getUsdPrice(gets.token, eth);
+  const givesUSD = await getUsdPrice(gives.token, eth);
+  const getsPrice = Number(gets.amount) * getsUSD;
+  const givesPrice = Number(gives.amount) * givesUSD;
+  const discount = givesPrice - getsPrice;
+  const percentage = (discount / givesPrice) * 100;
+  const response = Number(percentage.toFixed(2));
+  return response;
+};
 
 const buildFulfillMarkdownLink = (
   offer?: IOffer,
@@ -149,16 +138,53 @@ const buildFulfillMarkdownLink = (
 ) => {
   const baseLink = "https://app.pintswap.exchange";
   if (offer && peer && !telegram) {
-    return `[Take offer in Web App](${baseLink}/#/fulfill/${peer}/${hashOffer(
+    return `[Take offer in Web App](${baseLink}/#/fulfill/${maybeConvertName(
+      peer
+    )}/${hashOffer(offer)}/${chainId})`;
+  }
+  if (offer && peer && telegram) {
+    return `${baseLink}/#/fulfill/${maybeConvertName(peer)}/${hashOffer(
       offer
     )}/${chainId})`;
   }
-  if (offer && peer && telegram) {
-    return `${baseLink}/#/fulfill/${peer}/${hashOffer(
-      offer
-    )}/${chainId})`
-  }
   return `[Go to Web App](${baseLink})`;
+};
+
+const buildTeleMessage = async function ({
+  gives,
+  gets,
+  tokens,
+  discount,
+  chainId,
+}: {
+  gives?: ITransfer;
+  gets?: ITransfer;
+  tokens?: ITokenTransfers;
+  discount?;
+  chainId?: number;
+}) {
+  const chain = `${networkFromChainId(chainId)?.name}`;
+  if (gives && gets) {
+    const givesAmt = Number(gives.amount).toFixed(3);
+    const getsAmt = Number(gets.amount).toFixed(3);
+
+    return `<b>New Offer</b> 
+👀 👀 👀 👀 
+<i>${new Date().toUTCString().split(", ")[1]}</i>
+<b>Chain:</b> ${chain} \n
+<b>Give:</b> ${getsAmt} ${gets.token}
+<b>Get:</b> ${givesAmt} ${gives.token}
+${discount >= 3 ? `<b>Discount:</b> ${discount}%` : ""}`;
+  }
+  if (tokens) {
+    return `<b> 💯 Transaction Complete 💯 </b> \n 
+<b>${tokens.transfer1.name}: </b><i>${tokens.transfer1.amount}</i> 
+<i>--></i>
+<b>${tokens.transfer2.name}: </b><i>${tokens.transfer2.amount}</i>
+<u>Chain</u> 
+<i>${chain}</i> \n
+<b>${new Date().toUTCString()}</b>`;
+  }
 };
 
 export const webhookRun = async function ({
@@ -175,40 +201,44 @@ export const webhookRun = async function ({
   if (txHash) {
     try {
       const provider = providerFromChainId(chainId);
-      const tokens: ITokenTransfers | undefined = await getTokensFromTxHash(txHash, provider, chainId);
+      const tokens: ITokenTransfers | undefined = await getTokensFromTxHash(
+        txHash,
+        provider,
+        chainId
+      );
 
-      const teleMessage = await buildTeleMessage(
-        {
-          tokens: tokens,
-          chainId: chainId,
-          offer: offer,
-          peer: peer,
-          txHash: txHash
-        }
-      )
-      const url = `${TELEGRAM.base}/${TELEGRAM.transactionToken}/sendMessage`
-      const view = `${networkFromChainId(chainId)?.explorer}tx/${txHash}`
+      // Telegram Post
+      // const teleMessage = await buildTeleMessage({
+      //   tokens,
+      //   chainId,
+      // });
+      // const tgPost = fetch(
+      //   `${TELEGRAM.base}/${TELEGRAM.transactionToken}/sendMessage`,
+      //   {
+      //     method: "POST",
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //     },
+      //     body: JSON.stringify({
+      //       chat_id: TELEGRAM.psChat_id,
+      //       text: teleMessage,
+      //       parse_mode: "html",
+      //       reply_markup: JSON.stringify({
+      //         inline_keyboard: [
+      //           [
+      //             {
+      //               text: "View in Explorer",
+      //               url: `${networkFromChainId(chainId)?.explorer}tx/${txHash}`,
+      //             },
+      //           ],
+      //         ],
+      //       }),
+      //     }),
+      //   }
+      // );
 
-      const data = {
-        chat_id: TELEGRAM.psChat_id,
-        text: teleMessage,
-        parse_mode: "html",
-        reply_markup: JSON.stringify({
-          inline_keyboard: [
-            [{ text: "View in Explorer", url: view }]
-          ]
-        })
-      }
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-      console.log(response.status)
-      await fetch(
+      // Discord Post
+      const discordPost = fetch(
         `${DISCORD.base}/${DISCORD.completed.id}/${DISCORD.completed.token}`,
         {
           ...POST_REQ_OPTIONS,
@@ -240,8 +270,9 @@ export const webhookRun = async function ({
                   },
                   {
                     name: "",
-                    value: `[View in Explorer](${networkFromChainId(chainId)?.explorer
-                      }tx/${txHash})`,
+                    value: `[View in Explorer](${
+                      networkFromChainId(chainId)?.explorer
+                    }tx/${txHash})`,
                   },
                 ],
                 timestamp: new Date().toISOString(),
@@ -250,48 +281,53 @@ export const webhookRun = async function ({
           }),
         }
       );
-
+      await Promise.all([discordPost]);
     } catch (e) {
       console.error(e);
     }
   }
   if (offer) {
-    const discount = await calculateDiscount(offer, chainId)
     try {
-      //TODO Only showing offers with a discount or conditionally showing the discount in each offer?
-      if (discount) {
-        const { gives, gets } = await displayOffer(offer, chainId, "name");
-        const teleMessage = await buildTeleMessage(
-          {
-            gives: gives,
-            gets: gets,
-            discount: discount,
-            chainId: chainId,
-            offer: offer,
-            peer: peer
-          }
-        )
-        const url = `${TELEGRAM.base}/${TELEGRAM.offersToken}/sendMessage`
-        const offerURL = buildFulfillMarkdownLink(offer, peer, chainId, true)
-        const data = {
-          chat_id: TELEGRAM.psChat_id,
-          text: teleMessage,
-          parse_mode: "html",
-          reply_markup: JSON.stringify({
-            inline_keyboard: [
-              [{ text: "Take offer in Web App", url: offerURL }]
-            ]
-          })
-        }
-        const response = await fetch(url, {
-          method: 'POST',
+      // const discount = await calculateDiscount(offer, chainId);
+      // if (discount) {
+      const { gives, gets } = await displayOffer(offer, chainId, "name");
+
+      // Telegram Post
+      const teleMessage = await buildTeleMessage({
+        gives,
+        gets,
+        // discount: discount,
+        chainId,
+      });
+      const tgPost = fetch(
+        `${TELEGRAM.base}/${TELEGRAM.offersToken}/sendMessage`,
+        {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify(data)
-        });
-        console.log(response.status)
-        await fetch(`${DISCORD.base}/${DISCORD.new.id}/${DISCORD.new.token}`, {
+          body: JSON.stringify({
+            chat_id: TELEGRAM.psChat_id,
+            text: teleMessage,
+            parse_mode: "html",
+            reply_markup: JSON.stringify({
+              inline_keyboard: [
+                [
+                  {
+                    text: "View offer in web app",
+                    url: buildFulfillMarkdownLink(offer, peer, chainId, true),
+                  },
+                ],
+              ],
+            }),
+          }),
+        }
+      );
+
+      // Discord Post
+      const discordPost = fetch(
+        `${DISCORD.base}/${DISCORD.new.id}/${DISCORD.new.token}`,
+        {
           ...POST_REQ_OPTIONS,
           body: JSON.stringify({
             content: "",
@@ -315,10 +351,10 @@ export const webhookRun = async function ({
                     value: `${gets.amount}`,
                     inline: true,
                   },
-                  {
-                    name: `${discount >= 3 ? "Discount" : ""}`,
-                    value: `${discount >= 3 ? `${discount}%` : ""}`,
-                  },
+                  // {
+                  //   name: `${discount >= 3 ? "Discount" : ""}`,
+                  //   value: `${discount >= 3 ? `${discount}%` : ""}`,
+                  // },
                   {
                     name: "Chain",
                     value: `${networkFromChainId(chainId)?.name}`,
@@ -332,73 +368,13 @@ export const webhookRun = async function ({
               },
             ],
           }),
-        });
-      }
+        }
+      );
+
+      await Promise.all([tgPost, discordPost]);
+      // }
     } catch (e) {
       console.error(e);
     }
   }
 };
-
-const buildTeleMessage = async function ({
-  gives,
-  gets,
-  tokens,
-  discount,
-  chainId,
-  offer,
-  peer,
-  txHash
-}: {
-  gives?,
-  gets?,
-  tokens?: ITokenTransfers,
-  discount?,
-  chainId?,
-  offer?,
-  peer?,
-  txHash?,
-}) {
-  const chain = `${networkFromChainId(chainId)?.name}`
-  const fulfill = buildFulfillMarkdownLink(offer, peer, chainId)
-  if (gives && gets) {
-    const givesAmt = Number(gives.amount).toFixed(3)
-    const getsAmt = Number(gets.amount).toFixed(3)
-    return `<b> 👀 New Offer 👀 </b> \n
-    <b>${gives.token}: </b><i>${givesAmt}</i> \n 
-    <b> For </b> \n 
-    <b>${gets.token}: </b><i>${getsAmt}</i> \n
-    ${discount >= 3 ?
-    `<u>Discount</u>
-    <i>${discount}%</i>\n`
-        : ""
-      }
-    <u>Chain</u>
-    <i>${chain}</i> \n
-    <i>${getCurrentFormattedDate()}</i>`
-  }
-  if (tokens) {
-    return `<b> 💯 Transaction Complete 💯 </b> \n 
-    <b>${tokens.transfer1.name}: </b><i>${tokens.transfer1.amount}</i> \n 
-    <i> For </i> \n  
-    <b>${tokens.transfer2.name}: </b><i>${tokens.transfer2.amount}</i> \n
-    <u>Chain</u> 
-    <i>${chain}</i> \n
-    <b>${getCurrentFormattedDate()}</b> \n`
-  }
-}
-
-function getCurrentFormattedDate() {
-  const now = new Date();
-  // Get the day of the week
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const day = days[now.getDay()];
-  // Format the time
-  let hours = now.getHours();
-  const minutes = now.getMinutes();
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12; // the hour '0' should be '12'
-  const minutesStr = minutes < 10 ? '0' + minutes : minutes;
-  return `${day} at ${hours}:${minutesStr} ${ampm}`;
-}

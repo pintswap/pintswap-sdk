@@ -26,7 +26,7 @@ import {
   isERC721Transfer,
   isERC1155Transfer,
 } from "./trade";
-import { IOffer, ITransfer } from "./types";
+import { IOffer, ITransfer, IUserData, NFTPFP } from "./types";
 import PeerId from "peer-id";
 import { createLogger } from "./logger";
 import * as permit from "./permit";
@@ -35,9 +35,9 @@ import { detectPermit } from "./detect-permit";
 import { detectERC721Permit } from "./detect-erc721-permit";
 import fetch from "cross-fetch";
 import { webhookRun } from "./webhook";
-import { detectTradeNetwork } from "./chains";
+import { maybeConvertName, maybeFromName } from "./utils";
 
-const { getAddress, getCreateAddress, Contract, Transaction } = ethers;
+const { getCreateAddress, Contract, Transaction } = ethers;
 
 const base64ToValue = (data) => ethers.hexlify(ethers.decodeBase64(data));
 
@@ -63,8 +63,8 @@ const toTypedTransfer = (transfer) =>
     ],
   ]);
 
-const NFT_WILDCARD =
-  "0xf00000000000000000000000000000000000000000000000000000000000000000";
+// const NFT_WILDCARD =
+//   "0xf00000000000000000000000000000000000000000000000000000000000000000";
 
 export const protobufOffersToHex = (offers) =>
   offers.map((v) => {
@@ -247,35 +247,10 @@ export const NS_MULTIADDRS = {
   DRIP: ["pint1zgsdknywfch8h8t8r5gvpd62zhf7jaqjze599w3j8m9hnmvwnlynpdshvjz7n"],
 };
 
-export interface NFTPFP {
-  token: string;
-  tokenId: string;
-}
-
-export interface IUserData {
-  bio: string;
-  image: Buffer | NFTPFP;
-}
-
 const mapObjectStripNullAndUndefined = (o) => {
   return Object.fromEntries(
     Object.entries(o).filter(([key, value]) => value != null)
   );
-};
-
-const maybeConvertName = (s) => {
-  if (
-    s.indexOf(".") !== -1 ||
-    s.substr(0, PintP2P.PREFIX.length) === PintP2P.PREFIX
-  )
-    return s;
-  return PintP2P.toAddress(s);
-};
-
-const maybeFromName = (s) => {
-  if (s.substr(0, PintP2P.PREFIX.length) === PintP2P.PREFIX)
-    return PintP2P.fromAddress(s);
-  return s;
 };
 
 export class Pintswap extends PintP2P {
@@ -958,7 +933,9 @@ export class Pintswap extends PintP2P {
         this.logger.debug(
           "native-balance::" +
             ethers.formatEther(
-              await this.signer.provider.getBalance(await this.signer.getAddress())
+              await this.signer.provider.getBalance(
+                await this.signer.getAddress()
+              )
             )
         );
         const weth = new ethers.Contract(

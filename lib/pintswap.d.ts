@@ -4,7 +4,7 @@ import { PintP2P } from "./p2p";
 import { BigNumberish } from "ethers";
 import { EventEmitter } from "events";
 import { defer } from "./trade";
-import { IOffer, ITransfer } from "./types";
+import { IOffer, ITransfer, IUserData, NFTPFP } from "./types";
 import PeerId from "peer-id";
 import { createLogger } from "./logger";
 export declare const protobufOffersToHex: (offers: any) => any;
@@ -25,14 +25,6 @@ export declare function sumOffers(offers: any[]): any;
 export declare const NS_MULTIADDRS: {
     DRIP: string[];
 };
-export interface NFTPFP {
-    token: string;
-    tokenId: string;
-}
-export interface IUserData {
-    bio: string;
-    image: Buffer | NFTPFP;
-}
 export declare class Pintswap extends PintP2P {
     signer: any;
     offers: Map<string, IOffer>;

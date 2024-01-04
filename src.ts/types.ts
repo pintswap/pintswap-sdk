@@ -46,3 +46,29 @@ export type ITokenProps = {
   };
   balance?: string;
 };
+
+export type ITokens = {
+  type: string;
+  name: string;
+  symbol: string;
+  tokenAddress: string;
+  fromAddress: string;
+  toAddress: string;
+  decimals: number;
+  amount: string;
+};
+
+export type ITokenTransfers = {
+  transfer1: ITokens;
+  transfer2: ITokens;
+};
+
+export interface NFTPFP {
+  token: string;
+  tokenId: string;
+}
+
+export interface IUserData {
+  bio: string;
+  image: Buffer | NFTPFP;
+}

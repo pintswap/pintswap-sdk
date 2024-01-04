@@ -5,14 +5,17 @@ import {
   getAddress,
   isAddress,
 } from "ethers";
+import { keyBy } from "lodash";
 import { providerFromChainId } from "./chains";
 import { IOffer, ITokenProps } from "./types";
+import { PintP2P } from "./p2p";
 
 // CONSTANTS
 export const TOKENS: ITokenProps[] = require("./token-list.json").tokens;
 export const getTokenList = (chainId?: number) =>
   TOKENS.filter((el) => el.chainId === (chainId ? chainId : null));
-
+export const getTokenListBySymbol = (chainId?: number) =>
+  keyBy(getTokenList(chainId), "symbol");
 export const MIN_ABI = {
   ERC20: [
     "function name() view returns (string)",
@@ -27,6 +30,22 @@ export const MIN_ABI = {
     "function approve(address _spender, uint256 _value) public returns (bool success)",
     "function allowance(address _owner, address _spender) public view returns (uint256 remaining)",
   ],
+};
+
+// PintP2P
+export const maybeConvertName = (s) => {
+  if (
+    s.indexOf(".") !== -1 ||
+    s.substr(0, PintP2P.PREFIX.length) === PintP2P.PREFIX
+  )
+    return s;
+  return PintP2P.toAddress(s);
+};
+
+export const maybeFromName = (s) => {
+  if (s.substr(0, PintP2P.PREFIX.length) === PintP2P.PREFIX)
+    return PintP2P.fromAddress(s);
+  return s;
 };
 
 // HELPERS
@@ -167,4 +186,110 @@ export const displayOffer = async (
       },
     };
   }
+};
+
+const JSON_HEADER_POST = {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+};
+
+export const ENDPOINTS: Record<
+  "uniswap" | "pintswap",
+  Record<string, string>
+> = {
+  uniswap: {
+    v2: "https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v2-dev",
+    // v2Fallback: `https://gateway-arbitrum.network.thegraph.com/api/${SUBGRAPH_API_KEY}/subgraphs/id/J2oP9UNBjsnuDDW1fAoHKskyrNLFNBB2badQU6UvEtJp`,
+    v3: "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3",
+    arb: "https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-arbitrum-one",
+    // avax: `https://gateway-arbitrum.network.thegraph.com/api/${SUBGRAPH_API_KEY}/subgraphs/id/4KgG6aek9cEp8MXQZKWCmeJWj5Y77mK9tPRAD1kDQa8Q`,
+  },
+  pintswap: {
+    eth: "https://api.thegraph.com/subgraphs/name/pintswap/token-transfers-eth",
+    arb: "https://api.thegraph.com/subgraphs/name/pintswap/token-transfers-arb",
+    avax: "https://api.thegraph.com/subgraphs/name/pintswap/token-transfers-avax",
+    opt: "https://api.thegraph.com/subgraphs/name/pintswap/token-transfers-opt",
+  },
+};
+
+export async function getEthPrice(): Promise<string> {
+  const response = await fetch(
+    "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3",
+    {
+      ...JSON_HEADER_POST,
+      body: JSON.stringify({
+        query: `{
+        bundles {
+          ethPriceUSD
+        }
+      }`,
+      }),
+    }
+  );
+  const {
+    data: { bundles },
+  } = await response.json();
+  return bundles[0].ethPriceUSD;
+}
+
+export function toAddress(symbolOrAddress?: string, chainId = 1): string {
+  // If nothing
+  if (!symbolOrAddress) return "";
+  // If address
+  if (isAddress(symbolOrAddress)) {
+    if (symbolOrAddress === ZeroAddress) return ZeroAddress;
+    return getAddress(symbolOrAddress);
+  }
+  // Standardize if symbol
+  const capSymbolOrAddress = (symbolOrAddress as string).toUpperCase();
+  if (capSymbolOrAddress === "ETH" || capSymbolOrAddress === "AVAX")
+    return ZeroAddress;
+  // If in cache
+  // If in list
+  const token = getTokenListBySymbol(chainId)[capSymbolOrAddress];
+  if (token) return getAddress(token.address);
+  // else return nothing
+  return "";
+}
+
+export const getUsdPrice = async (
+  asset: string,
+  eth?: string,
+  setState?: any
+) => {
+  const address = !isAddress(asset) ? toAddress(asset) : getAddress(asset);
+  if (address) {
+    const _eth = await getEthPrice();
+    if (address === ZeroAddress) {
+      setState && setState(_eth);
+      return _eth;
+    } else {
+      try {
+        const data = await fetch(
+          `https://api.dexscreener.com/latest/dex/tokens/${address}`
+        );
+        const json = await data.json();
+        if (data.status === 200 && json?.pairs?.length) {
+          const usdPrice = json.pairs[0].priceUsd;
+          setState && setState(usdPrice);
+          return usdPrice;
+        } else {
+          console.log("cant fetch data");
+        }
+      } catch (err) {
+        console.log("#getUsdPrice: dexscreener", err);
+      }
+    }
+  }
+};
+
+export const percentChange = (
+  oldVal?: string | number,
+  newVal?: string | number,
+  times100?: boolean
+) => {
+  if (!oldVal || !newVal) return "";
+  const diff = (Number(oldVal) - Number(newVal)) / Number(newVal);
+  if (times100) return (diff * 100).toFixed(2);
+  return diff.toString();
 };

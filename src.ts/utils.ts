@@ -1,6 +1,7 @@
 import {
   Contract,
   ZeroAddress,
+  ethers,
   formatUnits,
   getAddress,
   isAddress,
@@ -168,3 +169,21 @@ export const displayOffer = async (
     };
   }
 };
+
+export function hexToNumber(value: string | number): number {
+  if (typeof value === "string") {
+    if (ethers.isHexString(value)) {
+      ethers.toNumber(value);
+    }
+    return Number(value);
+  }
+  return Number(value);
+}
+
+// export function numberToHex(value: number | string): string {
+//   if (typeof value === "string") {
+//     if (ethers.isHexString(value)) return value;
+//     ethers.toBeHex(value);
+//   }
+//   return String(value);
+// }

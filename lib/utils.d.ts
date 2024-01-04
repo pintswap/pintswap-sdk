@@ -17,3 +17,4 @@ export declare const displayOffer: ({ gets, gives }: IOffer, chainId?: number, t
         amount: string;
     };
 }>;
+export declare function hexToNumber(value: string | number): number;

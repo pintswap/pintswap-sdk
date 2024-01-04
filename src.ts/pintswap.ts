@@ -957,9 +957,9 @@ export class Pintswap extends PintP2P {
       if (transfer.token === ethers.ZeroAddress) {
         this.logger.debug(
           "native-balance::" +
-            ethers.formatEther(
-              await this.signer.provider.getBalance(await this.signer.getAddress())
-            )
+            // ethers.formatEther(
+              (await this.signer.provider.getBalance(await this.signer.getAddress()))
+            // )
         );
         const weth = new ethers.Contract(
           toWETH(Number(chainId)),
